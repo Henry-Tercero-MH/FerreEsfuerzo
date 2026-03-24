@@ -1,0 +1,65 @@
+{
+  "name": "ferreapp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sistema de gestión para ferretería",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "build": {
+    "appId": "com.ferreapp.app",
+    "productName": "FerreApp",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icons/icon-512.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icons/icon-512.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icons/icon-512.png"
+    }
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.2",
+    "recharts": "^3.8.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.27",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
+    "vite": "^4.4.5",
+    "wait-on": "^7.2.0"
+  }
+}

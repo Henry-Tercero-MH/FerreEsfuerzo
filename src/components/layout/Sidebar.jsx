@@ -1,0 +1,95 @@
+import { NavLink, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboard, ShoppingCart, Package, Warehouse,
+  Users, BarChart3, Settings, Wrench, X, LogOut,
+} from 'lucide-react'
+import { useAuth, ROLES } from '../../contexts/AuthContext'
+
+const NAV_ITEMS = [
+  { to: '/',           label: 'Dashboard',   icon: LayoutDashboard, end: true },
+  { to: '/ventas',     label: 'Ventas',       icon: ShoppingCart },
+  { to: '/productos',  label: 'Productos',    icon: Package },
+  { to: '/inventario', label: 'Inventario',   icon: Warehouse },
+  { to: '/clientes',   label: 'Clientes',     icon: Users },
+  { to: '/reportes',   label: 'Reportes',     icon: BarChart3 },
+  { to: '/ajustes',    label: 'Ajustes',      icon: Settings },
+]
+
+export default function Sidebar({ open, onClose }) {
+  const { sesion, logout, tieneAcceso } = useAuth()
+  const items = NAV_ITEMS.filter(item => tieneAcceso(item.to))
+
+  return (
+    <>
+      {/* Overlay móvil */}
+      {open && (
+        <div
+          className="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-white shadow-xl border-r border-gray-100
+        transition-transform duration-300 ease-in-out
+        ${open ? 'translate-x-0' : '-translate-x-full'}
+        lg:static lg:translate-x-0 lg:shadow-none
+      `}>
+        {/* Logo */}
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600">
+              <Wrench size={18} className="text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">FerreApp</p>
+              <p className="text-xs text-gray-400">Sistema de Ferretería</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="lg:hidden btn-icon btn-ghost text-gray-400">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          {items.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              onClick={() => onClose?.()}
+              className={({ isActive }) =>
+                isActive ? 'sidebar-item-active' : 'sidebar-item'
+              }
+            >
+              <Icon size={18} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Usuario */}
+        <div className="border-t border-gray-100 p-3">
+          <div className="flex items-center gap-3 rounded-lg p-2">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-semibold text-sm">
+              {sesion?.nombre?.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">{sesion?.nombre}</p>
+              <p className="truncate text-xs text-gray-400">{ROLES[sesion?.rol]?.label}</p>
+            </div>
+            <button
+              onClick={logout}
+              title="Cerrar sesión"
+              className="btn-icon btn-ghost text-gray-400 hover:text-red-500"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </>
+  )
+}
