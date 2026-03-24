@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// ELECTRON=true  → base './'  (rutas relativas, necesario para cargar desde archivo)
+// Sin ELECTRON   → base '/'   (rutas absolutas, correcto para Vercel / web)
+const isElectron = process.env.ELECTRON === 'true'
+
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: isElectron ? './' : '/',
   server: { port: 5173 },
   build: {
     outDir: 'dist',

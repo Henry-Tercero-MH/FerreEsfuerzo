@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "cross-env ELECTRON=true vite build && electron-builder",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "build": {
@@ -51,6 +51,7 @@
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.27",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "eslint": "^8.45.0",
