@@ -1,9 +1,9 @@
-const CACHE = 'ferreapp-v1'
+const CACHE = 'esfuerzo-v2'
 const ASSETS = ['/', '/index.html']
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)))
-  self.skipWaiting()
+  // No skipWaiting aquí — esperamos que el usuario confirme la actualización
 })
 
 self.addEventListener('activate', e => {
@@ -24,4 +24,9 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request))
   )
+})
+
+// El Navbar envía este mensaje cuando el usuario presiona "Actualizar"
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
