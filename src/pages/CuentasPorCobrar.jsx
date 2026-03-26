@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { DollarSign, AlertCircle, Plus } from 'lucide-react'
+import { AlertCircle, Plus } from 'lucide-react'
+import IconQ from '../components/ui/IconQ'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useApp } from '../contexts/AppContext'
 import { useDebounce } from '../hooks/useDebounce'
@@ -99,14 +100,14 @@ export default function CuentasPorCobrar() {
         <StatCard
           label="Total por cobrar"
           value={formatCurrency(totalPorCobrar)}
-          icon={DollarSign}
+          icon={IconQ}
           iconBg="bg-blue-100"
           iconColor="text-blue-600"
         />
         <StatCard
           label="Cuentas pendientes"
           value={cuentas.filter(c => c.estado !== 'PAGADA' && c.estado !== 'CANCELADA').length}
-          icon={DollarSign}
+          icon={IconQ}
           iconBg="bg-yellow-100"
           iconColor="text-yellow-600"
         />
@@ -158,7 +159,7 @@ export default function CuentasPorCobrar() {
             {cuentasFiltradas.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-12 text-center text-gray-400">
-                  <DollarSign size={32} className="mx-auto mb-2 opacity-30" />
+                  <IconQ size={32} className="mx-auto mb-2 opacity-30" />
                   No hay cuentas por cobrar
                 </td>
               </tr>

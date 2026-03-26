@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { DollarSign, Lock, Unlock, TrendingUp, TrendingDown } from 'lucide-react'
+import { Lock, Unlock, TrendingUp, TrendingDown } from 'lucide-react'
+import IconQ from '../components/ui/IconQ'
 import { useCaja } from '../contexts/CajaContext'
 import { useAuth } from '../contexts/AuthContext'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
@@ -83,7 +84,7 @@ export default function Caja() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button variant="secondary" icon={DollarSign} onClick={() => setModalMovimiento(true)}>
+            <Button variant="secondary" icon={IconQ} onClick={() => setModalMovimiento(true)}>
               Registrar movimiento
             </Button>
             <Button variant="danger" icon={Lock} onClick={() => setModalCierre(true)}>
@@ -117,14 +118,14 @@ export default function Caja() {
             <StatCard
               label="Ventas efectivo"
               value={formatCurrency(cajaAbierta.total_ventas_efectivo)}
-              icon={DollarSign}
+              icon={IconQ}
               iconBg="bg-green-100"
               iconColor="text-green-600"
             />
             <StatCard
               label="Ventas tarjeta"
               value={formatCurrency(cajaAbierta.total_ventas_tarjeta)}
-              icon={DollarSign}
+              icon={IconQ}
               iconBg="bg-blue-100"
               iconColor="text-blue-600"
             />

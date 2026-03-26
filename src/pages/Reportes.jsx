@@ -3,7 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useApp } from '../contexts/AppContext'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import { StatCard } from '../components/ui/Card'
-import { TrendingUp, Package, ShoppingCart, DollarSign } from 'lucide-react'
+import { TrendingUp, Package, ShoppingCart } from 'lucide-react'
+import IconQ from '../components/ui/IconQ'
 
 function agruparPorDia(ventas, dias = 14) {
   const mapa = {}
@@ -66,7 +67,7 @@ export default function Reportes() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Ingresos totales" value={formatCurrency(totalIngresos)} icon={DollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
+        <StatCard label="Ingresos totales" value={formatCurrency(totalIngresos)} icon={IconQ} iconBg="bg-green-100" iconColor="text-green-600" />
         <StatCard label="Total ventas" value={completadas.length} icon={ShoppingCart} iconBg="bg-blue-100" iconColor="text-blue-600" />
         <StatCard label="Ticket promedio" value={formatCurrency(promedioVenta)} icon={TrendingUp} iconBg="bg-purple-100" iconColor="text-purple-600" />
         <StatCard label="Alertas de stock" value={productosStockBajo.length} icon={Package} iconBg="bg-red-100" iconColor="text-red-600" />

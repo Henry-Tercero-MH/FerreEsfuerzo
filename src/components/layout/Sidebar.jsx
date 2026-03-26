@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
-  Users, Truck, DollarSign, Wallet, BarChart3, Building2, Settings, Wrench, X, LogOut,
+  Users, Truck, Wallet, BarChart3, Building2, Settings, Wrench, X, LogOut,
   ClipboardList, BookOpen,
 } from 'lucide-react'
+import IconQ from '../ui/IconQ'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
 
 const NAV_ITEMS = [
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
   { separator: true,           label: 'VENTAS' },
   { to: '/ventas',             label: 'Ventas',             icon: ShoppingCart },
   { to: '/cotizaciones',       label: 'Cotizaciones',       icon: FileText },
-  { to: '/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: DollarSign },
+  { to: '/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: IconQ },
   { separator: true,           label: 'INVENTARIO' },
   { to: '/productos',          label: 'Productos',          icon: Package },
   { to: '/inventario',         label: 'Inventario',         icon: Warehouse },
