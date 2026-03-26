@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Wrench, Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
@@ -79,7 +79,7 @@ export default function Login() {
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="usuario@ferreapp.com"
+                  placeholder="usuario@elesfuerzo.com"
                   className="input pl-9"
                   autoComplete="email"
                   autoFocus

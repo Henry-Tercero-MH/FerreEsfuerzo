@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
-  Users, Truck, Wallet, BarChart3, Building2, Settings, Wrench, X, LogOut,
-  ClipboardList, BookOpen,
+  Users, Truck, Wallet, BarChart3, Building2, Settings, X, LogOut,
+  ClipboardList, BookOpen, Calculator,
 } from 'lucide-react'
 import IconQ from '../ui/IconQ'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
@@ -10,7 +10,8 @@ import { useAuth, ROLES } from '../../contexts/AuthContext'
 const NAV_ITEMS = [
   { to: '/',                   label: 'Dashboard',          icon: LayoutDashboard, end: true },
   { separator: true,           label: 'VENTAS' },
-  { to: '/ventas',             label: 'Ventas',             icon: ShoppingCart },
+  { to: '/ventas/nueva',       label: 'Nueva Venta',        icon: ShoppingCart },
+  { to: '/ventas',             label: 'Historial Ventas',   icon: FileText },
   { to: '/cotizaciones',       label: 'Cotizaciones',       icon: FileText },
   { to: '/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: IconQ },
   { separator: true,           label: 'INVENTARIO' },
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/clientes',           label: 'Clientes',           icon: Users },
   { to: '/caja',               label: 'Caja',               icon: Wallet },
   { to: '/reportes',           label: 'Reportes',           icon: BarChart3 },
+  { to: '/contabilidad',      label: 'Contabilidad',       icon: Calculator },
   { separator: true,           label: 'DESPACHO' },
   { to: '/pedidos',            label: 'Pedidos',            icon: ClipboardList },
   { separator: true,           label: 'CONFIGURACIÓN' },

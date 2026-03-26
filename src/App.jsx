@@ -27,6 +27,7 @@ import ConfiguracionEmpresa from './pages/ConfiguracionEmpresa'
 import Ajustes from './pages/Ajustes'
 import Catalogos from './pages/Catalogos'
 import Pedidos from './pages/Pedidos'
+import Contabilidad from './pages/Contabilidad'
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
                           <Route path="/cuentas-por-cobrar"  element={<CuentasPorCobrar />} />
                           <Route path="/caja"                element={<Caja />} />
                           <Route path="/reportes"            element={<Reportes />} />
+                          <Route path="/contabilidad"        element={<Contabilidad />} />
                           <Route path="/pedidos"             element={<Pedidos />} />
                           <Route path="/catalogos"           element={<Catalogos />} />
                           <Route path="/configuracion"       element={<ConfiguracionEmpresa />} />

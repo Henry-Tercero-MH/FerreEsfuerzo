@@ -67,7 +67,7 @@ export default function BoletaDespacho({ pedido, cliente, onClose }) {
           <div ref={boletaRef}>
             {/* Encabezado empresa */}
             <div className="encabezado text-center border-b-2 border-gray-900 pb-3 mb-4">
-              <h1 className="text-lg font-bold text-gray-900">{empresa?.nombre_comercial || 'FerreApp'}</h1>
+              <h1 className="text-lg font-bold text-gray-900">{empresa?.nombre_comercial || 'Ferretería El Esfuerzo'}</h1>
               {empresa?.direccion_fiscal && <p className="text-xs text-gray-500">{empresa.direccion_fiscal}</p>}
               {empresa?.telefono && <p className="text-xs text-gray-500">Tel: {empresa.telefono}</p>}
               {empresa?.nit && <p className="text-xs text-gray-500">NIT: {empresa.nit}</p>}
@@ -168,7 +168,7 @@ export default function BoletaDespacho({ pedido, cliente, onClose }) {
             </div>
 
             <p className="pie mt-6 text-center text-xs text-gray-400 border-t border-gray-100 pt-3">
-              FerreApp — Generado el {formatDate(new Date().toISOString())}
+              Ferretería El Esfuerzo — Generado el {formatDate(new Date().toISOString())}
             </p>
           </div>
         </div>
