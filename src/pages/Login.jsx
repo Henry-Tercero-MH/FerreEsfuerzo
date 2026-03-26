@@ -39,12 +39,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 via-purple-600 to-pink-600 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Fondo decorativo animado */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-yellow-400/10 animate-pulse-soft" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-cyan-400/10 animate-pulse-soft" style={{animationDelay: '1s'}} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-pink-400/10 animate-pulse-soft" style={{animationDelay: '0.5s'}} />
+        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary-500/10 animate-pulse-soft" />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-primary-400/10 animate-pulse-soft" style={{animationDelay: '1s'}} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-primary-600/10 animate-pulse-soft" style={{animationDelay: '0.5s'}} />
       </div>
 
       <div className="relative w-full max-w-md animate-fade-in">
@@ -52,11 +52,11 @@ export default function Login() {
         <div className="rounded-2xl bg-white p-8 shadow-2xl">
           {/* Logo */}
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-600 to-purple-600 shadow-lg shadow-primary-600/40 hover:scale-110 transition-transform duration-300">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-500 shadow-lg shadow-primary-900/40 hover:scale-110 transition-transform duration-300">
               <Wrench size={30} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">FerreApp</h1>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent">FerreApp</h1>
               <p className="text-sm text-gray-500">Sistema de Gestión para Ferreterías</p>
             </div>
           </div>
