@@ -27,5 +27,8 @@ export const shortId = () =>
 export const generateNumeroVenta = (count) =>
   `VTA-${String(count).padStart(6, '0')}`
 
+export const generateNumeroDocumento = (prefix) =>
+  `${prefix}-${Date.now().toString(36).toUpperCase()}-${shortId().slice(0, 4)}`
+
 export const generateCodigoProducto = () =>
   `PROD-${Date.now().toString(36).toUpperCase()}`

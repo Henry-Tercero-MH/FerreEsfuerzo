@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => setSesion(null), [setSesion])
 
   const tieneAcceso = useCallback((ruta) => {
-    if (!sesion) return false
+    if (!sesion || !ruta) return false
     const rol = ROLES[sesion.rol]
     if (!rol) return false
     return rol.rutas.some(r => ruta === r || ruta.startsWith(r + '/'))

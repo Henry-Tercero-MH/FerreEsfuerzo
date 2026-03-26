@@ -1,23 +1,34 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, ShoppingCart, Package, Warehouse,
-  Users, BarChart3, Settings, Wrench, X, LogOut,
+  LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
+  Users, Truck, DollarSign, Wallet, BarChart3, Building2, Settings, Wrench, X, LogOut,
 } from 'lucide-react'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
 
 const NAV_ITEMS = [
-  { to: '/',           label: 'Dashboard',   icon: LayoutDashboard, end: true },
-  { to: '/ventas',     label: 'Ventas',       icon: ShoppingCart },
-  { to: '/productos',  label: 'Productos',    icon: Package },
-  { to: '/inventario', label: 'Inventario',   icon: Warehouse },
-  { to: '/clientes',   label: 'Clientes',     icon: Users },
-  { to: '/reportes',   label: 'Reportes',     icon: BarChart3 },
-  { to: '/ajustes',    label: 'Ajustes',      icon: Settings },
+  { to: '/',                   label: 'Dashboard',          icon: LayoutDashboard, end: true },
+  { separator: true,           label: 'VENTAS' },
+  { to: '/ventas',             label: 'Ventas',             icon: ShoppingCart },
+  { to: '/cotizaciones',       label: 'Cotizaciones',       icon: FileText },
+  { to: '/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: DollarSign },
+  { separator: true,           label: 'INVENTARIO' },
+  { to: '/productos',          label: 'Productos',          icon: Package },
+  { to: '/inventario',         label: 'Inventario',         icon: Warehouse },
+  { separator: true,           label: 'COMPRAS' },
+  { to: '/proveedores',        label: 'Proveedores',        icon: Truck },
+  { to: '/compras',            label: 'Compras',            icon: Package },
+  { separator: true,           label: 'OTROS' },
+  { to: '/clientes',           label: 'Clientes',           icon: Users },
+  { to: '/caja',               label: 'Caja',               icon: Wallet },
+  { to: '/reportes',           label: 'Reportes',           icon: BarChart3 },
+  { separator: true,           label: 'CONFIGURACIÓN' },
+  { to: '/configuracion',      label: 'Empresa',            icon: Building2 },
+  { to: '/ajustes',            label: 'Sistema',            icon: Settings },
 ]
 
 export default function Sidebar({ open, onClose }) {
   const { sesion, logout, tieneAcceso } = useAuth()
-  const items = NAV_ITEMS.filter(item => tieneAcceso(item.to))
+  const items = NAV_ITEMS.filter(item => item.separator || tieneAcceso(item.to))
 
   return (
     <>
@@ -54,20 +65,32 @@ export default function Sidebar({ open, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-          {items.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              onClick={() => onClose?.()}
-              className={({ isActive }) =>
-                isActive ? 'sidebar-item-active' : 'sidebar-item'
-              }
-            >
-              <Icon size={18} />
-              {label}
-            </NavLink>
-          ))}
+          {items.map((item, index) => {
+            if (item.separator) {
+              return (
+                <div key={`sep-${index}`} className="pt-3 pb-1 px-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    {item.label}
+                  </p>
+                </div>
+              )
+            }
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={() => onClose?.()}
+                className={({ isActive }) =>
+                  isActive ? 'sidebar-item-active' : 'sidebar-item'
+                }
+              >
+                <Icon size={18} />
+                {item.label}
+              </NavLink>
+            )
+          })}
         </nav>
 
         {/* Usuario */}
