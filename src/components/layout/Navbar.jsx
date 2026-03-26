@@ -14,7 +14,7 @@ const TITLES = {
 
 export default function Navbar({ onMenuClick }) {
   const { pathname } = useLocation()
-  const title = TITLES[pathname] ?? 'FerreApp'
+  const title = TITLES[pathname] ?? 'FERRETERÍA EL ESFUERZO'
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-gray-100 bg-white/80 backdrop-blur px-4 sm:px-6">

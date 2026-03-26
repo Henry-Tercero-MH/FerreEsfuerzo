@@ -49,14 +49,16 @@ export default function Login() {
 
       <div className="relative w-full max-w-md animate-fade-in">
         {/* Card */}
-        <div className="rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="rounded-2xl bg-primary-50 p-8 shadow-2xl">
           {/* Logo */}
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-700 to-primary-500 shadow-lg shadow-primary-900/40 hover:scale-110 transition-transform duration-300">
-              <Wrench size={30} className="text-white" />
-            </div>
+              <img
+                src="/icons/logo-esfuerzo.png"
+                alt="Logo Ferretería El Esfuerzo"
+                className="h-32 w-32 rounded-full object-cover shadow-lg hover:scale-110 transition-transform duration-300"
+              />
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent">FerreApp</h1>
+              <h1 className="text-2xl font-bold text-primary-700">FERRETERÍA EL ESFUERZO</h1>
               <p className="text-sm text-gray-500">Sistema de Gestión para Ferreterías</p>
             </div>
           </div>
@@ -130,7 +132,7 @@ export default function Login() {
         </div>
 
         <p className="mt-4 text-center text-xs text-white/50">
-          FerreApp v1.0 — Guatemala
+          FERRETERÍA EL ESFUERZO v1.0 — Guatemala
         </p>
       </div>
     </div>

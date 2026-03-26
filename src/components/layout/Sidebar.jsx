@@ -63,12 +63,16 @@ export default function Sidebar({ open, onClose }) {
         {/* Logo */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600">
-              <Wrench size={18} className="text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">FerreApp</p>
-              <p className="text-xs text-gray-400">Sistema de Ferretería</p>
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/icons/logo-esfuerzo.png"
+                alt="Logo Ferretería El Esfuerzo"
+                className="h-12 w-12 rounded-full bg-white object-cover shadow"
+              />
+              <div>
+                <p className="text-sm font-bold text-gray-900">FERRETERÍA EL ESFUERZO</p>
+                <p className="text-xs text-gray-400">Sistema de Ferretería</p>
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden btn-icon btn-ghost text-gray-400">
