@@ -1,14 +1,24 @@
 export const CATEGORIAS = [
   'Herramientas Manuales',
   'Herramientas Eléctricas',
-  'Fijaciones y Tornillería',
+  'Accesorios para Herramientas',
+  'Materiales de Construcción',
+  'Materiales Estructurales',
+  'Materiales para Techos',
+  'Tornillería y Fijaciones',
   'Plomería',
   'Electricidad',
   'Pintura y Acabados',
-  'Construcción',
-  'Seguridad',
+  'Acabados de Construcción',
+  'Seguridad y Cerrajería',
+  'Seguridad Industrial',
   'Jardinería',
-  'Otros',
+  'Herramientas Agrícolas',
+  'Adhesivos y Químicos',
+  'Limpieza y Mantenimiento',
+  'Carpintería y Madera',
+  'Equipos Especiales',
+  'Consumibles',
 ]
 
 export const METODOS_PAGO = [
