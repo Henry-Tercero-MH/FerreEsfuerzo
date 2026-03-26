@@ -21,8 +21,15 @@ async function post(action, payload) {
  * Envía un backup completo de todos los datos al Google Sheet.
  * El Apps Script crea/sobreescribe una hoja por cada colección.
  */
-export async function backupCompleto({ productos, ventas, clientes, movimientos }) {
-  return post('backup', { productos, ventas, clientes, movimientos, fecha: new Date().toISOString() })
+export async function backupCompleto({ productos, ventas, clientes, movimientos, catalogos }) {
+  return post('backup', { productos, ventas, clientes, movimientos, catalogos, fecha: new Date().toISOString() })
+}
+
+/**
+ * Sincroniza solo los catálogos (categorías, unidades, métodos de pago).
+ */
+export async function sincronizarCatalogos(catalogos) {
+  return post('syncCatalogos', { catalogos, fecha: new Date().toISOString() })
 }
 
 /**
@@ -41,4 +48,4 @@ export async function obtenerReporteSheet(periodo = 'mes') {
   return post('reporte', { periodo })
 }
 
-export const appsScript = { backupCompleto, sincronizarVentasHoy, obtenerReporteSheet }
+export const appsScript = { backupCompleto, sincronizarVentasHoy, sincronizarCatalogos, obtenerReporteSheet }

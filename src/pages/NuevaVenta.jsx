@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useCatalogos } from '../contexts/CatalogosContext'
 import { formatCurrency } from '../utils/formatters'
-import { METODOS_PAGO, IMPUESTO_DEFAULT } from '../utils/constants'
+import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
 import { Select } from '../components/ui/Input'
 
 export default function NuevaVenta() {
   const { productos, clientes, crearVenta } = useApp()
+  const { metodos_pago } = useCatalogos()
   const navigate = useNavigate()
 
   const [busqueda, setBusqueda] = useState('')
@@ -17,6 +19,8 @@ export default function NuevaVenta() {
   const [metodoPago, setMetodoPago] = useState('efectivo')
   const [descuentoGlobal, setDescuentoGlobal] = useState(0)
   const [notas, setNotas] = useState('')
+  const [esPedido, setEsPedido] = useState(false)
+  const [direccionEntrega, setDireccionEntrega] = useState('')
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(null)
 
@@ -35,11 +39,14 @@ export default function NuevaVenta() {
       const existente = prev.find(i => i.producto_id === producto.id)
       if (existente) {
         if (existente.cantidad >= producto.stock) return prev
-        return prev.map(i => i.producto_id === producto.id ? { ...i, cantidad: i.cantidad + 1, subtotal: (i.cantidad + 1) * i.precio_unitario } : i)
+        return prev.map(i => i.producto_id === producto.id
+          ? { ...i, cantidad: i.cantidad + 1, subtotal: (i.cantidad + 1) * i.precio_unitario }
+          : i)
       }
       return [...prev, {
         producto_id: producto.id,
         nombre: producto.nombre,
+        codigo: producto.codigo,
         precio_unitario: producto.precio_venta,
         cantidad: 1,
         subtotal: producto.precio_venta,
@@ -66,9 +73,15 @@ export default function NuevaVenta() {
 
   const handleConfirmar = async () => {
     if (items.length === 0) return
+    if (esPedido && !direccionEntrega.trim()) return
     setLoading(true)
     await new Promise(r => setTimeout(r, 400))
-    const venta = crearVenta({ items, cliente_id: clienteId, metodo_pago: metodoPago, subtotal, descuento, impuesto, total, notas })
+    const venta = crearVenta({
+      items, cliente_id: clienteId, metodo_pago: metodoPago,
+      subtotal, descuento, impuesto, total, notas,
+      es_pedido: esPedido,
+      direccion_entrega: esPedido ? direccionEntrega.trim() : '',
+    })
     setLoading(false)
     setExito(venta)
   }
@@ -79,11 +92,23 @@ export default function NuevaVenta() {
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
           <CheckCircle size={40} className="text-green-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">¡Venta registrada!</h2>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {exito.es_pedido ? '¡Pedido registrado!' : '¡Venta registrada!'}
+        </h2>
         <p className="text-gray-500">{exito.numero_venta} — Total: {formatCurrency(exito.total)}</p>
+        {exito.es_pedido && (
+          <p className="text-sm text-primary-600 flex items-center gap-1">
+            <MapPin size={14} /> {exito.direccion_entrega}
+          </p>
+        )}
         <div className="flex gap-3 mt-2">
-          <Button variant="secondary" onClick={() => { setItems([]); setExito(null) }}>Nueva venta</Button>
-          <Button variant="primary" onClick={() => navigate('/ventas')}>Ver ventas</Button>
+          <Button variant="secondary" onClick={() => { setItems([]); setEsPedido(false); setDireccionEntrega(''); setExito(null) }}>
+            Nueva venta
+          </Button>
+          {exito.es_pedido
+            ? <Button variant="primary" onClick={() => navigate('/pedidos')}>Ver pedidos</Button>
+            : <Button variant="primary" onClick={() => navigate('/ventas')}>Ver ventas</Button>
+          }
         </div>
       </div>
     )
@@ -167,7 +192,7 @@ export default function NuevaVenta() {
           </Select>
 
           <Select label="Método de pago" value={metodoPago} onChange={e => setMetodoPago(e.target.value)}>
-            {METODOS_PAGO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            {metodos_pago.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </Select>
 
           <div>
@@ -178,6 +203,36 @@ export default function NuevaVenta() {
           <div>
             <label className="label">Notas</label>
             <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2} className="input resize-none" placeholder="Opcional..." />
+          </div>
+
+          {/* Toggle pedido */}
+          <div className="rounded-xl border border-gray-200 p-3 space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => setEsPedido(v => !v)}
+                className={`relative w-10 h-6 rounded-full transition-colors duration-200 ${esPedido ? 'bg-primary-600' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${esPedido ? 'translate-x-5' : 'translate-x-1'}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Es un pedido</p>
+                <p className="text-xs text-gray-400">Requiere preparación y envío</p>
+              </div>
+            </label>
+            {esPedido && (
+              <div>
+                <label className="label flex items-center gap-1">
+                  <MapPin size={12} /> Dirección de entrega *
+                </label>
+                <textarea
+                  value={direccionEntrega}
+                  onChange={e => setDireccionEntrega(e.target.value)}
+                  rows={2}
+                  className={`input resize-none ${esPedido && !direccionEntrega.trim() ? 'border-red-300' : ''}`}
+                  placeholder="Zona, calle, número de casa..."
+                />
+              </div>
+            )}
           </div>
 
           {/* Totales */}
@@ -193,11 +248,11 @@ export default function NuevaVenta() {
           <Button
             variant="success"
             className="w-full btn-lg"
-            disabled={items.length === 0}
+            disabled={items.length === 0 || (esPedido && !direccionEntrega.trim())}
             loading={loading}
             onClick={handleConfirmar}
           >
-            Confirmar venta
+            {esPedido ? 'Registrar pedido' : 'Confirmar venta'}
           </Button>
         </div>
       </div>

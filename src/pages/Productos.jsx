@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Package } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useCatalogos } from '../contexts/CatalogosContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { validateProducto } from '../utils/validators'
-import { CATEGORIAS } from '../utils/constants'
 import { formatCurrency } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -18,6 +18,7 @@ const FORM_VACÍO = {
 
 export default function Productos() {
   const { productos, agregarProducto, editarProducto, eliminarProducto } = useApp()
+  const { categorias, unidades } = useCatalogos()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', producto: null })
@@ -96,7 +97,7 @@ export default function Productos() {
           className="input sm:w-52"
         >
           <option value="">Todas las categorías</option>
-          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+          {categorias.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
@@ -156,14 +157,14 @@ export default function Productos() {
           <Input label="Código" name="codigo" value={form.codigo} onChange={handleChange} placeholder="Auto-generado" />
           <Select label="Categoría *" name="categoria" value={form.categoria} onChange={handleChange} error={errors.categoria}>
             <option value="">Seleccionar...</option>
-            {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
           <Input label="Precio compra (Q)" name="precio_compra" type="number" value={form.precio_compra} onChange={handleChange} placeholder="0.00" />
           <Input label="Precio venta (Q) *" name="precio_venta" type="number" value={form.precio_venta} onChange={handleChange} error={errors.precio_venta} placeholder="0.00" />
           <Input label="Stock actual" name="stock" type="number" value={form.stock} onChange={handleChange} error={errors.stock} />
           <Input label="Stock mínimo" name="stock_minimo" type="number" value={form.stock_minimo} onChange={handleChange} />
           <Select label="Unidad" name="unidad" value={form.unidad} onChange={handleChange}>
-            {['unidad','par','caja','metro','litro','galón','kg','bolsa','rollo'].map(u => <option key={u} value={u}>{u}</option>)}
+            {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </Select>
         </div>
       </Modal>

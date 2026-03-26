@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { AppProvider } from './contexts/AppContext'
+import { CatalogosProvider } from './contexts/CatalogosContext'
 import { ProveedoresProvider } from './contexts/ProveedoresContext'
 import { ComprasProvider } from './contexts/ComprasContext'
 import { CotizacionesProvider } from './contexts/CotizacionesContext'
@@ -24,12 +25,15 @@ import CuentasPorCobrar from './pages/CuentasPorCobrar'
 import Reportes from './pages/Reportes'
 import ConfiguracionEmpresa from './pages/ConfiguracionEmpresa'
 import Ajustes from './pages/Ajustes'
+import Catalogos from './pages/Catalogos'
+import Pedidos from './pages/Pedidos'
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <EmpresaProvider>
+          <CatalogosProvider>
           <AppProvider>
             <ProveedoresProvider>
               <ComprasProvider>
@@ -54,6 +58,8 @@ export default function App() {
                           <Route path="/cuentas-por-cobrar"  element={<CuentasPorCobrar />} />
                           <Route path="/caja"                element={<Caja />} />
                           <Route path="/reportes"            element={<Reportes />} />
+                          <Route path="/pedidos"             element={<Pedidos />} />
+                          <Route path="/catalogos"           element={<Catalogos />} />
                           <Route path="/configuracion"       element={<ConfiguracionEmpresa />} />
                           <Route path="/ajustes"             element={<Ajustes />} />
                         </Route>
@@ -67,6 +73,7 @@ export default function App() {
               </ComprasProvider>
             </ProveedoresProvider>
           </AppProvider>
+          </CatalogosProvider>
         </EmpresaProvider>
       </AuthProvider>
     </BrowserRouter>

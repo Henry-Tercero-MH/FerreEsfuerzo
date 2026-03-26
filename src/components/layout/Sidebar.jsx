@@ -1,7 +1,8 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
   Users, Truck, DollarSign, Wallet, BarChart3, Building2, Settings, Wrench, X, LogOut,
+  ClipboardList, BookOpen,
 } from 'lucide-react'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
 
@@ -21,14 +22,25 @@ const NAV_ITEMS = [
   { to: '/clientes',           label: 'Clientes',           icon: Users },
   { to: '/caja',               label: 'Caja',               icon: Wallet },
   { to: '/reportes',           label: 'Reportes',           icon: BarChart3 },
+  { separator: true,           label: 'DESPACHO' },
+  { to: '/pedidos',            label: 'Pedidos',            icon: ClipboardList },
   { separator: true,           label: 'CONFIGURACIÓN' },
+  { to: '/catalogos',          label: 'Catálogos',          icon: BookOpen },
   { to: '/configuracion',      label: 'Empresa',            icon: Building2 },
   { to: '/ajustes',            label: 'Sistema',            icon: Settings },
 ]
 
 export default function Sidebar({ open, onClose }) {
   const { sesion, logout, tieneAcceso } = useAuth()
-  const items = NAV_ITEMS.filter(item => item.separator || tieneAcceso(item.to))
+  const items = NAV_ITEMS.filter(item => {
+    if (item.separator) return true
+    return tieneAcceso(item.to)
+  }).filter((item, i, arr) => {
+    // Elimina separadores que quedan al final o seguidos de otro separador
+    if (!item.separator) return true
+    const next = arr[i + 1]
+    return next && !next.separator
+  })
 
   return (
     <>

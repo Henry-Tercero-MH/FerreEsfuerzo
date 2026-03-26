@@ -211,6 +211,12 @@
   }
 }
 
+/* ── Print ── */
+@media print {
+  body > *:not(#boleta-print) { display: none !important; }
+  #boleta-print { display: block !important; }
+}
+
 /* ── Scrollbar personalizado ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { @apply bg-gray-100; }

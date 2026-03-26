@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useCallback } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { shortId } from '../utils/formatters'
 
@@ -8,15 +8,15 @@ export const AuthContext = createContext(null)
 export const ROLES = {
   admin: {
     label: 'Administrador',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/ajustes'],
+    rutas: ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/ajustes', '/pedidos', '/catalogos', '/compras', '/proveedores', '/cotizaciones', '/cuentas-por-cobrar', '/caja', '/configuracion'],
   },
   vendedor: {
     label: 'Vendedor',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/clientes'],
+    rutas: ['/', '/ventas', '/ventas/nueva', '/clientes', '/cotizaciones'],
   },
   bodeguero: {
     label: 'Bodeguero',
-    rutas: ['/', '/productos', '/inventario'],
+    rutas: ['/', '/productos', '/inventario', '/pedidos'],
   },
 }
 

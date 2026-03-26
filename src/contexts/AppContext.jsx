@@ -67,17 +67,24 @@ export function AppProvider({ children }) {
   // ── VENTAS ─────────────────────────────────────────────────────────────────
   const crearVenta = useCallback((data) => {
     const numero = generateNumeroVenta(ventas.length + 1)
+    const esPedido = !!data.es_pedido
     const nueva = {
       ...data,
       id: `v-${shortId()}`,
       numero_venta: numero,
       fecha: new Date().toISOString(),
       estado: 'completada',
+      // campos de despacho — solo presentes si es pedido
+      ...(esPedido && {
+        es_pedido: true,
+        estado_despacho: 'pendiente',
+        direccion_entrega: data.direccion_entrega || '',
+        notas_despacho: data.notas_despacho || '',
+      }),
     }
     setVentas(prev => [nueva, ...prev])
-    // Desconta stock de cada item
     nueva.items.forEach(item => {
-      ajustarStock(item.producto_id, item.cantidad, 'salida', 'venta', numero)
+      ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero)
     })
     return nueva
   }, [ventas.length, setVentas, ajustarStock])
@@ -86,11 +93,14 @@ export function AppProvider({ children }) {
     const venta = ventas.find(v => v.id === id)
     if (!venta || venta.estado === 'cancelada') return
     setVentas(prev => prev.map(v => v.id === id ? { ...v, estado: 'cancelada' } : v))
-    // Devuelve el stock
     venta.items.forEach(item => {
       ajustarStock(item.producto_id, item.cantidad, 'entrada', 'cancelacion', venta.numero_venta)
     })
   }, [ventas, setVentas, ajustarStock])
+
+  const actualizarDespacho = useCallback((id, updates) => {
+    setVentas(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))
+  }, [setVentas])
 
   // ── CLIENTES ───────────────────────────────────────────────────────────────
   const agregarCliente = useCallback((data) => {
@@ -135,7 +145,7 @@ export function AppProvider({ children }) {
       // Acciones productos
       agregarProducto, editarProducto, eliminarProducto, ajustarStock,
       // Acciones ventas
-      crearVenta, cancelarVenta,
+      crearVenta, cancelarVenta, actualizarDespacho,
       // Acciones clientes
       agregarCliente, editarCliente, eliminarCliente,
       // Stats

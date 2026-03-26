@@ -37,6 +37,18 @@ export const TIPOS_CLIENTE = [
   { value: 'frecuente', label: 'Cliente Frecuente' },
 ]
 
+export const UNIDADES_SEED = [
+  'unidad', 'par', 'caja', 'bolsa', 'saco',
+  'metro', 'litro', 'galón', 'kg', 'rollo',
+]
+
+export const ESTADOS_DESPACHO = {
+  pendiente:       { label: 'Pendiente',       badge: 'badge-yellow', next: 'en_preparacion' },
+  en_preparacion:  { label: 'En preparación',  badge: 'badge-blue',   next: 'listo' },
+  listo:           { label: 'Listo',           badge: 'badge-purple', next: 'entregado' },
+  entregado:       { label: 'Entregado',       badge: 'badge-green',  next: null },
+}
+
 export const IMPUESTO_DEFAULT = 0.12 // 12% IVA
 export const MONEDA = 'Q'            // Quetzal guatemalteco
 
