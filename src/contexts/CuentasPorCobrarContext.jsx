@@ -1,16 +1,23 @@
-import { createContext, useContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId, generateNumeroDocumento } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const CuentasPorCobrarContext = createContext(null)
 
-const SEED = []
-
 export function CuentasPorCobrarProvider({ children }) {
-  const [cuentas, setCuentas] = useLocalStorage('ferreapp_cuentas_cobrar', SEED)
-  const [abonos, setAbonos] = useLocalStorage('ferreapp_abonos', [])
+  const [cuentas, setCuentas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_cuentas_cobrar') || '[]') } catch { return [] }
+  })
+  const [abonos, setAbonos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_abonos') || '[]') } catch { return [] }
+  })
 
-  const crearCuenta = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('cuentasCobrar').then(data => { if (data.length) setCuentas(data) })
+    db.getAll('abonos').then(data => { if (data.length) setAbonos(data) })
+  }, [])
+
+  const crearCuenta = useCallback(async (data) => {
     const nueva = {
       ...data,
       id: shortId(),
@@ -22,10 +29,11 @@ export function CuentasPorCobrarProvider({ children }) {
       creado_en: new Date().toISOString(),
     }
     setCuentas(prev => [nueva, ...prev])
+    await db.insert('cuentasCobrar', nueva)
     return nueva
-  }, [setCuentas])
+  }, [])
 
-  const registrarAbono = useCallback((cuentaId, data) => {
+  const registrarAbono = useCallback(async (cuentaId, data) => {
     const cuenta = cuentas.find(c => c.id === cuentaId)
     if (!cuenta) return
 
@@ -35,25 +43,24 @@ export function CuentasPorCobrarProvider({ children }) {
       cuenta_por_cobrar_id: cuentaId,
       fecha: new Date().toISOString(),
     }
-
     setAbonos(prev => [nuevoAbono, ...prev])
+    await db.insert('abonos', nuevoAbono)
 
     const nuevoMontoPagado = cuenta.monto_pagado + data.monto
     const nuevoSaldo = cuenta.monto_original - nuevoMontoPagado
     const nuevoEstado = nuevoSaldo <= 0 ? 'PAGADA' : nuevoMontoPagado > 0 ? 'PARCIAL' : 'PENDIENTE'
+    const cambio = {
+      monto_pagado: nuevoMontoPagado,
+      saldo: nuevoSaldo,
+      estado: nuevoEstado,
+      actualizado_en: new Date().toISOString(),
+    }
 
-    setCuentas(prev =>
-      prev.map(c => c.id === cuentaId ? {
-        ...c,
-        monto_pagado: nuevoMontoPagado,
-        saldo: nuevoSaldo,
-        estado: nuevoEstado,
-        actualizado_en: new Date().toISOString(),
-      } : c)
-    )
+    setCuentas(prev => prev.map(c => c.id === cuentaId ? { ...c, ...cambio } : c))
+    await db.update('cuentasCobrar', cuentaId, cambio)
 
     return nuevoAbono
-  }, [cuentas, setAbonos, setCuentas])
+  }, [cuentas])
 
   const cuentasPendientes = useMemo(
     () => cuentas.filter(c => c.estado === 'PENDIENTE' || c.estado === 'PARCIAL'),

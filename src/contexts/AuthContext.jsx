@@ -1,6 +1,7 @@
-import { createContext, useContext, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { shortId } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const AuthContext = createContext(null)
 
@@ -33,8 +34,15 @@ const USUARIOS_DEFAULT = [
 ]
 
 export function AuthProvider({ children }) {
-  const [usuarios, setUsuarios] = useLocalStorage('ferreapp_usuarios', USUARIOS_DEFAULT)
+  const [usuarios, setUsuarios] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_usuarios') || 'null') || USUARIOS_DEFAULT } catch { return USUARIOS_DEFAULT }
+  })
+  // Sesión es solo local — no va a la nube
   const [sesion, setSesion] = useLocalStorage('ferreapp_sesion', null)
+
+  useEffect(() => {
+    db.getAll('usuarios').then(data => { if (data.length) setUsuarios(data) })
+  }, [])
 
   const login = useCallback((email, password) => {
     const usuario = usuarios.find(
@@ -55,24 +63,27 @@ export function AuthProvider({ children }) {
     return rol.rutas.some(r => ruta === r || ruta.startsWith(r + '/'))
   }, [sesion])
 
-  const agregarUsuario = useCallback((data) => {
+  const agregarUsuario = useCallback(async (data) => {
     if (usuarios.find(u => u.email.toLowerCase() === data.email.toLowerCase())) {
       return { ok: false, error: 'Ya existe un usuario con ese email' }
     }
     const nuevo = { ...data, id: `usr-${shortId()}`, activo: true, creado_en: new Date().toISOString() }
     setUsuarios(prev => [...prev, nuevo])
+    await db.insert('usuarios', nuevo)
     return { ok: true }
-  }, [usuarios, setUsuarios])
+  }, [usuarios])
 
-  const editarUsuario = useCallback((id, data) => {
+  const editarUsuario = useCallback(async (id, data) => {
     setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ...data } : u))
-  }, [setUsuarios])
+    await db.update('usuarios', id, data)
+  }, [])
 
-  const eliminarUsuario = useCallback((id) => {
+  const eliminarUsuario = useCallback(async (id) => {
     if (id === 'usr-admin') return { ok: false, error: 'No puedes eliminar el admin principal' }
     setUsuarios(prev => prev.map(u => u.id === id ? { ...u, activo: false } : u))
+    await db.remove('usuarios', id)
     return { ok: true }
-  }, [setUsuarios])
+  }, [])
 
   return (
     <AuthContext.Provider value={{

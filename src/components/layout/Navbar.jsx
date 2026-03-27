@@ -1,6 +1,7 @@
 import { Menu, Bell, RefreshCw } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { usePWAUpdate } from '../../hooks/usePWAUpdate'
+import SyncStatusBar from '../SyncStatusBar'
 
 const TITLES = {
   '/':                   'Dashboard',
@@ -37,6 +38,8 @@ export default function Navbar({ onMenuClick }) {
       </button>
 
       <h1 className="flex-1 text-lg font-semibold text-gray-900">{title}</h1>
+
+      <SyncStatusBar />
 
       <div className="flex items-center gap-2">
         {/* Botón de actualización PWA */}

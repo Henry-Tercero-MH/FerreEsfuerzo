@@ -1,5 +1,5 @@
-import { createContext, useContext, useCallback } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { db } from '../services/db'
 
 export const EmpresaContext = createContext(null)
 
@@ -39,23 +39,35 @@ const EMPRESA_DEFAULT = {
 }
 
 export function EmpresaProvider({ children }) {
-  const [empresa, setEmpresa] = useLocalStorage('ferreapp_empresa', EMPRESA_DEFAULT)
+  const [empresa, setEmpresa] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_empresa') || 'null') || EMPRESA_DEFAULT } catch { return EMPRESA_DEFAULT }
+  })
+
+  // Empresa es un registro único — se guarda con id='empresa'
+  useEffect(() => {
+    db.getAll('empresa').then(data => {
+      if (data.length) setEmpresa(data[0])
+    })
+  }, [])
+
+  const _guardarEmpresa = useCallback(async (nuevo) => {
+    localStorage.setItem('ferreapp_empresa', JSON.stringify(nuevo))
+    setEmpresa(nuevo)
+    const id = nuevo.nit || 'empresa'
+    // Intentar update primero; si no existe el registro, insertar
+    await db.update('empresa', id, { ...nuevo, id })
+      .catch(() => db.insert('empresa', { ...nuevo, id }))
+  }, [])
 
   const actualizarEmpresa = useCallback((data) => {
-    setEmpresa(prev => ({
-      ...prev,
-      ...data,
-      actualizado_en: new Date().toISOString(),
-    }))
-  }, [setEmpresa])
+    const nuevo = { ...empresa, ...data, actualizado_en: new Date().toISOString() }
+    _guardarEmpresa(nuevo)
+  }, [empresa, _guardarEmpresa])
 
   const actualizarFEL = useCallback((data) => {
-    setEmpresa(prev => ({
-      ...prev,
-      ...data,
-      actualizado_en: new Date().toISOString(),
-    }))
-  }, [setEmpresa])
+    const nuevo = { ...empresa, ...data, actualizado_en: new Date().toISOString() }
+    _guardarEmpresa(nuevo)
+  }, [empresa, _guardarEmpresa])
 
   return (
     <EmpresaContext.Provider value={{

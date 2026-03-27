@@ -1,15 +1,19 @@
-import { createContext, useContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId, generateNumeroDocumento } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const CotizacionesContext = createContext(null)
 
-const SEED = []
-
 export function CotizacionesProvider({ children }) {
-  const [cotizaciones, setCotizaciones] = useLocalStorage('ferreapp_cotizaciones', SEED)
+  const [cotizaciones, setCotizaciones] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_cotizaciones') || '[]') } catch { return [] }
+  })
 
-  const crearCotizacion = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('cotizaciones').then(data => { if (data.length) setCotizaciones(data) })
+  }, [])
+
+  const crearCotizacion = useCallback(async (data) => {
     const nueva = {
       ...data,
       id: shortId(),
@@ -19,20 +23,21 @@ export function CotizacionesProvider({ children }) {
       creado_en: new Date().toISOString(),
     }
     setCotizaciones(prev => [nueva, ...prev])
+    await db.insert('cotizaciones', nueva)
     return nueva
-  }, [setCotizaciones])
+  }, [])
 
-  const editarCotizacion = useCallback((id, data) => {
-    setCotizaciones(prev =>
-      prev.map(c => c.id === id ? { ...c, ...data, actualizado_en: new Date().toISOString() } : c)
-    )
-  }, [setCotizaciones])
+  const editarCotizacion = useCallback(async (id, data) => {
+    const actualizado = { ...data, actualizado_en: new Date().toISOString() }
+    setCotizaciones(prev => prev.map(c => c.id === id ? { ...c, ...actualizado } : c))
+    await db.update('cotizaciones', id, actualizado)
+  }, [])
 
-  const cambiarEstado = useCallback((id, nuevoEstado) => {
-    setCotizaciones(prev =>
-      prev.map(c => c.id === id ? { ...c, estado: nuevoEstado, actualizado_en: new Date().toISOString() } : c)
-    )
-  }, [setCotizaciones])
+  const cambiarEstado = useCallback(async (id, nuevoEstado) => {
+    const cambio = { estado: nuevoEstado, actualizado_en: new Date().toISOString() }
+    setCotizaciones(prev => prev.map(c => c.id === id ? { ...c, ...cambio } : c))
+    await db.update('cotizaciones', id, cambio)
+  }, [])
 
   const cotizacionesVigentes = useMemo(
     () => cotizaciones.filter(c => c.estado === 'VIGENTE'),

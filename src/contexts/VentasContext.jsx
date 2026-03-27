@@ -1,14 +1,23 @@
-import { createContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId, generateNumeroVenta } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const VentasContext = createContext(null)
 
 export function VentasProvider({ children }) {
-  const [ventas, setVentas] = useLocalStorage('ferreapp_ventas', [])
-  const [movimientos, setMovimientos] = useLocalStorage('ferreapp_movimientos', [])
+  const [ventas, setVentas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_ventas') || '[]') } catch { return [] }
+  })
+  const [movimientos, setMovimientos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_movimientos') || '[]') } catch { return [] }
+  })
 
-  const registrarVenta = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('ventas').then(data => { if (data.length) setVentas(data) })
+    db.getAll('movimientos').then(data => { if (data.length) setMovimientos(data) })
+  }, [])
+
+  const registrarVenta = useCallback(async (data) => {
     const numero = generateNumeroVenta(ventas.length + 1)
     const nueva = {
       ...data,
@@ -18,6 +27,7 @@ export function VentasProvider({ children }) {
       estado: data.estado || 'completada',
     }
     setVentas(prev => [nueva, ...prev])
+    await db.insert('ventas', nueva)
 
     // Registrar movimientos de inventario por cada item
     const movs = data.items.map(item => ({
@@ -31,19 +41,22 @@ export function VentasProvider({ children }) {
       fecha: nueva.fecha,
     }))
     setMovimientos(prev => [...movs, ...prev])
+    await Promise.all(movs.map(m => db.insert('movimientos', m)))
 
     return nueva
-  }, [ventas.length, setVentas, setMovimientos])
+  }, [ventas.length])
 
-  const registrarMovimiento = useCallback((data) => {
+  const registrarMovimiento = useCallback(async (data) => {
     const mov = { ...data, id: shortId(), fecha: new Date().toISOString() }
     setMovimientos(prev => [mov, ...prev])
+    await db.insert('movimientos', mov)
     return mov
-  }, [setMovimientos])
+  }, [])
 
-  const cancelarVenta = useCallback((id) => {
+  const cancelarVenta = useCallback(async (id) => {
     setVentas(prev => prev.map(v => v.id === id ? { ...v, estado: 'cancelada' } : v))
-  }, [setVentas])
+    await db.update('ventas', id, { estado: 'cancelada' })
+  }, [])
 
   const resumenHoy = useMemo(() => {
     const hoy = new Date().toDateString()

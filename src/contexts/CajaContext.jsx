@@ -1,16 +1,23 @@
-import { createContext, useContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const CajaContext = createContext(null)
 
-const SEED = []
-
 export function CajaProvider({ children }) {
-  const [aperturas, setAperturas] = useLocalStorage('ferreapp_caja_aperturas', SEED)
-  const [movimientos, setMovimientos] = useLocalStorage('ferreapp_caja_movimientos', [])
+  const [aperturas, setAperturas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_caja_aperturas') || '[]') } catch { return [] }
+  })
+  const [movimientos, setMovimientos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_caja_movimientos') || '[]') } catch { return [] }
+  })
 
-  const abrirCaja = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('cajaAperturas').then(data => { if (data.length) setAperturas(data) })
+    db.getAll('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
+  }, [])
+
+  const abrirCaja = useCallback(async (data) => {
     const nueva = {
       ...data,
       id: shortId(),
@@ -27,30 +34,27 @@ export function CajaProvider({ children }) {
       diferencia: 0,
     }
     setAperturas(prev => [nueva, ...prev])
+    await db.insert('cajaAperturas', nueva)
     return nueva
-  }, [setAperturas])
+  }, [])
 
-  const cerrarCaja = useCallback((id, data) => {
-    setAperturas(prev =>
-      prev.map(a => a.id === id ? {
-        ...a,
-        ...data,
-        fecha_cierre: new Date().toISOString(),
-        estado: 'CERRADA',
-        diferencia: data.monto_real - data.monto_esperado,
-      } : a)
-    )
-  }, [setAperturas])
-
-  const registrarMovimiento = useCallback((data) => {
-    const nuevo = {
+  const cerrarCaja = useCallback(async (id, data) => {
+    const cambio = {
       ...data,
-      id: shortId(),
-      fecha: new Date().toISOString(),
+      fecha_cierre: new Date().toISOString(),
+      estado: 'CERRADA',
+      diferencia: data.monto_real - data.monto_esperado,
     }
+    setAperturas(prev => prev.map(a => a.id === id ? { ...a, ...cambio } : a))
+    await db.update('cajaAperturas', id, cambio)
+  }, [])
+
+  const registrarMovimiento = useCallback(async (data) => {
+    const nuevo = { ...data, id: shortId(), fecha: new Date().toISOString() }
     setMovimientos(prev => [nuevo, ...prev])
+    await db.insert('cajaMovimientos', nuevo)
     return nuevo
-  }, [setMovimientos])
+  }, [])
 
   const cajaAbierta = useMemo(
     () => aperturas.find(a => a.estado === 'ABIERTA'),

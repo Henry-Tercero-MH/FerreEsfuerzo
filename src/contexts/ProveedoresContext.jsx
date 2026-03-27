@@ -1,42 +1,19 @@
-import { createContext, useContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const ProveedoresContext = createContext(null)
 
-const SEED = [
-  {
-    id: shortId(),
-    nit: '12345678-9',
-    nombre: 'Distribuidora La Unión',
-    nombre_contacto: 'Juan Pérez',
-    direccion: 'Zona 1, Guatemala',
-    telefono: '2234-5678',
-    correo: 'ventas@launion.com.gt',
-    dias_credito: 30,
-    porcentaje_descuento: 2,
-    activo: true,
-    creado_en: new Date().toISOString(),
-  },
-  {
-    id: shortId(),
-    nit: '98765432-1',
-    nombre: 'Ferretería Nacional',
-    nombre_contacto: 'María López',
-    direccion: 'Zona 12, Guatemala',
-    telefono: '2456-7890',
-    correo: 'contacto@ferrenacional.com',
-    dias_credito: 15,
-    porcentaje_descuento: 0,
-    activo: true,
-    creado_en: new Date().toISOString(),
-  },
-]
-
 export function ProveedoresProvider({ children }) {
-  const [proveedores, setProveedores] = useLocalStorage('ferreapp_proveedores', SEED)
+  const [proveedores, setProveedores] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_proveedores') || '[]') } catch { return [] }
+  })
 
-  const agregarProveedor = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('proveedores').then(data => { if (data.length) setProveedores(data) })
+  }, [])
+
+  const agregarProveedor = useCallback(async (data) => {
     const nuevo = {
       ...data,
       id: shortId(),
@@ -45,18 +22,20 @@ export function ProveedoresProvider({ children }) {
       actualizado_en: new Date().toISOString(),
     }
     setProveedores(prev => [nuevo, ...prev])
+    await db.insert('proveedores', nuevo)
     return nuevo
-  }, [setProveedores])
+  }, [])
 
-  const editarProveedor = useCallback((id, data) => {
-    setProveedores(prev =>
-      prev.map(p => p.id === id ? { ...p, ...data, actualizado_en: new Date().toISOString() } : p)
-    )
-  }, [setProveedores])
+  const editarProveedor = useCallback(async (id, data) => {
+    const actualizado = { ...data, actualizado_en: new Date().toISOString() }
+    setProveedores(prev => prev.map(p => p.id === id ? { ...p, ...actualizado } : p))
+    await db.update('proveedores', id, actualizado)
+  }, [])
 
-  const eliminarProveedor = useCallback((id) => {
+  const eliminarProveedor = useCallback(async (id) => {
     setProveedores(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p))
-  }, [setProveedores])
+    await db.remove('proveedores', id)
+  }, [])
 
   const proveedoresActivos = useMemo(() => proveedores.filter(p => p.activo), [proveedores])
 

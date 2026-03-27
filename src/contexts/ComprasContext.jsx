@@ -1,15 +1,19 @@
-import { createContext, useContext, useCallback, useMemo } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId, generateNumeroDocumento } from '../utils/formatters'
+import { db } from '../services/db'
 
 export const ComprasContext = createContext(null)
 
-const SEED = []
-
 export function ComprasProvider({ children }) {
-  const [compras, setCompras] = useLocalStorage('ferreapp_compras', SEED)
+  const [compras, setCompras] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ferreapp_compras') || '[]') } catch { return [] }
+  })
 
-  const crearCompra = useCallback((data) => {
+  useEffect(() => {
+    db.getAll('compras').then(data => { if (data.length) setCompras(data) })
+  }, [])
+
+  const crearCompra = useCallback(async (data) => {
     const nueva = {
       ...data,
       id: shortId(),
@@ -19,20 +23,21 @@ export function ComprasProvider({ children }) {
       creado_en: new Date().toISOString(),
     }
     setCompras(prev => [nueva, ...prev])
+    await db.insert('compras', nueva)
     return nueva
-  }, [setCompras])
+  }, [])
 
-  const editarCompra = useCallback((id, data) => {
-    setCompras(prev =>
-      prev.map(c => c.id === id ? { ...c, ...data, actualizado_en: new Date().toISOString() } : c)
-    )
-  }, [setCompras])
+  const editarCompra = useCallback(async (id, data) => {
+    const actualizado = { ...data, actualizado_en: new Date().toISOString() }
+    setCompras(prev => prev.map(c => c.id === id ? { ...c, ...actualizado } : c))
+    await db.update('compras', id, actualizado)
+  }, [])
 
-  const anularCompra = useCallback((id) => {
-    setCompras(prev =>
-      prev.map(c => c.id === id ? { ...c, estado: 'ANULADA', actualizado_en: new Date().toISOString() } : c)
-    )
-  }, [setCompras])
+  const anularCompra = useCallback(async (id) => {
+    const cambio = { estado: 'ANULADA', actualizado_en: new Date().toISOString() }
+    setCompras(prev => prev.map(c => c.id === id ? { ...c, ...cambio } : c))
+    await db.update('compras', id, cambio)
+  }, [])
 
   const comprasActivas = useMemo(() => compras.filter(c => c.estado !== 'ANULADA'), [compras])
 
