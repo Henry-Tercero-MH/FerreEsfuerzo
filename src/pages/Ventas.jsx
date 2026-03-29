@@ -3,18 +3,23 @@ import { Plus, Eye, XCircle, ShoppingCart, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import { ESTADOS_VENTA, METODOS_PAGO } from '../utils/constants'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import ToastContainer from '../components/ui/Toast'
 import SearchBar from '../components/shared/SearchBar'
 
 export default function Ventas() {
   const { ventas, cancelarVenta, clientes } = useApp()
+  const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [ventaDetalle, setVentaDetalle] = useState(null)
+  const [confirm, setConfirm] = useState(null)
 
   const termino = useDebounce(busqueda)
 
@@ -74,7 +79,7 @@ export default function Ventas() {
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => setVentaDetalle(v)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600" title="Ver detalle"><Eye size={15} /></button>
                       {v.estado !== 'cancelada' && (
-                        <button onClick={() => cancelarVenta(v.id)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500" title="Cancelar venta"><XCircle size={15} /></button>
+                        <button onClick={() => setConfirm(v)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500" title="Cancelar venta"><XCircle size={15} /></button>
                       )}
                     </div>
                   </td>
@@ -119,6 +124,17 @@ export default function Ventas() {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { cancelarVenta(confirm.id); toast(`Venta ${confirm.numero_venta} cancelada`, 'warning') }}
+        title="¿Cancelar venta?"
+        message={`Se cancelará la venta ${confirm?.numero_venta}. El stock será restituido automáticamente.`}
+        confirmText="Cancelar venta"
+      />
+
+      <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
   )
 }

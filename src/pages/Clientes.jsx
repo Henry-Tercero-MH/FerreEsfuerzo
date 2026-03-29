@@ -2,11 +2,14 @@ import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Users } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { validateCliente } from '../utils/validators'
 import { TIPOS_CLIENTE } from '../utils/constants'
 import { formatDate } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import ToastContainer from '../components/ui/Toast'
 import SearchBar from '../components/shared/SearchBar'
 import Badge from '../components/ui/Badge'
 import Input, { Select } from '../components/ui/Input'
@@ -15,8 +18,10 @@ const FORM_VACÍO = { nombre: '', telefono: '', email: '', nit: '', direccion: '
 
 export default function Clientes() {
   const { clientes, agregarCliente, editarCliente, eliminarCliente } = useApp()
+  const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', cliente: null })
+  const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState(FORM_VACÍO)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -45,8 +50,8 @@ export default function Clientes() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
-    if (modal.modo === 'crear') agregarCliente(form)
-    else editarCliente(modal.cliente.id, form)
+    if (modal.modo === 'crear') { agregarCliente(form); toast('Cliente creado correctamente', 'success') }
+    else { editarCliente(modal.cliente.id, form); toast('Cliente actualizado', 'success') }
     setLoading(false)
     cerrar()
   }
@@ -87,7 +92,7 @@ export default function Clientes() {
                   {c.id !== 'c1' && (
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => abrirEditar(c)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
-                      <button onClick={() => eliminarCliente(c.id)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                      <button onClick={() => setConfirm(c)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
                     </div>
                   )}
                 </td>
@@ -115,6 +120,16 @@ export default function Clientes() {
           <Input label="Dirección" name="direccion" value={form.direccion} onChange={handleChange} className="sm:col-span-2" />
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { eliminarCliente(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        title="¿Eliminar cliente?"
+        message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
+      />
+
+      <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
   )
 }

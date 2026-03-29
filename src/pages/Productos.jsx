@@ -3,10 +3,13 @@ import { Plus, Pencil, Trash2, Package } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { validateProducto } from '../utils/validators'
 import { formatCurrency } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import ToastContainer from '../components/ui/Toast'
 import SearchBar from '../components/shared/SearchBar'
 import Badge from '../components/ui/Badge'
 import Input, { Select } from '../components/ui/Input'
@@ -20,9 +23,11 @@ const FORM_VACÍO = {
 export default function Productos() {
   const { productos, agregarProducto, editarProducto, eliminarProducto } = useApp()
   const { categorias, unidades, ubicaciones } = useCatalogos()
+  const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', producto: null })
+  const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState(FORM_VACÍO)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -71,6 +76,7 @@ export default function Productos() {
     }
     setLoading(false)
     cerrarModal()
+    toast(modal.modo === 'crear' ? 'Producto creado correctamente' : 'Producto actualizado', 'success')
   }
 
   const stockBadge = (p) => {
@@ -131,7 +137,7 @@ export default function Productos() {
                   <td>
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => abrirEditar(p)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
-                      <button onClick={() => eliminarProducto(p.id)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                      <button onClick={() => setConfirm(p)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
                     </div>
                   </td>
                 </tr>
@@ -174,6 +180,16 @@ export default function Productos() {
           </Select>
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { eliminarProducto(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        title="¿Eliminar producto?"
+        message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
+      />
+
+      <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
   )
 }

@@ -4,8 +4,11 @@ import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
 import { appsScript, testConexion } from '../services/googleAppsScript.js'
 import { storage } from '../services/storage.js'
+import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import ToastContainer from '../components/ui/Toast'
 import Input, { Select } from '../components/ui/Input'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
@@ -15,7 +18,9 @@ const FORM_VACÍO = { nombre: '', email: '', password: '', rol: 'vendedor' }
 export default function Ajustes() {
   const { usuarios, agregarUsuario, editarUsuario, eliminarUsuario, sesion } = useAuth()
   const { productos, ventas, clientes, movimientos } = useApp()
+  const { toasts, toast, remove: removeToast } = useToast()
   const [modal, setModal] = useState({ open: false, modo: 'crear', usuario: null })
+  const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState(FORM_VACÍO)
   const [errores, setErrores] = useState({})
   const [loading, setLoading] = useState(false)
@@ -65,10 +70,10 @@ export default function Ajustes() {
     cerrar()
   }
 
-  const handleEliminar = (id) => {
-    const result = eliminarUsuario(id)
-    if (!result.ok) mostrarAlerta('error', result.error)
-    else mostrarAlerta('success', 'Usuario desactivado')
+  const ejecutarEliminar = async (usuario) => {
+    const result = await eliminarUsuario(usuario.id)
+    if (!result.ok) toast(result.error, 'error')
+    else toast(`Usuario "${usuario.nombre}" desactivado`, 'warning')
   }
 
   const handleBackup = async () => {
@@ -135,7 +140,7 @@ export default function Ajustes() {
                 <Badge variant={rolesColor[u.rol] ?? 'gray'}>{ROLES[u.rol]?.label}</Badge>
                 <button onClick={() => abrirEditar(u)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
                 {u.id !== 'usr-admin' && (
-                  <button onClick={() => handleEliminar(u.id)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                  <button onClick={() => setConfirm(u)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
                 )}
               </div>
             </div>
@@ -185,6 +190,16 @@ export default function Ajustes() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => ejecutarEliminar(confirm)}
+        title="¿Desactivar usuario?"
+        message={`Se desactivará al usuario "${confirm?.nombre}". No podrá iniciar sesión.`}
+        confirmText="Desactivar"
+      />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* Modal usuario */}
       <Modal open={modal.open} onClose={cerrar} title={modal.modo === 'crear' ? 'Nuevo usuario' : 'Editar usuario'}

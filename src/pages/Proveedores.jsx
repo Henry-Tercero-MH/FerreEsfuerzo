@@ -2,9 +2,12 @@ import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, Truck } from 'lucide-react'
 import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { formatDate } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
+import ConfirmModal from '../components/ui/ConfirmModal'
+import ToastContainer from '../components/ui/Toast'
 import SearchBar from '../components/shared/SearchBar'
 import Badge from '../components/ui/Badge'
 import Input from '../components/ui/Input'
@@ -24,8 +27,10 @@ const FORM_VACÍO = {
 
 export default function Proveedores() {
   const { proveedores, agregarProveedor, editarProveedor, eliminarProveedor } = useProveedores()
+  const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', proveedor: null })
+  const [confirm, setConfirm] = useState(null)
   const [form, setForm] = useState(FORM_VACÍO)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -78,12 +83,14 @@ export default function Proveedores() {
         dias_credito: Number(form.dias_credito) || 0,
         porcentaje_descuento: Number(form.porcentaje_descuento) || 0,
       })
+      toast('Proveedor creado correctamente', 'success')
     } else {
       editarProveedor(modal.proveedor.id, {
         ...form,
         dias_credito: Number(form.dias_credito) || 0,
         porcentaje_descuento: Number(form.porcentaje_descuento) || 0,
       })
+      toast('Proveedor actualizado', 'success')
     }
 
     setLoading(false)
@@ -154,7 +161,7 @@ export default function Proveedores() {
                         <Pencil size={15} />
                       </button>
                       <button
-                        onClick={() => eliminarProveedor(p.id)}
+                        onClick={() => setConfirm(p)}
                         className="btn-icon btn-ghost text-gray-400 hover:text-red-500"
                       >
                         <Trash2 size={15} />
@@ -266,6 +273,16 @@ export default function Proveedores() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { eliminarProveedor(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        title="¿Eliminar proveedor?"
+        message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
+      />
+
+      <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
   )
 }
