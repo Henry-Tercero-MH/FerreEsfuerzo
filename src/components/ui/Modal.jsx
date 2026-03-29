@@ -21,19 +21,19 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
         onClick={onClose}
       />
       {/* Dialog */}
-      <div className={`relative w-full ${sizes[size]} animate-fade-in rounded-2xl bg-white shadow-2xl`}>
+      <div className={`relative w-full ${sizes[size]} animate-fade-in rounded-2xl bg-white shadow-2xl flex flex-col max-h-[90vh]`}>
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button onClick={onClose} className="btn-icon btn-ghost text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
         {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
             {footer}
           </div>
         )}
