@@ -5,8 +5,12 @@
  * La URL del Web App se configura en .env → VITE_APPS_SCRIPT_URL
  */
 
+// En producción usamos el proxy /api/gas para evitar CORS
+// En desarrollo local apuntamos directo al script
+const IS_DEV     = import.meta.env.DEV
 const GAS_URL    = import.meta.env.VITE_APPS_SCRIPT_URL || ''
 const GAS_SECRET = import.meta.env.VITE_GAS_SECRET      || ''
+const PROXY_URL  = IS_DEV ? GAS_URL : '/api/gas'
 
 // ── Utilidad de hash ──────────────────────────────────────────
 
@@ -28,7 +32,7 @@ export async function sha256(texto) {
  */
 async function post(action, payload = {}) {
   if (!GAS_URL) throw new Error('VITE_APPS_SCRIPT_URL no está configurada')
-  const res = await fetch(GAS_URL, {
+  const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, secret: GAS_SECRET, ...payload }),
@@ -126,7 +130,9 @@ export async function obtenerReporteSheet(periodo = 'mes') {
 export async function testConexion() {
   if (!GAS_URL) return { ok: false, error: 'VITE_APPS_SCRIPT_URL no está configurada' }
   try {
-    const url = GAS_SECRET ? `${GAS_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : GAS_URL
+    const url = IS_DEV
+      ? (GAS_SECRET ? `${GAS_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : GAS_URL)
+      : (GAS_SECRET ? `${PROXY_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : PROXY_URL)
     const res = await fetch(url, { method: 'GET' })
     const data = await res.json()
     return data
