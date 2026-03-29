@@ -8,7 +8,16 @@ const isElectron = process.env.ELECTRON === 'true'
 export default defineConfig({
   plugins: [react()],
   base: isElectron ? './' : '/',
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api/gas': {
+        target: 'https://script.google.com/macros/s/AKfycbylyo69QJpwNy_2ewhWoBZskbWFZUQJbxmPWdS4S6ACK9JLurpaMuhUME1VDVD9PyJCow/exec',
+        changeOrigin: true,
+        rewrite: () => '',
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -5,12 +5,10 @@
  * La URL del Web App se configura en .env → VITE_APPS_SCRIPT_URL
  */
 
-// En producción usamos el proxy /api/gas para evitar CORS
-// En desarrollo local apuntamos directo al script
-const IS_DEV     = import.meta.env.DEV
+// Siempre usamos el proxy /api/gas — en dev lo maneja Vite, en prod Vercel
 const GAS_URL    = import.meta.env.VITE_APPS_SCRIPT_URL || ''
 const GAS_SECRET = import.meta.env.VITE_GAS_SECRET      || ''
-const PROXY_URL  = IS_DEV ? GAS_URL : '/api/gas'
+const PROXY_URL  = '/api/gas'
 
 // ── Utilidad de hash ──────────────────────────────────────────
 
@@ -128,11 +126,8 @@ export async function obtenerReporteSheet(periodo = 'mes') {
  * Retorna { ok: true } o { ok: false, error: '...' }
  */
 export async function testConexion() {
-  if (!GAS_URL) return { ok: false, error: 'VITE_APPS_SCRIPT_URL no está configurada' }
   try {
-    const url = IS_DEV
-      ? (GAS_SECRET ? `${GAS_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : GAS_URL)
-      : (GAS_SECRET ? `${PROXY_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : PROXY_URL)
+    const url = GAS_SECRET ? `${PROXY_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : PROXY_URL
     const res = await fetch(url, { method: 'GET' })
     const data = await res.json()
     return data
