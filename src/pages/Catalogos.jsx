@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, Pencil, Trash2, Check, X, Tag, Ruler, CreditCard, MapPin, Users } from 'lucide-react'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import Button from '../components/ui/Button'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 const TABS = [
   { key: 'categorias',    label: 'Categorías',       icon: Tag },
@@ -52,6 +53,7 @@ function FilaEditable({ valor, onGuardar, onEliminar }) {
 
 // ── Fila editable para métodos de pago (value + label) ───────────────────────
 function FilaMetodoPago({ item, onGuardar, onEliminar }) {
+
   const [editando, setEditando] = useState(false)
   const [draft, setDraft] = useState(item)
 
@@ -113,6 +115,7 @@ export default function Catalogos() {
   const [tab, setTab] = useState('categorias')
   const [nuevo, setNuevo] = useState('')
   const [nuevoMetodo, setNuevoMetodo] = useState({ value: '', label: '' })
+  const [confirm, setConfirm] = useState(null) // { label, onConfirm }
 
   const SIMPLE_TABS = {
     categorias:    { lista: categorias,    agregar: agregarCategoria,    editar: editarCategoria,    eliminar: eliminarCategoria,    placeholder: 'Nueva categoría...' },
@@ -175,7 +178,7 @@ export default function Catalogos() {
                   key={i}
                   item={item}
                   onGuardar={v => editarMetodoPago(i, v)}
-                  onEliminar={() => eliminarMetodoPago(i)}
+                  onEliminar={() => setConfirm({ label: item.label, onConfirm: () => eliminarMetodoPago(i) })}
                 />
               ))}
             </ul>
@@ -208,7 +211,7 @@ export default function Catalogos() {
                   key={i}
                   valor={item}
                   onGuardar={v => cfg.editar(i, v)}
-                  onEliminar={() => cfg.eliminar(i)}
+                  onEliminar={() => setConfirm({ label: item, onConfirm: () => cfg.eliminar(i) })}
                 />
               ))}
             </ul>
@@ -227,6 +230,14 @@ export default function Catalogos() {
           </>
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => { confirm?.onConfirm(); setConfirm(null) }}
+        title="¿Eliminar entrada?"
+        message={`Se eliminará "${confirm?.label}". Esta acción no se puede deshacer.`}
+      />
     </div>
   )
 }
