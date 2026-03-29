@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { db } from '../services/db'
 import { shortId, generateNumeroVenta, generateCodigoProducto } from '../utils/formatters'
 
 const AppContext = createContext(null)
@@ -363,22 +364,28 @@ export function AppProvider({ children }) {
       creado_en: new Date().toISOString(),
     }
     setProductos(prev => [...prev, nuevo])
+    db.insert('productos', nuevo)
     return nuevo
   }, [setProductos])
 
   const editarProducto = useCallback((id, data) => {
-    setProductos(prev => prev.map(p => p.id === id ? { ...p, ...data, actualizado_en: new Date().toISOString() } : p))
+    const cambios = { ...data, actualizado_en: new Date().toISOString() }
+    setProductos(prev => prev.map(p => p.id === id ? { ...p, ...cambios } : p))
+    db.update('productos', id, cambios)
   }, [setProductos])
 
   const eliminarProducto = useCallback((id) => {
     setProductos(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p))
+    db.remove('productos', id)
   }, [setProductos])
 
   const ajustarStock = useCallback((productoId, cantidad, tipo, motivo = '', referencia = '') => {
     setProductos(prev => prev.map(p => {
       if (p.id !== productoId) return p
       const delta = tipo === 'entrada' ? cantidad : -cantidad
-      return { ...p, stock: Math.max(0, p.stock + delta) }
+      const actualizado = { ...p, stock: Math.max(0, p.stock + delta) }
+      db.update('productos', productoId, { stock: actualizado.stock })
+      return actualizado
     }))
     const mov = {
       id: `mov-${shortId()}`,
@@ -390,6 +397,7 @@ export function AppProvider({ children }) {
       fecha: new Date().toISOString(),
     }
     setMovimientos(prev => [mov, ...prev])
+    db.insert('movimientos', mov)
   }, [setProductos, setMovimientos])
 
   // ── VENTAS ─────────────────────────────────────────────────────────────────
@@ -411,6 +419,7 @@ export function AppProvider({ children }) {
       }),
     }
     setVentas(prev => [nueva, ...prev])
+    db.insert('ventas', nueva)
     nueva.items.forEach(item => {
       ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero)
     })
@@ -421,6 +430,7 @@ export function AppProvider({ children }) {
     const venta = ventas.find(v => v.id === id)
     if (!venta || venta.estado === 'cancelada') return
     setVentas(prev => prev.map(v => v.id === id ? { ...v, estado: 'cancelada' } : v))
+    db.update('ventas', id, { estado: 'cancelada' })
     venta.items.forEach(item => {
       ajustarStock(item.producto_id, item.cantidad, 'entrada', 'cancelacion', venta.numero_venta)
     })
@@ -428,6 +438,7 @@ export function AppProvider({ children }) {
 
   const actualizarDespacho = useCallback((id, updates) => {
     setVentas(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))
+    db.update('ventas', id, updates)
   }, [setVentas])
 
   // ── CLIENTES ───────────────────────────────────────────────────────────────
@@ -439,16 +450,19 @@ export function AppProvider({ children }) {
       creado_en: new Date().toISOString(),
     }
     setClientes(prev => [...prev, nuevo])
+    db.insert('clientes', nuevo)
     return nuevo
   }, [setClientes])
 
   const editarCliente = useCallback((id, data) => {
     setClientes(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
+    db.update('clientes', id, data)
   }, [setClientes])
 
   const eliminarCliente = useCallback((id) => {
     if (id === 'c1') return // CF no se elimina
     setClientes(prev => prev.map(c => c.id === id ? { ...c, activo: false } : c))
+    db.remove('clientes', id)
   }, [setClientes])
 
   // ── Stats ──────────────────────────────────────────────────────────────────
