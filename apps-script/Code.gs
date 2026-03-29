@@ -266,7 +266,7 @@ function respuesta(datos, codigo = 200) {
 }
 
 // ── Encabezados & mappers ─────────────────────────────────────
-function encabezadosProductos()   { return ['id','codigo','nombre','categoria','precio_compra','precio_venta','stock','stock_minimo','unidad','activo','creado_en'] }
+function encabezadosProductos()   { return ['id','codigo','nombre','categoria','precio_compra','precio_venta','stock','stock_minimo','unidad','ubicacion','activo','creado_en'] }
 function encabezadosClientes()    { return ['id','nombre','telefono','email','direccion','nit','tipo','activo','creado_en'] }
 function encabezadosProveedores() { return ['id','nit','nombre','nombre_contacto','telefono','correo','direccion','dias_credito','porcentaje_descuento','activo','creado_en'] }
 function encabezadosVentas()      { return ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas'] }
@@ -284,7 +284,7 @@ function encabezadosEmpresa()          { return ['nit','nombre_comercial','razon
 function encabezadosUsuarios()         { return ['id','nombre','email','password_hash','rol','activo','creado_en'] }
 function encabezadosCatalogos()        { return ['tipo','codigo','valor','descripcion','orden'] }
 
-function filaProducto(p)        { return [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.activo,p.creado_en] }
+function filaProducto(p)        { return [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.ubicacion||'',p.activo,p.creado_en] }
 function filaCliente(c)         { return [c.id,c.nombre,c.telefono,c.email,c.direccion,c.nit,c.tipo,c.activo,c.creado_en] }
 function filaProveedor(p)       { return [p.id,p.nit,p.nombre,p.nombre_contacto,p.telefono,p.correo,p.direccion,p.dias_credito,p.porcentaje_descuento,p.activo,p.creado_en] }
 function filaVenta(v)           { return [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre || '',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas || ''] }

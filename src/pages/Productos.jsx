@@ -14,6 +14,7 @@ import Input, { Select } from '../components/ui/Input'
 const FORM_VACÍO = {
   nombre: '', codigo: '', categoria: '', descripcion: '',
   precio_compra: '', precio_venta: '', stock: 0, stock_minimo: 5, unidad: 'unidad',
+  ubicacion: '',
 }
 
 export default function Productos() {
@@ -107,12 +108,12 @@ export default function Productos() {
           <thead>
             <tr>
               <th>Código</th><th>Nombre</th><th>Categoría</th>
-              <th>P. Venta</th><th>Stock</th><th>Estado</th><th></th>
+              <th>Ubicación</th><th>P. Venta</th><th>Stock</th><th>Estado</th><th></th>
             </tr>
           </thead>
           <tbody>
             {productosFiltrados.length === 0 ? (
-              <tr><td colSpan={7} className="py-12 text-center text-gray-400">
+              <tr><td colSpan={8} className="py-12 text-center text-gray-400">
                 <Package size={32} className="mx-auto mb-2 opacity-30" />
                 No se encontraron productos
               </td></tr>
@@ -123,6 +124,7 @@ export default function Productos() {
                   <td className="font-mono text-xs text-gray-500">{p.codigo}</td>
                   <td className="font-medium text-gray-900">{p.nombre}</td>
                   <td><Badge variant="gray">{p.categoria}</Badge></td>
+                  <td className="text-sm text-gray-500">{p.ubicacion || '—'}</td>
                   <td className="font-semibold">{formatCurrency(p.precio_venta)}</td>
                   <td>{p.stock} {p.unidad}</td>
                   <td><Badge variant={variant}>{label}</Badge></td>
@@ -166,6 +168,7 @@ export default function Productos() {
           <Select label="Unidad" name="unidad" value={form.unidad} onChange={handleChange}>
             {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </Select>
+          <Input label="Ubicación" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej: Pasillo 1 · Estante 3 · Fila 2" className="sm:col-span-2" />
         </div>
       </Modal>
     </div>

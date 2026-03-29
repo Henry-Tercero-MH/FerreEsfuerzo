@@ -59,11 +59,11 @@ export default function Inventario() {
       <div className="table-wrapper">
         <table className="table">
           <thead>
-            <tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mín.</th><th>P. Compra</th><th>Valor total</th><th>Estado</th></tr>
+            <tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Ubicación</th><th>Stock</th><th>Mín.</th><th>P. Compra</th><th>Valor total</th><th>Estado</th></tr>
           </thead>
           <tbody>
             {productosFiltrados.length === 0 ? (
-              <tr><td colSpan={8} className="py-12 text-center text-gray-400"><Warehouse size={32} className="mx-auto mb-2 opacity-30" />Sin productos</td></tr>
+              <tr><td colSpan={9} className="py-12 text-center text-gray-400"><Warehouse size={32} className="mx-auto mb-2 opacity-30" />Sin productos</td></tr>
             ) : productosFiltrados.map(p => {
               const { label, variant } = stockBadge(p)
               return (
@@ -71,6 +71,7 @@ export default function Inventario() {
                   <td className="font-mono text-xs text-gray-500">{p.codigo}</td>
                   <td className="font-medium text-gray-900">{p.nombre}</td>
                   <td><Badge variant="gray">{p.categoria}</Badge></td>
+                  <td className="text-sm text-gray-500">{p.ubicacion || '—'}</td>
                   <td className={`font-bold ${p.stock === 0 ? 'text-red-600' : p.stock <= p.stock_minimo ? 'text-yellow-600' : 'text-green-700'}`}>
                     {p.stock} {p.unidad}
                   </td>
