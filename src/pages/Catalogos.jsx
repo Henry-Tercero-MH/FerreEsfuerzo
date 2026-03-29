@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Check, X, Tag, Ruler, CreditCard } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Tag, Ruler, CreditCard, MapPin, Users } from 'lucide-react'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import Button from '../components/ui/Button'
 
 const TABS = [
-  { key: 'categorias',   label: 'Categorías',       icon: Tag },
-  { key: 'unidades',     label: 'Unidades de medida', icon: Ruler },
-  { key: 'metodos_pago', label: 'Métodos de pago',   icon: CreditCard },
+  { key: 'categorias',    label: 'Categorías',       icon: Tag },
+  { key: 'unidades',      label: 'Unidades',         icon: Ruler },
+  { key: 'metodos_pago',  label: 'Métodos de pago',  icon: CreditCard },
+  { key: 'ubicaciones',   label: 'Ubicaciones',      icon: MapPin },
+  { key: 'tipos_cliente', label: 'Tipos de cliente', icon: Users },
 ]
 
 // ── Fila editable genérica ────────────────────────────────────────────────────
@@ -100,25 +102,42 @@ function FilaMetodoPago({ item, onGuardar, onEliminar }) {
 // ── Página principal ─────────────────────────────────────────────────────────
 export default function Catalogos() {
   const {
-    categorias, unidades, metodos_pago,
-    agregarCategoria, editarCategoria, eliminarCategoria,
-    agregarUnidad,    editarUnidad,    eliminarUnidad,
-    agregarMetodoPago, editarMetodoPago, eliminarMetodoPago,
+    categorias, unidades, metodos_pago, ubicaciones, tipos_cliente,
+    agregarCategoria,   editarCategoria,   eliminarCategoria,
+    agregarUnidad,      editarUnidad,      eliminarUnidad,
+    agregarMetodoPago,  editarMetodoPago,  eliminarMetodoPago,
+    agregarUbicacion,   editarUbicacion,   eliminarUbicacion,
+    agregarTipoCliente, editarTipoCliente, eliminarTipoCliente,
   } = useCatalogos()
 
   const [tab, setTab] = useState('categorias')
   const [nuevo, setNuevo] = useState('')
   const [nuevoMetodo, setNuevoMetodo] = useState({ value: '', label: '' })
 
-  const handleAgregarSimple = (agregarFn) => {
-    if (!nuevo.trim()) return
-    agregarFn(nuevo.trim())
+  const SIMPLE_TABS = {
+    categorias:    { lista: categorias,    agregar: agregarCategoria,    editar: editarCategoria,    eliminar: eliminarCategoria,    placeholder: 'Nueva categoría...' },
+    unidades:      { lista: unidades,      agregar: agregarUnidad,       editar: editarUnidad,       eliminar: eliminarUnidad,       placeholder: 'Nueva unidad...' },
+    ubicaciones:   { lista: ubicaciones,   agregar: agregarUbicacion,    editar: editarUbicacion,    eliminar: eliminarUbicacion,    placeholder: 'Ej: Pasillo 1 · Estante A' },
+    tipos_cliente: { lista: tipos_cliente, agregar: agregarTipoCliente,  editar: editarTipoCliente,  eliminar: eliminarTipoCliente,  placeholder: 'Ej: mayorista' },
+  }
+
+  const cfg = SIMPLE_TABS[tab]
+
+  const handleAgregarSimple = () => {
+    if (!nuevo.trim() || !cfg) return
+    cfg.agregar(nuevo.trim())
     setNuevo('')
   }
 
   const handleAgregarMetodo = () => {
     if (!nuevoMetodo.value.trim() || !nuevoMetodo.label.trim()) return
     agregarMetodoPago(nuevoMetodo)
+    setNuevoMetodo({ value: '', label: '' })
+  }
+
+  const cambiarTab = (key) => {
+    setTab(key)
+    setNuevo('')
     setNuevoMetodo({ value: '', label: '' })
   }
 
@@ -131,57 +150,25 @@ export default function Catalogos() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+      {/* Tabs — scroll horizontal en móvil */}
+      <div className="flex gap-1 rounded-xl bg-gray-100 p-1 overflow-x-auto">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => { setTab(key); setNuevo(''); setNuevoMetodo({ value: '', label: '' }) }}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+            onClick={() => cambiarTab(key)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
               tab === key ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <Icon size={15} />{label}
+            <Icon size={14} />{label}
           </button>
         ))}
       </div>
 
       {/* Panel */}
       <div className="card">
-        {tab !== 'metodos_pago' ? (
+        {tab === 'metodos_pago' ? (
           <>
-            {/* Lista simple */}
-            <ul className="mb-4 divide-y divide-gray-50">
-              {(tab === 'categorias' ? categorias : unidades).map((item, i) => (
-                <FilaEditable
-                  key={i}
-                  valor={item}
-                  onGuardar={v => tab === 'categorias' ? editarCategoria(i, v) : editarUnidad(i, v)}
-                  onEliminar={() => tab === 'categorias' ? eliminarCategoria(i) : eliminarUnidad(i)}
-                />
-              ))}
-            </ul>
-            {/* Agregar */}
-            <div className="flex gap-2 border-t border-gray-100 pt-4">
-              <input
-                value={nuevo}
-                onChange={e => setNuevo(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAgregarSimple(tab === 'categorias' ? agregarCategoria : agregarUnidad)}
-                placeholder={tab === 'categorias' ? 'Nueva categoría...' : 'Nueva unidad...'}
-                className="input flex-1 text-sm"
-              />
-              <Button
-                variant="primary"
-                icon={Plus}
-                onClick={() => handleAgregarSimple(tab === 'categorias' ? agregarCategoria : agregarUnidad)}
-              >
-                Agregar
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Lista métodos de pago */}
             <ul className="mb-4 divide-y divide-gray-50">
               {metodos_pago.map((item, i) => (
                 <FilaMetodoPago
@@ -192,7 +179,6 @@ export default function Catalogos() {
                 />
               ))}
             </ul>
-            {/* Agregar método */}
             <div className="flex gap-2 border-t border-gray-100 pt-4 flex-wrap">
               <input
                 value={nuevoMetodo.label}
@@ -211,7 +197,35 @@ export default function Catalogos() {
               </Button>
             </div>
           </>
-        )}
+        ) : cfg ? (
+          <>
+            {cfg.lista.length === 0 && (
+              <p className="py-6 text-center text-sm text-gray-400">Sin entradas aún</p>
+            )}
+            <ul className="mb-4 divide-y divide-gray-50">
+              {cfg.lista.map((item, i) => (
+                <FilaEditable
+                  key={i}
+                  valor={item}
+                  onGuardar={v => cfg.editar(i, v)}
+                  onEliminar={() => cfg.eliminar(i)}
+                />
+              ))}
+            </ul>
+            <div className="flex gap-2 border-t border-gray-100 pt-4">
+              <input
+                value={nuevo}
+                onChange={e => setNuevo(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAgregarSimple()}
+                placeholder={cfg.placeholder}
+                className="input flex-1 text-sm"
+              />
+              <Button variant="primary" icon={Plus} onClick={handleAgregarSimple}>
+                Agregar
+              </Button>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   )

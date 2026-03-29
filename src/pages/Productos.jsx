@@ -19,7 +19,7 @@ const FORM_VACÍO = {
 
 export default function Productos() {
   const { productos, agregarProducto, editarProducto, eliminarProducto } = useApp()
-  const { categorias, unidades } = useCatalogos()
+  const { categorias, unidades, ubicaciones } = useCatalogos()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', producto: null })
@@ -168,7 +168,10 @@ export default function Productos() {
           <Select label="Unidad" name="unidad" value={form.unidad} onChange={handleChange}>
             {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </Select>
-          <Input label="Ubicación" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej: Pasillo 1 · Estante 3 · Fila 2" className="sm:col-span-2" />
+          <Select label="Ubicación" name="ubicacion" value={form.ubicacion} onChange={handleChange} className="sm:col-span-2">
+            <option value="">Sin ubicación</option>
+            {ubicaciones.map(u => <option key={u} value={u}>{u}</option>)}
+          </Select>
         </div>
       </Modal>
     </div>
