@@ -121,6 +121,7 @@ export default function BoletaDespacho({ pedido, cliente, onClose }) {
                   <tr className="bg-gray-50">
                     <th className="check border border-gray-200 p-2 text-center text-xs">✓</th>
                     <th className="border border-gray-200 p-2 text-left text-xs">Producto</th>
+                    <th className="border border-gray-200 p-2 text-left text-xs">Ubicación</th>
                     <th className="border border-gray-200 p-2 text-center text-xs">Cant.</th>
                     <th className="border border-gray-200 p-2 text-right text-xs">Subtotal</th>
                   </tr>
@@ -133,12 +134,13 @@ export default function BoletaDespacho({ pedido, cliente, onClose }) {
                         <p className="font-medium">{item.nombre}</p>
                         {item.codigo && <p className="text-xs text-gray-400">{item.codigo}</p>}
                       </td>
+                      <td className="border border-gray-200 p-2 text-xs text-gray-500">{item.ubicacion || '—'}</td>
                       <td className="border border-gray-200 p-2 text-center font-bold">{item.cantidad}</td>
                       <td className="border border-gray-200 p-2 text-right">{formatCurrency(item.subtotal)}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-50 font-bold">
-                    <td colSpan={3} className="border border-gray-200 p-2 text-right text-xs uppercase">Total</td>
+                    <td colSpan={4} className="border border-gray-200 p-2 text-right text-xs uppercase">Total</td>
                     <td className="border border-gray-200 p-2 text-right">{formatCurrency(pedido.total)}</td>
                   </tr>
                 </tbody>

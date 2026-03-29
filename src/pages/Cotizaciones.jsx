@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, FileText, Eye, CheckCircle, XCircle } from 'lucide-react'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
-
+import { useApp } from '../contexts/AppContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import Button from '../components/ui/Button'
@@ -13,7 +13,7 @@ import Modal from '../components/ui/Modal'
 
 export default function Cotizaciones() {
   const { cotizaciones, cambiarEstado } = useCotizaciones()
-
+  const { crearVenta } = useApp()
   const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -34,17 +34,52 @@ export default function Cotizaciones() {
   const estadoBadge = (estado) => {
     const map = {
       VIGENTE:    { label: 'Vigente',    variant: 'green' },
-      CONVERTIDA: { label: 'Convertida', variant: 'blue' },
+      PEDIDO:     { label: 'Pedido',     variant: 'blue' },
+      CONVERTIDA: { label: 'Convertida', variant: 'purple' },
       VENCIDA:    { label: 'Vencida',    variant: 'yellow' },
       CANCELADA:  { label: 'Cancelada',  variant: 'red' },
     }
     return map[estado] || { label: estado, variant: 'gray' }
   }
 
-  const handleConvertir = (id) => {
-    if (confirm('¿Convertir esta cotización en venta?')) {
-      cambiarEstado(id, 'CONVERTIDA')
-      if (detalle?.id === id) setDetalle(prev => ({ ...prev, estado: 'CONVERTIDA' }))
+  const handleAprobarPedido = (cot) => {
+    if (confirm(`¿Aprobar la cotización ${cot.numero_cotizacion} como pedido?`)) {
+      crearVenta({
+        cliente_id: cot.cliente_id,
+        cliente_nombre: cot.cliente_nombre,
+        items: cot.items || [],
+        subtotal: cot.subtotal,
+        descuento: cot.descuento || 0,
+        impuesto: cot.impuesto,
+        total: cot.total,
+        metodo_pago: 'credito',
+        notas: cot.notas || '',
+        es_pedido: true,
+        direccion_entrega: '',
+        notas_despacho: `Generado desde cotización ${cot.numero_cotizacion}`,
+        cotizacion_id: cot.id,
+      })
+      cambiarEstado(cot.id, 'PEDIDO')
+      if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'PEDIDO' }))
+    }
+  }
+
+  const handleConvertir = (cot) => {
+    if (confirm(`¿Convertir la cotización ${cot.numero_cotizacion} directamente en venta?`)) {
+      crearVenta({
+        cliente_id: cot.cliente_id,
+        cliente_nombre: cot.cliente_nombre,
+        items: cot.items || [],
+        subtotal: cot.subtotal,
+        descuento: cot.descuento || 0,
+        impuesto: cot.impuesto,
+        total: cot.total,
+        metodo_pago: 'efectivo',
+        notas: cot.notas || '',
+        cotizacion_id: cot.id,
+      })
+      cambiarEstado(cot.id, 'CONVERTIDA')
+      if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CONVERTIDA' }))
     }
   }
 
@@ -81,6 +116,7 @@ export default function Cotizaciones() {
         >
           <option value="">Todos los estados</option>
           <option value="VIGENTE">Vigente</option>
+          <option value="PEDIDO">Pedido</option>
           <option value="CONVERTIDA">Convertida</option>
           <option value="VENCIDA">Vencida</option>
           <option value="CANCELADA">Cancelada</option>
@@ -134,9 +170,9 @@ export default function Cotizaciones() {
                         {c.estado === 'VIGENTE' && (
                           <>
                             <button
-                              onClick={() => handleConvertir(c.id)}
+                              onClick={() => handleAprobarPedido(c)}
                               className="btn-icon btn-ghost text-gray-400 hover:text-green-600"
-                              title="Convertir a venta"
+                              title="Aprobar como pedido"
                             >
                               <CheckCircle size={15} />
                             </button>
@@ -167,9 +203,10 @@ export default function Cotizaciones() {
         size="lg"
         footer={
           detalle?.estado === 'VIGENTE' ? (
-            <div className="flex gap-2 w-full justify-end">
-              <Button variant="ghost" onClick={() => handleCancelar(detalle.id)}>Cancelar cotización</Button>
-              <Button variant="primary" onClick={() => handleConvertir(detalle.id)}>Convertir a venta</Button>
+            <div className="flex flex-wrap gap-2 w-full justify-end">
+              <Button variant="ghost" onClick={() => handleCancelar(detalle.id)}>Cancelar</Button>
+              <Button variant="secondary" onClick={() => handleConvertir(detalle)}>Venta directa</Button>
+              <Button variant="primary" onClick={() => handleAprobarPedido(detalle)}>Aprobar como Pedido</Button>
             </div>
           ) : (
             <Button variant="secondary" onClick={() => setDetalle(null)}>Cerrar</Button>
