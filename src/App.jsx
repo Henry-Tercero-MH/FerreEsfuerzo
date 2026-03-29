@@ -20,6 +20,7 @@ import Clientes from './pages/Clientes'
 import Proveedores from './pages/Proveedores'
 import Compras from './pages/Compras'
 import Cotizaciones from './pages/Cotizaciones'
+import NuevaCotizacion from './pages/NuevaCotizacion'
 import Caja from './pages/Caja'
 import CuentasPorCobrar from './pages/CuentasPorCobrar'
 import Reportes from './pages/Reportes'
@@ -51,6 +52,7 @@ export default function App() {
                           <Route path="/ventas"              element={<Ventas />} />
                           <Route path="/ventas/nueva"        element={<NuevaVenta />} />
                           <Route path="/cotizaciones"        element={<Cotizaciones />} />
+                          <Route path="/cotizaciones/nueva"  element={<NuevaCotizacion />} />
                           <Route path="/productos"           element={<Productos />} />
                           <Route path="/inventario"          element={<Inventario />} />
                           <Route path="/proveedores"         element={<Proveedores />} />

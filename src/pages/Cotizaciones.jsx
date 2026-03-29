@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, FileText, Eye, CheckCircle, XCircle } from 'lucide-react'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { useApp } from '../contexts/AppContext'
@@ -12,6 +13,7 @@ import EmptyState from '../components/shared/EmptyState'
 export default function Cotizaciones() {
   const { cotizaciones, cambiarEstado } = useCotizaciones()
   const { clientes } = useApp()
+  const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
 
@@ -56,7 +58,7 @@ export default function Cotizaciones() {
           <h1 className="page-title">Cotizaciones</h1>
           <p className="page-subtitle">{cotizaciones.length} cotizaciones registradas</p>
         </div>
-        <Button variant="primary" icon={Plus}>
+        <Button variant="primary" icon={Plus} onClick={() => navigate('/cotizaciones/nueva')}>
           Nueva cotización
         </Button>
       </div>

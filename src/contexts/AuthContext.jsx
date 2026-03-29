@@ -14,7 +14,7 @@ export const ROLES = {
   },
   vendedor: {
     label: 'Vendedor',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/clientes', '/cotizaciones'],
+    rutas: ['/', '/ventas', '/ventas/nueva', '/clientes', '/cotizaciones', '/cotizaciones/nueva'],
   },
   bodeguero: {
     label: 'Bodeguero',
