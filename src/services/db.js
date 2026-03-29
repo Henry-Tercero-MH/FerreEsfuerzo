@@ -107,13 +107,20 @@ async function insert(entity, data) {
   if (_online) {
     try {
       await gasInsert(entity, record)
+      // Si es una venta, insertar también los items en VentaItems
+      if (entity === 'ventas' && record.items && record.items.length) {
+        await Promise.all(record.items.map(item =>
+          gasInsert('ventaItems', { ...item, venta_id: record.id })
+        ))
+      }
       _notify()
-      return record
+      return record  // éxito — no encolar
     } catch {
       // No llegó al servidor: encolar
     }
   }
 
+  // Solo llega aquí si offline o si falló el request
   enqueue('insert', entity, record, record.id)
   return record
 }
