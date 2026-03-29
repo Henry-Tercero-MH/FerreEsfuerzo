@@ -12,9 +12,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api/gas': {
-        target: 'https://script.google.com/macros/s/AKfycbylyo69QJpwNy_2ewhWoBZskbWFZUQJbxmPWdS4S6ACK9JLurpaMuhUME1VDVD9PyJCow/exec',
+        target: 'https://script.google.com',
         changeOrigin: true,
-        rewrite: () => '',
+        rewrite: () => '/macros/s/AKfycbylyo69QJpwNy_2ewhWoBZskbWFZUQJbxmPWdS4S6ACK9JLurpaMuhUME1VDVD9PyJCow/exec',
       },
     },
   },
