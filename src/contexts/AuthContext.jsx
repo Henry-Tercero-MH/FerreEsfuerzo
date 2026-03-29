@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { shortId } from '../utils/formatters'
 import { db } from '../services/db'
+import { sha256 } from '../services/googleAppsScript'
 
 export const AuthContext = createContext(null)
 
@@ -21,12 +22,15 @@ export const ROLES = {
   },
 }
 
+// SHA-256 de 'admin123' — precalculado para el seed inicial
+const HASH_ADMIN_DEFAULT = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'
+
 const USUARIOS_DEFAULT = [
   {
     id: 'usr-admin',
     nombre: 'Administrador',
     email: 'admin@ferreapp.com',
-    password: 'admin123',
+    password_hash: HASH_ADMIN_DEFAULT,
     rol: 'admin',
     activo: true,
     creado_en: new Date().toISOString(),
@@ -44,12 +48,13 @@ export function AuthProvider({ children }) {
     db.getAll('usuarios').then(data => { if (data.length) setUsuarios(data) })
   }, [])
 
-  const login = useCallback((email, password) => {
+  const login = useCallback(async (email, password) => {
+    const hash = await sha256(password)
     const usuario = usuarios.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password && u.activo
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password_hash === hash && u.activo
     )
     if (!usuario) return { ok: false, error: 'Credenciales incorrectas' }
-    const { password: _, ...sesionData } = usuario
+    const { password_hash: _, ...sesionData } = usuario
     setSesion(sesionData)
     return { ok: true }
   }, [usuarios, setSesion])
@@ -67,15 +72,22 @@ export function AuthProvider({ children }) {
     if (usuarios.find(u => u.email.toLowerCase() === data.email.toLowerCase())) {
       return { ok: false, error: 'Ya existe un usuario con ese email' }
     }
-    const nuevo = { ...data, id: `usr-${shortId()}`, activo: true, creado_en: new Date().toISOString() }
+    const { password, ...resto } = data
+    const password_hash = password ? await sha256(password) : ''
+    const nuevo = { ...resto, password_hash, id: `usr-${shortId()}`, activo: true, creado_en: new Date().toISOString() }
     setUsuarios(prev => [...prev, nuevo])
     await db.insert('usuarios', nuevo)
     return { ok: true }
   }, [usuarios])
 
   const editarUsuario = useCallback(async (id, data) => {
-    setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ...data } : u))
-    await db.update('usuarios', id, data)
+    let cambios = { ...data }
+    if (data.password) {
+      cambios.password_hash = await sha256(data.password)
+      delete cambios.password
+    }
+    setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ...cambios } : u))
+    await db.update('usuarios', id, cambios)
   }, [])
 
   const eliminarUsuario = useCallback(async (id) => {

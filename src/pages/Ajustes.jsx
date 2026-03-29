@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Save, CloudUpload, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, CloudUpload, Download, Wifi } from 'lucide-react'
 import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
-import { appsScript } from '../services/googleAppsScript.js'
+import { appsScript, testConexion } from '../services/googleAppsScript.js'
 import { storage } from '../services/storage.js'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -21,6 +21,7 @@ export default function Ajustes() {
   const [loading, setLoading] = useState(false)
   const [alerta, setAlerta] = useState(null)
   const [backupLoading, setBackupLoading] = useState(false)
+  const [testLoading, setTestLoading] = useState(false)
 
   const mostrarAlerta = (type, message) => {
     setAlerta({ type, message })
@@ -79,6 +80,14 @@ export default function Ajustes() {
       mostrarAlerta('error', `Error al hacer backup: ${e.message}`)
     }
     setBackupLoading(false)
+  }
+
+  const handleTestConexion = async () => {
+    setTestLoading(true)
+    const res = await testConexion()
+    if (res.ok) mostrarAlerta('success', 'Conexión con Google Sheets exitosa')
+    else mostrarAlerta('error', `Error de conexión: ${res.error}`)
+    setTestLoading(false)
   }
 
   const handleExportarJSON = () => {
@@ -141,6 +150,9 @@ export default function Ajustes() {
         <div className="flex flex-wrap gap-3">
           <Button variant="primary" icon={CloudUpload} loading={backupLoading} onClick={handleBackup}>
             Backup a Google Sheets
+          </Button>
+          <Button variant="secondary" icon={Wifi} loading={testLoading} onClick={handleTestConexion}>
+            Probar conexión
           </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportarJSON}>
             Exportar JSON local

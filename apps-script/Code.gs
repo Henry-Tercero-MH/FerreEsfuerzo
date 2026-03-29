@@ -38,6 +38,13 @@ const HOJAS = {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents)
+
+    // Validar API_SECRET
+    const SECRET = PropertiesService.getScriptProperties().getProperty('API_SECRET')
+    if (SECRET && body.secret !== SECRET) {
+      return respuesta({ ok: false, error: 'No autorizado' }, 401)
+    }
+
     const { action, accion, datos } = body
     const actionName = action || accion
     let resultado
@@ -96,9 +103,20 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+function doGet(e) {
+  // Permite verificar la conexión y autenticación desde la app
+  // Uso: GET <url>?secret=TU_SECRET
+  const SECRET = PropertiesService.getScriptProperties().getProperty('API_SECRET')
+  const secretParam = e && e.parameter && e.parameter.secret
+
+  if (SECRET && secretParam !== SECRET) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: 'No autorizado' })
+    ).setMimeType(ContentService.MimeType.JSON)
+  }
+
   return ContentService.createTextOutput(
-    JSON.stringify({ ok: true, mensaje: 'FerreApp API activa' })
+    JSON.stringify({ ok: true, mensaje: 'FerreApp API activa', version: '1.0', timestamp: new Date().toISOString() })
   ).setMimeType(ContentService.MimeType.JSON)
 }
 
@@ -263,7 +281,7 @@ function encabezadosCajaAperturas()    { return ['id','usuario_id','usuario_nomb
 function encabezadosCajaMovimientos()  { return ['id','apertura_caja_id','usuario_id','tipo','monto','concepto','referencia','fecha'] }
 function encabezadosMovimientos()      { return ['id','producto_id','producto_nombre','tipo','cantidad','motivo','referencia','fecha'] }
 function encabezadosEmpresa()          { return ['nit','nombre_comercial','razon_social','direccion_fiscal','telefono','correo_electronico','regimen_tributario','moneda_codigo','iva_porcentaje'] }
-function encabezadosUsuarios()         { return ['id','nombre','email','rol','activo','creado_en'] }
+function encabezadosUsuarios()         { return ['id','nombre','email','password_hash','rol','activo','creado_en'] }
 function encabezadosCatalogos()        { return ['tipo','codigo','valor','descripcion','orden'] }
 
 function filaProducto(p)        { return [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.activo,p.creado_en] }
@@ -281,7 +299,7 @@ function filaCajaApertura(c)    { return [c.id,c.usuario_id,c.usuario_nombre || 
 function filaCajaMovimiento(m)  { return [m.id,m.apertura_caja_id,m.usuario_id,m.tipo,m.monto,m.concepto,m.referencia || '',m.fecha] }
 function filaMovimiento(m)      { return [m.id,m.producto_id,m.producto_nombre || '',m.tipo,m.cantidad,m.motivo,m.referencia || '',m.fecha] }
 function filaEmpresa(e)         { return [e.nit,e.nombre_comercial,e.razon_social,e.direccion_fiscal,e.telefono,e.correo_electronico,e.regimen_tributario,e.moneda_codigo,e.iva_porcentaje] }
-function filaUsuario(u)         { return [u.id,u.nombre,u.email,u.rol,u.activo,u.creado_en] }
+function filaUsuario(u)         { return [u.id,u.nombre,u.email,u.password_hash || '',u.rol,u.activo,u.creado_en] }
 function filaCatalogo(c)        { return [c.tipo || '',c.codigo || '',c.valor || '',c.descripcion || '',c.orden || 0] }
 
 // ── CRUD genérico (offline-first) ────────────────────────────
@@ -328,7 +346,9 @@ function insertRecord(entity, data) {
   if (mapFn) {
     hoja.appendRow(mapFn(data))
   } else {
-    // Fallback: usar los encabezados actuales para armar la fila
+    // Fallback genérico — nunca para entidades con datos sensibles
+    const ENTIDADES_SIN_FALLBACK = ['usuarios']
+    if (ENTIDADES_SIN_FALLBACK.indexOf(entity) !== -1) throw new Error('Mapper requerido para: ' + entity)
     const existingHeaders = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0]
     hoja.appendRow(existingHeaders.map(h => (data[h] !== undefined ? data[h] : '')))
   }
@@ -462,6 +482,8 @@ function configurarHojas() {
     cajaMovimientos:   encabezadosCajaMovimientos(),
     movimientos:       encabezadosMovimientos(),
     empresa:           encabezadosEmpresa(),
+    usuarios:          encabezadosUsuarios(),
+    catalogos:         encabezadosCatalogos(),
   }
 
   Object.entries(HOJAS).forEach(([key, nombre]) => {

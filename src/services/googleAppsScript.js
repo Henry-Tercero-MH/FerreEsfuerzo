@@ -5,7 +5,19 @@
  * La URL del Web App se configura en .env → VITE_APPS_SCRIPT_URL
  */
 
-const GAS_URL = import.meta.env.VITE_APPS_SCRIPT_URL || ''
+const GAS_URL    = import.meta.env.VITE_APPS_SCRIPT_URL || ''
+const GAS_SECRET = import.meta.env.VITE_GAS_SECRET      || ''
+
+// ── Utilidad de hash ──────────────────────────────────────────
+
+/**
+ * Devuelve el hash SHA-256 (hex) de un string usando la Web Crypto API.
+ * Se usa para contraseñas antes de guardarlas o compararlas.
+ */
+export async function sha256(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
 
 // ── Transporte genérico ───────────────────────────────────────
 
@@ -19,7 +31,7 @@ async function post(action, payload = {}) {
   const res = await fetch(GAS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...payload }),
+    body: JSON.stringify({ action, secret: GAS_SECRET, ...payload }),
   })
   if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
   return res.json()
@@ -102,6 +114,25 @@ export async function sincronizarVentasHoy(ventas) {
  */
 export async function obtenerReporteSheet(periodo = 'mes') {
   return post('reporte', { periodo })
+}
+
+// ── Test de conexión ─────────────────────────────────────────
+
+/**
+ * Verifica que la URL esté configurada y que el secret sea válido.
+ * Hace un GET simple — no escribe nada en el Sheet.
+ * Retorna { ok: true } o { ok: false, error: '...' }
+ */
+export async function testConexion() {
+  if (!GAS_URL) return { ok: false, error: 'VITE_APPS_SCRIPT_URL no está configurada' }
+  try {
+    const url = GAS_SECRET ? `${GAS_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : GAS_URL
+    const res = await fetch(url, { method: 'GET' })
+    const data = await res.json()
+    return data
+  } catch (err) {
+    return { ok: false, error: 'No se pudo conectar: ' + err.message }
+  }
 }
 
 // ── Alias de compatibilidad ───────────────────────────────────
