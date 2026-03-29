@@ -30,18 +30,13 @@ export async function sha256(texto) {
  */
 async function post(action, payload = {}) {
   if (!GAS_URL) throw new Error('VITE_APPS_SCRIPT_URL no está configurada')
-  const body = { action, secret: GAS_SECRET, ...payload }
-  console.log(`[GAS] POST → ${PROXY_URL}`, action, body)
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ action, secret: GAS_SECRET, ...payload }),
   })
-  console.log(`[GAS] respuesta HTTP ${res.status}`)
   if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
-  const data = await res.json()
-  console.log(`[GAS] respuesta body`, data)
-  return data
+  return res.json()
 }
 
 // ── CRUD genérico ─────────────────────────────────────────────

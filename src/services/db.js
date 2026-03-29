@@ -106,8 +106,7 @@ async function insert(entity, data) {
 
   if (_online) {
     try {
-      const res = await gasInsert(entity, record)
-      console.log('[db.insert]', entity, res)
+      await gasInsert(entity, record)
       // Si es una venta, insertar también los items en VentaItems
       if (entity === 'ventas' && record.items && record.items.length) {
         await Promise.all(record.items.map(item =>
@@ -116,8 +115,8 @@ async function insert(entity, data) {
       }
       _notify()
       return record  // éxito — no encolar
-    } catch (err) {
-      console.error('[db.insert] error:', entity, err)
+    } catch {
+      // offline o error — encolar
     }
   }
 
