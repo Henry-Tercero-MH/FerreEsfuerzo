@@ -107,10 +107,15 @@ async function insert(entity, data) {
   if (_online) {
     try {
       await gasInsert(entity, record)
-      // Si es una venta, insertar también los items en VentaItems
+      // Insertar items en su hoja separada
       if (entity === 'ventas' && record.items && record.items.length) {
         await Promise.all(record.items.map(item =>
           gasInsert('ventaItems', { ...item, venta_id: record.id })
+        ))
+      }
+      if (entity === 'cotizaciones' && record.items && record.items.length) {
+        await Promise.all(record.items.map(item =>
+          gasInsert('cotizacionItems', { ...item, cotizacion_id: record.id })
         ))
       }
       _notify()

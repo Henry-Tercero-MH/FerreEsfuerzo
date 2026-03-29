@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, Eye, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, FileText, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { useApp } from '../contexts/AppContext'
 import { useDebounce } from '../hooks/useDebounce'
@@ -18,6 +18,8 @@ export default function Cotizaciones() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [detalle, setDetalle] = useState(null)
+  // confirm: { tipo: 'pedido'|'venta'|'cancelar', cot }
+  const [confirm, setConfirm] = useState(null)
 
   const termino = useDebounce(busqueda)
 
@@ -42,8 +44,11 @@ export default function Cotizaciones() {
     return map[estado] || { label: estado, variant: 'gray' }
   }
 
-  const handleAprobarPedido = (cot) => {
-    if (confirm(`¿Aprobar la cotización ${cot.numero_cotizacion} como pedido?`)) {
+  // Ejecuta la acción confirmada
+  const ejecutarConfirm = () => {
+    if (!confirm) return
+    const { tipo, cot } = confirm
+    if (tipo === 'pedido') {
       crearVenta({
         cliente_id: cot.cliente_id,
         cliente_nombre: cot.cliente_nombre,
@@ -61,11 +66,7 @@ export default function Cotizaciones() {
       })
       cambiarEstado(cot.id, 'PEDIDO')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'PEDIDO' }))
-    }
-  }
-
-  const handleConvertir = (cot) => {
-    if (confirm(`¿Convertir la cotización ${cot.numero_cotizacion} directamente en venta?`)) {
+    } else if (tipo === 'venta') {
       crearVenta({
         cliente_id: cot.cliente_id,
         cliente_nombre: cot.cliente_nombre,
@@ -80,14 +81,32 @@ export default function Cotizaciones() {
       })
       cambiarEstado(cot.id, 'CONVERTIDA')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CONVERTIDA' }))
+    } else if (tipo === 'cancelar') {
+      cambiarEstado(cot.id, 'CANCELADA')
+      if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CANCELADA' }))
     }
+    setConfirm(null)
   }
 
-  const handleCancelar = (id) => {
-    if (confirm('¿Cancelar esta cotización?')) {
-      cambiarEstado(id, 'CANCELADA')
-      if (detalle?.id === id) setDetalle(prev => ({ ...prev, estado: 'CANCELADA' }))
-    }
+  const CONFIRM_CONFIG = {
+    pedido: {
+      titulo: 'Aprobar como Pedido',
+      mensaje: (cot) => `Se creará un pedido para ${cot.cliente_nombre} con ${(cot.items||[]).length} producto(s) por ${formatCurrency(cot.total)}. El bodeguero podrá verlo en Pedidos para preparar el despacho.`,
+      boton: 'Aprobar como Pedido',
+      variante: 'primary',
+    },
+    venta: {
+      titulo: 'Convertir a Venta',
+      mensaje: (cot) => `Se registrará una venta directa para ${cot.cliente_nombre} por ${formatCurrency(cot.total)}. La cotización quedará como Convertida.`,
+      boton: 'Convertir a Venta',
+      variante: 'primary',
+    },
+    cancelar: {
+      titulo: 'Cancelar Cotización',
+      mensaje: (cot) => `¿Estás seguro de cancelar la cotización ${cot.numero_cotizacion}? Esta acción no se puede deshacer.`,
+      boton: 'Cancelar cotización',
+      variante: 'danger',
+    },
   }
 
   return (
@@ -155,9 +174,7 @@ export default function Cotizaciones() {
                       {c.fecha_vencimiento ? formatDate(c.fecha_vencimiento) : '—'}
                     </td>
                     <td className="font-semibold">{formatCurrency(c.total)}</td>
-                    <td>
-                      <Badge variant={variant}>{label}</Badge>
-                    </td>
+                    <td><Badge variant={variant}>{label}</Badge></td>
                     <td>
                       <div className="flex gap-1 justify-end">
                         <button
@@ -170,14 +187,14 @@ export default function Cotizaciones() {
                         {c.estado === 'VIGENTE' && (
                           <>
                             <button
-                              onClick={() => handleAprobarPedido(c)}
+                              onClick={() => setConfirm({ tipo: 'pedido', cot: c })}
                               className="btn-icon btn-ghost text-gray-400 hover:text-green-600"
                               title="Aprobar como pedido"
                             >
                               <CheckCircle size={15} />
                             </button>
                             <button
-                              onClick={() => handleCancelar(c.id)}
+                              onClick={() => setConfirm({ tipo: 'cancelar', cot: c })}
                               className="btn-icon btn-ghost text-gray-400 hover:text-red-500"
                               title="Cancelar cotización"
                             >
@@ -204,9 +221,9 @@ export default function Cotizaciones() {
         footer={
           detalle?.estado === 'VIGENTE' ? (
             <div className="flex flex-wrap gap-2 w-full justify-end">
-              <Button variant="ghost" onClick={() => handleCancelar(detalle.id)}>Cancelar</Button>
-              <Button variant="secondary" onClick={() => handleConvertir(detalle)}>Venta directa</Button>
-              <Button variant="primary" onClick={() => handleAprobarPedido(detalle)}>Aprobar como Pedido</Button>
+              <Button variant="ghost" onClick={() => setConfirm({ tipo: 'cancelar', cot: detalle })}>Cancelar cot.</Button>
+              <Button variant="secondary" onClick={() => setConfirm({ tipo: 'venta', cot: detalle })}>Venta directa</Button>
+              <Button variant="primary" onClick={() => setConfirm({ tipo: 'pedido', cot: detalle })}>Aprobar como Pedido</Button>
             </div>
           ) : (
             <Button variant="secondary" onClick={() => setDetalle(null)}>Cerrar</Button>
@@ -215,7 +232,6 @@ export default function Cotizaciones() {
       >
         {detalle && (
           <div className="space-y-4">
-            {/* Encabezado */}
             <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
               <div>
                 <p className="text-gray-400">Cliente</p>
@@ -239,10 +255,11 @@ export default function Cotizaciones() {
               </div>
             </div>
 
-            {/* Items */}
             {detalle.items && detalle.items.length > 0 && (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Productos</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Productos ({detalle.items.length})
+                </p>
                 <div className="rounded-xl border border-gray-100 overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -268,7 +285,6 @@ export default function Cotizaciones() {
               </div>
             )}
 
-            {/* Totales */}
             <div className="rounded-xl bg-gray-50 p-4 space-y-1 text-sm">
               <div className="flex justify-between text-gray-500">
                 <span>Subtotal</span><span>{formatCurrency(detalle.subtotal)}</span>
@@ -286,7 +302,6 @@ export default function Cotizaciones() {
               </div>
             </div>
 
-            {/* Notas */}
             {detalle.notas && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Notas</p>
@@ -296,6 +311,39 @@ export default function Cotizaciones() {
           </div>
         )}
       </Modal>
+
+      {/* Modal confirmación */}
+      {confirm && (() => {
+        const cfg = CONFIRM_CONFIG[confirm.tipo]
+        return (
+          <Modal
+            open
+            onClose={() => setConfirm(null)}
+            title={cfg.titulo}
+            size="sm"
+            footer={
+              <div className="flex gap-2 w-full justify-end">
+                <Button variant="secondary" onClick={() => setConfirm(null)}>Cancelar</Button>
+                <Button
+                  variant={cfg.variante === 'danger' ? 'danger' : 'primary'}
+                  onClick={ejecutarConfirm}
+                >
+                  {cfg.boton}
+                </Button>
+              </div>
+            }
+          >
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow-50">
+                <AlertTriangle size={20} className="text-yellow-500" />
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {cfg.mensaje(confirm.cot)}
+              </p>
+            </div>
+          </Modal>
+        )
+      })()}
     </div>
   )
 }
