@@ -104,8 +104,8 @@ export default function Ventas() {
               <table className="table">
                 <thead><tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr></thead>
                 <tbody>
-                  {ventaDetalle.items?.map((item, i) => (
-                    <tr key={i}>
+                  {(Array.isArray(ventaDetalle.items) ? ventaDetalle.items : []).map((item, i) => (
+                    <tr key={item.producto_id ?? i}>
                       <td className="text-sm">{item.nombre}</td>
                       <td>{item.cantidad}</td>
                       <td>{formatCurrency(item.precio_unitario)}</td>

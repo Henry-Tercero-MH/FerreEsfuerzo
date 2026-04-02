@@ -10,7 +10,16 @@ export function CotizacionesProvider({ children }) {
   })
 
   useEffect(() => {
-    db.forceRefresh('cotizaciones').then(data => { if (data.length) setCotizaciones(data) })
+    Promise.all([
+      db.forceRefresh('cotizaciones'),
+      db.forceRefresh('cotizacionItems'),
+    ]).then(([cotizaciones, items]) => {
+      if (!cotizaciones.length) return
+      setCotizaciones(cotizaciones.map(c => ({
+        ...c,
+        items: items.filter(i => String(i.cotizacion_id) === String(c.id)),
+      })))
+    })
   }, [])
 
   const crearCotizacion = useCallback(async (data) => {

@@ -13,7 +13,18 @@ export function VentasProvider({ children }) {
   })
 
   useEffect(() => {
-    db.forceRefresh('ventas').then(data => { if (data.length) setVentas(data) })
+    // Cargar ventas y sus items desde el Sheet y cruzarlos
+    Promise.all([
+      db.forceRefresh('ventas'),
+      db.forceRefresh('ventaItems'),
+    ]).then(([ventas, items]) => {
+      if (!ventas.length) return
+      const conItems = ventas.map(v => ({
+        ...v,
+        items: items.filter(i => String(i.venta_id) === String(v.id)),
+      }))
+      setVentas(conItems)
+    })
     db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) })
   }, [])
 

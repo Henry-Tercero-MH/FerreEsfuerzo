@@ -10,7 +10,16 @@ export function ComprasProvider({ children }) {
   })
 
   useEffect(() => {
-    db.forceRefresh('compras').then(data => { if (data.length) setCompras(data) })
+    Promise.all([
+      db.forceRefresh('compras'),
+      db.forceRefresh('compraItems'),
+    ]).then(([compras, items]) => {
+      if (!compras.length) return
+      setCompras(compras.map(c => ({
+        ...c,
+        items: items.filter(i => String(i.compra_id) === String(c.id)),
+      })))
+    })
   }, [])
 
   const crearCompra = useCallback(async (data) => {
