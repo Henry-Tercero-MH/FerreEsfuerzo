@@ -65,10 +65,10 @@ export default function Ventas() {
                 <ShoppingCart size={32} className="mx-auto mb-2 opacity-30" />
                 No hay ventas registradas
               </td></tr>
-            ) : ventasFiltradas.map(v => {
+            ) : ventasFiltradas.map((v, i) => {
               const estado = ESTADOS_VENTA[v.estado]
               return (
-                <tr key={v.id}>
+                <tr key={v.id ?? i}>
                   <td className="font-mono text-xs font-semibold text-primary-700">{v.numero_venta}</td>
                   <td className="text-xs text-gray-500">{formatDateTime(v.fecha)}</td>
                   <td className="text-sm">{getClienteNombre(v.cliente_id)}</td>

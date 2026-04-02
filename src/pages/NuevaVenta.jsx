@@ -10,7 +10,7 @@ import { Select } from '../components/ui/Input'
 
 export default function NuevaVenta() {
   const { productos, clientes, crearVenta } = useApp()
-  const { metodos_pago } = useCatalogos()
+  const { metodos_pago = [] } = useCatalogos()
   const navigate = useNavigate()
 
   const [busqueda, setBusqueda] = useState('')
