@@ -13,8 +13,8 @@ export function CajaProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('cajaAperturas').then(data => { if (data.length) setAperturas(data) })
-    db.getAll('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
+    db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data) })
+    db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
   }, [])
 
   const abrirCaja = useCallback(async (data) => {

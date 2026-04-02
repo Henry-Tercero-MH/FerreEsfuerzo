@@ -10,7 +10,7 @@ export function ComprasProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('compras').then(data => { if (data.length) setCompras(data) })
+    db.forceRefresh('compras').then(data => { if (data.length) setCompras(data) })
   }, [])
 
   const crearCompra = useCallback(async (data) => {

@@ -13,8 +13,8 @@ export function CuentasPorCobrarProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('cuentasCobrar').then(data => { if (data.length) setCuentas(data) })
-    db.getAll('abonos').then(data => { if (data.length) setAbonos(data) })
+    db.forceRefresh('cuentasCobrar').then(data => { if (data.length) setCuentas(data) })
+    db.forceRefresh('abonos').then(data => { if (data.length) setAbonos(data) })
   }, [])
 
   const crearCuenta = useCallback(async (data) => {

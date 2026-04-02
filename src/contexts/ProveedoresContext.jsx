@@ -10,7 +10,7 @@ export function ProveedoresProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('proveedores').then(data => { if (data.length) setProveedores(data) })
+    db.forceRefresh('proveedores').then(data => { if (data.length) setProveedores(data) })
   }, [])
 
   const agregarProveedor = useCallback(async (data) => {

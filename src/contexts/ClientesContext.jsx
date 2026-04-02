@@ -10,7 +10,7 @@ export function ClientesProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('clientes').then(data => { if (data.length) setClientes(data) })
+    db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) })
   }, [])
 
   const agregarCliente = useCallback(async (data) => {

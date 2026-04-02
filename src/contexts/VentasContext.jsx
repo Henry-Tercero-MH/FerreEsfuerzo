@@ -13,8 +13,8 @@ export function VentasProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('ventas').then(data => { if (data.length) setVentas(data) })
-    db.getAll('movimientos').then(data => { if (data.length) setMovimientos(data) })
+    db.forceRefresh('ventas').then(data => { if (data.length) setVentas(data) })
+    db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) })
   }, [])
 
   const registrarVenta = useCallback(async (data) => {

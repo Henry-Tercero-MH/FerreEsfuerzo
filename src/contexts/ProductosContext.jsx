@@ -11,7 +11,7 @@ export function ProductosProvider({ children }) {
 
   // Carga inicial desde el Sheet (si hay conexión) o desde localStorage
   useEffect(() => {
-    db.getAll('productos').then(data => { if (data.length) setProductos(data) })
+    db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) })
   }, [])
 
   const agregarProducto = useCallback(async (data) => {

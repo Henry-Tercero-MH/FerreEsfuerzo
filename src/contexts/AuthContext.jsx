@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
   const [sesion, setSesion] = useLocalStorage('ferreapp_sesion', null)
 
   useEffect(() => {
-    db.getAll('usuarios').then(data => { if (data.length) setUsuarios(data) })
+    db.forceRefresh('usuarios').then(data => { if (data.length) setUsuarios(data) })
   }, [])
 
   const login = useCallback(async (email, password) => {

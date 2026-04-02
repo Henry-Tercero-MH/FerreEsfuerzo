@@ -10,7 +10,7 @@ export function CotizacionesProvider({ children }) {
   })
 
   useEffect(() => {
-    db.getAll('cotizaciones').then(data => { if (data.length) setCotizaciones(data) })
+    db.forceRefresh('cotizaciones').then(data => { if (data.length) setCotizaciones(data) })
   }, [])
 
   const crearCotizacion = useCallback(async (data) => {
