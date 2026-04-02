@@ -127,10 +127,9 @@ export async function obtenerReporteSheet(periodo = 'mes') {
  */
 export async function testConexion() {
   try {
-    const url = GAS_SECRET ? `${PROXY_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : PROXY_URL
-    const res = await fetch(url, { method: 'GET' })
-    const data = await res.json()
-    return data
+    if (!GAS_URL) return { ok: false, error: 'VITE_APPS_SCRIPT_URL no está configurada' }
+    const data = await post('ping', {})
+    return data?.ok ? { ok: true } : { ok: false, error: data?.error || 'Respuesta inesperada' }
   } catch (err) {
     return { ok: false, error: 'No se pudo conectar: ' + err.message }
   }

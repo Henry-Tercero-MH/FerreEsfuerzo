@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback } from 'react'
+import { createContext, useContext, useCallback, useEffect } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { db } from '../services/db'
 import { shortId, generateNumeroVenta, generateCodigoProducto } from '../utils/formatters'
@@ -353,6 +353,17 @@ export function AppProvider({ children }) {
   const [ventas, setVentas]                 = useLocalStorage('ferreapp_ventas', VENTAS_SEED)
   const [clientes, setClientes]             = useLocalStorage('ferreapp_clientes', CLIENTES_SEED)
   const [movimientos, setMovimientos]       = useLocalStorage('ferreapp_movimientos', MOVIMIENTOS_SEED)
+
+  // Al iniciar la app: cargar desde Google Sheets y actualizar el cache
+  useEffect(() => {
+    db.refreshAll().then(() => {
+      const p = db.getAll('productos').then(data => { if (data.length) setProductos(data) })
+      const v = db.getAll('ventas').then(data => { if (data.length) setVentas(data) })
+      const c = db.getAll('clientes').then(data => { if (data.length) setClientes(data) })
+      const m = db.getAll('movimientos').then(data => { if (data.length) setMovimientos(data) })
+      return Promise.allSettled([p, v, c, m])
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── PRODUCTOS ──────────────────────────────────────────────────────────────
   const agregarProducto = useCallback((data) => {

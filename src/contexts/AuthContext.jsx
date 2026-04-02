@@ -20,6 +20,11 @@ export const ROLES = {
     label: 'Bodeguero',
     rutas: ['/', '/productos', '/inventario', '/pedidos'],
   },
+  // Rol para tablet: solo puede crear y ver cotizaciones y consultar clientes/productos
+  cotizador: {
+    label: 'Cotizador',
+    rutas: ['/', '/cotizaciones', '/cotizaciones/nueva', '/clientes', '/productos'],
+  },
 }
 
 // SHA-256 de 'admin123' — precalculado para el seed inicial

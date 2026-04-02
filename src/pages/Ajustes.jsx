@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, CloudUpload, Download, Wifi } from 'lucide-react'
+import { Plus, Pencil, Trash2, Download, Wifi, RefreshCw } from 'lucide-react'
 import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
-import { appsScript, testConexion } from '../services/googleAppsScript.js'
+import { testConexion } from '../services/googleAppsScript.js'
 import { storage } from '../services/storage.js'
+import { db } from '../services/db.js'
 import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -19,23 +20,23 @@ export default function Ajustes() {
   const { usuarios, agregarUsuario, editarUsuario, eliminarUsuario, sesion } = useAuth()
   const { productos, ventas, clientes, movimientos } = useApp()
   const { toasts, toast, remove: removeToast } = useToast()
-  const [modal, setModal] = useState({ open: false, modo: 'crear', usuario: null })
+  const [modal, setModal]   = useState({ open: false, modo: 'crear', usuario: null })
   const [confirm, setConfirm] = useState(null)
-  const [form, setForm] = useState(FORM_VACÍO)
+  const [form, setForm]     = useState(FORM_VACÍO)
   const [errores, setErrores] = useState({})
   const [loading, setLoading] = useState(false)
-  const [alerta, setAlerta] = useState(null)
-  const [backupLoading, setBackupLoading] = useState(false)
-  const [testLoading, setTestLoading] = useState(false)
+  const [alerta, setAlerta]  = useState(null)
+  const [testLoading, setTestLoading]     = useState(false)
+  const [refreshLoading, setRefreshLoading] = useState(false)
 
   const mostrarAlerta = (type, message) => {
     setAlerta({ type, message })
     setTimeout(() => setAlerta(null), 4000)
   }
 
-  const abrirCrear = () => { setForm(FORM_VACÍO); setErrores({}); setModal({ open: true, modo: 'crear', usuario: null }) }
+  const abrirCrear  = () => { setForm(FORM_VACÍO); setErrores({}); setModal({ open: true, modo: 'crear', usuario: null }) }
   const abrirEditar = (u) => { setForm({ nombre: u.nombre, email: u.email, password: '', rol: u.rol }); setErrores({}); setModal({ open: true, modo: 'editar', usuario: u }) }
-  const cerrar = () => setModal(m => ({ ...m, open: false }))
+  const cerrar      = () => setModal(m => ({ ...m, open: false }))
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -46,7 +47,7 @@ export default function Ajustes() {
   const validar = () => {
     const errs = {}
     if (!form.nombre.trim()) errs.nombre = 'El nombre es requerido'
-    if (!form.email.trim()) errs.email = 'El email es requerido'
+    if (!form.email.trim())  errs.email  = 'El email es requerido'
     if (modal.modo === 'crear' && !form.password) errs.password = 'La contraseña es requerida'
     return errs
   }
@@ -55,15 +56,14 @@ export default function Ajustes() {
     const errs = validar()
     if (Object.keys(errs).length) { setErrores(errs); return }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 300))
     if (modal.modo === 'crear') {
-      const result = agregarUsuario(form)
+      const result = await agregarUsuario(form)
       if (!result.ok) { setErrores({ email: result.error }); setLoading(false); return }
       mostrarAlerta('success', 'Usuario creado correctamente')
     } else {
       const data = { nombre: form.nombre, rol: form.rol }
       if (form.password) data.password = form.password
-      editarUsuario(modal.usuario.id, data)
+      await editarUsuario(modal.usuario.id, data)
       mostrarAlerta('success', 'Usuario actualizado')
     }
     setLoading(false)
@@ -76,17 +76,6 @@ export default function Ajustes() {
     else toast(`Usuario "${usuario.nombre}" desactivado`, 'warning')
   }
 
-  const handleBackup = async () => {
-    setBackupLoading(true)
-    try {
-      await appsScript.backupCompleto({ productos, ventas, clientes, movimientos })
-      mostrarAlerta('success', 'Backup enviado a Google Sheets exitosamente')
-    } catch (e) {
-      mostrarAlerta('error', `Error al hacer backup: ${e.message}`)
-    }
-    setBackupLoading(false)
-  }
-
   const handleTestConexion = async () => {
     setTestLoading(true)
     const res = await testConexion()
@@ -95,25 +84,36 @@ export default function Ajustes() {
     setTestLoading(false)
   }
 
+  const handleRefrescarDatos = async () => {
+    setRefreshLoading(true)
+    try {
+      await db.refreshAll()
+      mostrarAlerta('success', 'Datos actualizados desde Google Sheets')
+    } catch (e) {
+      mostrarAlerta('error', `Error al actualizar: ${e.message}`)
+    }
+    setRefreshLoading(false)
+  }
+
   const handleExportarJSON = () => {
     const data = storage.exportAll()
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
     a.download = `ferreapp-backup-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
     mostrarAlerta('success', 'Backup JSON descargado')
   }
 
-  const rolesColor = { admin: 'orange', vendedor: 'blue', bodeguero: 'green' }
+  const rolesColor = { admin: 'orange', vendedor: 'blue', bodeguero: 'green', cotizador: 'purple' }
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="page-title">Ajustes</h1>
-        <p className="page-subtitle">Gestión de usuarios, respaldos y configuración</p>
+        <p className="page-subtitle">Gestión de usuarios y configuración del sistema</p>
       </div>
 
       {alerta && <Alert type={alerta.type} message={alerta.message} onClose={() => setAlerta(null)} />}
@@ -132,15 +132,21 @@ export default function Ajustes() {
                   {u.nombre.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{u.nombre} {u.id === sesion?.id && <span className="text-xs text-gray-400">(tú)</span>}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {u.nombre} {u.id === sesion?.id && <span className="text-xs text-gray-400">(tú)</span>}
+                  </p>
                   <p className="text-xs text-gray-400">{u.email}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant={rolesColor[u.rol] ?? 'gray'}>{ROLES[u.rol]?.label}</Badge>
-                <button onClick={() => abrirEditar(u)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
+                <button onClick={() => abrirEditar(u)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600">
+                  <Pencil size={15} />
+                </button>
                 {u.id !== 'usr-admin' && (
-                  <button onClick={() => setConfirm(u)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                  <button onClick={() => setConfirm(u)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500">
+                    <Trash2 size={15} />
+                  </button>
                 )}
               </div>
             </div>
@@ -148,23 +154,25 @@ export default function Ajustes() {
         </div>
       </div>
 
-      {/* Respaldos */}
+      {/* Conexión y datos */}
       <div className="card">
-        <h2 className="mb-1 text-base font-semibold text-gray-900">Respaldos y exportación</h2>
-        <p className="mb-4 text-sm text-gray-400">Mantén tus datos seguros con copias de seguridad</p>
+        <h2 className="mb-1 text-base font-semibold text-gray-900">Conexión y datos</h2>
+        <p className="mb-4 text-sm text-gray-400">
+          Los datos se sincronizan automáticamente con Google Sheets. Usa estas opciones para verificar o forzar una actualización.
+        </p>
         <div className="flex flex-wrap gap-3">
-          <Button variant="primary" icon={CloudUpload} loading={backupLoading} onClick={handleBackup}>
-            Backup a Google Sheets
+          <Button variant="primary" icon={RefreshCw} loading={refreshLoading} onClick={handleRefrescarDatos}>
+            Refrescar desde Google Sheets
           </Button>
           <Button variant="secondary" icon={Wifi} loading={testLoading} onClick={handleTestConexion}>
             Probar conexión
           </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportarJSON}>
-            Exportar JSON local
+            Exportar copia JSON
           </Button>
         </div>
         <p className="mt-3 text-xs text-gray-400">
-          Para activar el backup a Google Sheets, configura la variable <code className="bg-gray-100 px-1 rounded">VITE_APPS_SCRIPT_URL</code> en tu archivo <code className="bg-gray-100 px-1 rounded">.env</code>
+          Configura <code className="bg-gray-100 px-1 rounded">VITE_APPS_SCRIPT_URL</code> en el archivo <code className="bg-gray-100 px-1 rounded">.env</code> para habilitar la sincronización.
         </p>
       </div>
 
@@ -202,13 +210,17 @@ export default function Ajustes() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* Modal usuario */}
-      <Modal open={modal.open} onClose={cerrar} title={modal.modo === 'crear' ? 'Nuevo usuario' : 'Editar usuario'}
+      <Modal
+        open={modal.open}
+        onClose={cerrar}
+        title={modal.modo === 'crear' ? 'Nuevo usuario' : 'Editar usuario'}
         footer={<>
           <Button variant="secondary" onClick={cerrar}>Cancelar</Button>
           <Button variant="primary" loading={loading} onClick={handleGuardar}>
             {modal.modo === 'crear' ? 'Crear usuario' : 'Guardar cambios'}
           </Button>
-        </>}>
+        </>}
+      >
         <div className="space-y-4">
           <Input label="Nombre completo *" name="nombre" value={form.nombre} onChange={handleChange} error={errores.nombre} />
           <Input label="Correo electrónico *" name="email" type="email" value={form.email} onChange={handleChange} error={errores.email} disabled={modal.modo === 'editar'} />
@@ -216,6 +228,11 @@ export default function Ajustes() {
           <Select label="Rol" name="rol" value={form.rol} onChange={handleChange}>
             {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </Select>
+          {form.rol === 'cotizador' && (
+            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2">
+              El rol <strong>Cotizador</strong> es ideal para tablet. Solo tiene acceso a cotizaciones, clientes y consulta de productos. No puede facturar ni ver caja.
+            </p>
+          )}
         </div>
       </Modal>
     </div>

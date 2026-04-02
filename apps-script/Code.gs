@@ -1,19 +1,24 @@
 /**
  * FerreApp — Google Apps Script
  * ============================================================
- * Instrucciones de instalación:
+ * Las hojas se crean automáticamente la primera vez que se usan.
+ * No es necesario correr ninguna función de configuración manual.
+ *
+ * Despliegue:
  * 1. Abre Google Sheets → Extensiones → Apps Script
- * 2. Pega este código
- * 3. Ejecuta "configurarHojas()" una vez para crear las hojas
- * 4. Despliega como Web App:
- *    - Implementar → Nueva implementación
+ * 2. Pega este código y guarda
+ * 3. Implementar → Nueva implementación
  *    - Tipo: Aplicación web
  *    - Ejecutar como: Yo
  *    - Acceso: Cualquier persona
- * 5. Copia la URL generada y pégala en FerreApp → Ajustes
+ * 4. Copia la URL y pégala en FerreApp → Ajustes
+ *
+ * Opcional: en Proyecto → Propiedades del script, agrega
+ *   API_SECRET = tu_clave_secreta
  * ============================================================
  */
 
+// ── Mapa entidad → nombre de hoja ─────────────────────────────
 const HOJAS = {
   productos:         'Productos',
   clientes:          'Clientes',
@@ -39,280 +44,79 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents)
 
-    // Validar API_SECRET
     const SECRET = PropertiesService.getScriptProperties().getProperty('API_SECRET')
     if (SECRET && body.secret !== SECRET) {
-      return respuesta({ ok: false, error: 'No autorizado' }, 401)
+      return json({ ok: false, error: 'No autorizado' })
     }
 
-    const { action, accion, datos } = body
-    const actionName = action || accion
-    let resultado
+    const action = body.action || body.accion
+    let result
 
-    switch (actionName) {
-      // Acciones de backup
-      case 'backup':
-      case 'BACKUP_COMPLETO':
-        resultado = backupCompleto(body)
+    switch (action) {
+      case 'ping':
+        result = { ok: true, message: 'Conexión exitosa', timestamp: new Date().toISOString() }
         break
-
-      // Sincronizaciones
-      case 'syncProductos':
-      case 'SYNC_PRODUCTOS':
-        resultado = syncProductos(body.productos || datos?.productos)
-        break
-      case 'syncCatalogos':
-        resultado = syncCatalogos(body.catalogos || datos?.catalogos)
-        break
-      case 'syncVentas':
-        resultado = syncVentas(body.ventas || datos?.ventas)
-        break
-
-      // Operaciones individuales
-      case 'NUEVA_VENTA':
-        resultado = nuevaVenta(datos.venta)
-        break
-
-      // Reportes
-      case 'reporte':
-      case 'GET_RESUMEN':
-        resultado = getResumen(body.periodo || datos?.periodo)
-        break
-
-      // CRUD genérico (offline-first)
       case 'getAll':
-        resultado = getAllRecords(body.entity)
+        result = getAllRecords(body.entity)
         break
       case 'insert':
-        resultado = insertRecord(body.entity, body.data)
+        result = insertRecord(body.entity, body.data)
         break
       case 'update':
-        resultado = updateRecord(body.entity, body.id, body.data)
+        result = updateRecord(body.entity, body.id, body.data)
         break
       case 'remove':
-        resultado = removeRecord(body.entity, body.id)
+        result = removeRecord(body.entity, body.id)
         break
-
+      case 'backup':
+      case 'BACKUP_COMPLETO':
+        result = backupCompleto(body)
+        break
+      // Acciones legadas — mantener compatibilidad
+      case 'syncProductos':
+      case 'SYNC_PRODUCTOS':
+        result = syncEntidad('productos', body.productos || body.datos?.productos)
+        break
+      case 'syncCatalogos':
+        result = syncEntidad('catalogos', body.catalogos || body.datos?.catalogos)
+        break
+      case 'syncVentas': {
+        const ventas = body.ventas || body.datos?.ventas || []
+        syncEntidad('ventas', ventas)
+        const items = ventas.flatMap(v => (v.items || []).map(i => ({ ...i, venta_id: v.id })))
+        result = syncEntidad('ventaItems', items)
+        break
+      }
+      case 'reporte':
+      case 'GET_RESUMEN':
+        result = getResumen(body.periodo || body.datos?.periodo)
+        break
       default:
-        throw new Error(`Acción desconocida: ${actionName}`)
+        throw new Error('Acción desconocida: ' + action)
     }
 
-    return respuesta({ ok: true, ...resultado })
+    return json({ ok: true, ...result })
   } catch (err) {
-    return respuesta({ ok: false, error: err.message }, 500)
+    return json({ ok: false, error: err.message })
   }
 }
 
 function doGet(e) {
-  // Permite verificar la conexión y autenticación desde la app
-  // Uso: GET <url>?secret=TU_SECRET
   const SECRET = PropertiesService.getScriptProperties().getProperty('API_SECRET')
   const secretParam = e && e.parameter && e.parameter.secret
-
   if (SECRET && secretParam !== SECRET) {
-    return ContentService.createTextOutput(
-      JSON.stringify({ ok: false, error: 'No autorizado' })
-    ).setMimeType(ContentService.MimeType.JSON)
+    return json({ ok: false, error: 'No autorizado' })
   }
-
-  return ContentService.createTextOutput(
-    JSON.stringify({ ok: true, mensaje: 'FerreApp API activa', version: '1.0', timestamp: new Date().toISOString() })
-  ).setMimeType(ContentService.MimeType.JSON)
+  return json({ ok: true, message: 'FerreApp API activa', version: '2.0', timestamp: new Date().toISOString() })
 }
 
-// ── Acciones ──────────────────────────────────────────────────
-function backupCompleto(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
+// ── CRUD genérico ─────────────────────────────────────────────
 
-  // Datos base
-  escribirHoja(ss, HOJAS.productos,    encabezadosProductos(),    data.productos || [],    filaProducto)
-  escribirHoja(ss, HOJAS.clientes,     encabezadosClientes(),     data.clientes || [],     filaCliente)
-  escribirHoja(ss, HOJAS.proveedores,  encabezadosProveedores(),  data.proveedores || [],  filaProveedor)
-
-  // Movimientos de stock (necesita productos para obtener nombres)
-  const movimientos = (data.movimientos || []).map(m => {
-    const producto = (data.productos || []).find(p => p.id === m.producto_id)
-    return { ...m, producto_nombre: producto ? producto.nombre : '' }
-  })
-  escribirHoja(ss, HOJAS.movimientos, encabezadosMovimientos(), movimientos, filaMovimiento)
-
-  // Ventas
-  escribirHoja(ss, HOJAS.ventas, encabezadosVentas(), data.ventas || [], filaVenta)
-  const ventaItems = (data.ventas || []).flatMap(v => (v.items || []).map(i => ({ ...i, venta_id: v.id })))
-  escribirHoja(ss, HOJAS.ventaItems, encabezadosVentaItems(), ventaItems, filaVentaItem)
-
-  // Compras
-  escribirHoja(ss, HOJAS.compras, encabezadosCompras(), data.compras || [], filaCompra)
-  const compraItems = (data.compras || []).flatMap(c => (c.items || []).map(i => ({ ...i, compra_id: c.id })))
-  escribirHoja(ss, HOJAS.compraItems, encabezadosCompraItems(), compraItems, filaCompraItem)
-
-  // Cotizaciones
-  escribirHoja(ss, HOJAS.cotizaciones, encabezadosCotizaciones(), data.cotizaciones || [], filaCotizacion)
-  const cotizacionItems = (data.cotizaciones || []).flatMap(c => (c.items || []).map(i => ({ ...i, cotizacion_id: c.id })))
-  escribirHoja(ss, HOJAS.cotizacionItems, encabezadosCotizacionItems(), cotizacionItems, filaCotizacionItem)
-
-  // Cuentas por cobrar y abonos
-  escribirHoja(ss, HOJAS.cuentasCobrar, encabezadosCuentasCobrar(), data.cuentas_cobrar || [], filaCuentaCobrar)
-  escribirHoja(ss, HOJAS.abonos, encabezadosAbonos(), data.abonos || [], filaAbono)
-
-  // Caja
-  escribirHoja(ss, HOJAS.cajaAperturas, encabezadosCajaAperturas(), data.caja_aperturas || [], filaCajaApertura)
-  escribirHoja(ss, HOJAS.cajaMovimientos, encabezadosCajaMovimientos(), data.caja_movimientos || [], filaCajaMovimiento)
-
-  // Empresa
-  if (data.empresa) {
-    const hEmpresa = obtenerHoja(ss, HOJAS.empresa, encabezadosEmpresa())
-    hEmpresa.clearContents()
-    hEmpresa.appendRow(encabezadosEmpresa())
-    hEmpresa.appendRow(filaEmpresa(data.empresa))
-  }
-
-  // Usuarios (si existen)
-  if (data.usuarios) {
-    escribirHoja(ss, HOJAS.usuarios, encabezadosUsuarios(), data.usuarios || [], filaUsuario)
-  }
-
-  // Catálogos (si existen)
-  if (data.catalogos) {
-    escribirHoja(ss, HOJAS.catalogos, encabezadosCatalogos(), data.catalogos || [], filaCatalogo)
-  }
-
-  return { mensaje: `Backup completado: ${(data.productos || []).length} productos, ${(data.ventas || []).length} ventas, ${(data.clientes || []).length} clientes` }
-}
-
-function syncProductos(productos) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  escribirHoja(ss, HOJAS.productos, encabezadosProductos(), productos, filaProducto)
-  return { mensaje: `${productos.length} productos sincronizados` }
-}
-
-function syncCatalogos(catalogos) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  escribirHoja(ss, HOJAS.catalogos, encabezadosCatalogos(), catalogos, filaCatalogo)
-  return { mensaje: `Catálogos sincronizados` }
-}
-
-function syncVentas(ventas) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  escribirHoja(ss, HOJAS.ventas, encabezadosVentas(), ventas, filaVenta)
-  const ventaItems = ventas.flatMap(v => (v.items || []).map(i => ({ ...i, venta_id: v.id })))
-  escribirHoja(ss, HOJAS.ventaItems, encabezadosVentaItems(), ventaItems, filaVentaItem)
-  return { mensaje: `${ventas.length} ventas sincronizadas` }
-}
-
-function nuevaVenta(venta) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  const hVentas = obtenerHoja(ss, HOJAS.ventas, encabezadosVentas())
-  hVentas.appendRow(filaVenta(venta))
-
-  const hItems = obtenerHoja(ss, HOJAS.ventaItems, encabezadosVentaItems())
-  ;(venta.items || []).forEach(i => hItems.appendRow(filaVentaItem({ ...i, venta_id: venta.id })))
-
-  return { numero_venta: venta.numero_venta }
-}
-
-function getResumen(periodo) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  const hoja = ss.getSheetByName(HOJAS.ventas)
-  if (!hoja) return { total: 0, cantidad: 0, periodo: periodo || 'todos' }
-
-  const datos = hoja.getDataRange().getValues().slice(1)
-
-  // Filtrar por periodo si se especifica
-  let datosFiltrados = datos
-  if (periodo === 'hoy' || periodo === 'dia') {
-    const hoy = new Date().toDateString()
-    datosFiltrados = datos.filter(fila => {
-      const fecha = new Date(fila[4])
-      return fecha.toDateString() === hoy
-    })
-  } else if (periodo === 'mes') {
-    const hoy = new Date()
-    const mesActual = hoy.getMonth()
-    const añoActual = hoy.getFullYear()
-    datosFiltrados = datos.filter(fila => {
-      const fecha = new Date(fila[4])
-      return fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual
-    })
-  }
-
-  const total = datosFiltrados.reduce((acc, fila) => acc + (parseFloat(fila[8]) || 0), 0)
-  return { total, cantidad: datosFiltrados.length, periodo: periodo || 'todos' }
-}
-
-// ── Helpers ───────────────────────────────────────────────────
-function escribirHoja(ss, nombre, encabezados, datos, maperFn) {
-  const hoja = obtenerHoja(ss, nombre, encabezados)
-  hoja.clearContents()
-  hoja.appendRow(encabezados)
-  if (datos && datos.length) {
-    const filas = datos.map(maperFn)
-    hoja.getRange(2, 1, filas.length, filas[0].length).setValues(filas)
-  }
-}
-
-function obtenerHoja(ss, nombre, encabezados) {
-  let hoja = ss.getSheetByName(nombre)
-  if (!hoja) {
-    hoja = ss.insertSheet(nombre)
-    hoja.appendRow(encabezados)
-  }
-  return hoja
-}
-
-function respuesta(datos, codigo = 200) {
-  return ContentService.createTextOutput(JSON.stringify(datos))
-    .setMimeType(ContentService.MimeType.JSON)
-}
-
-// ── Encabezados & mappers ─────────────────────────────────────
-function encabezadosProductos()   { return ['id','codigo','nombre','categoria','precio_compra','precio_venta','stock','stock_minimo','unidad','ubicacion','activo','creado_en'] }
-function encabezadosClientes()    { return ['id','nombre','telefono','email','direccion','nit','tipo','activo','creado_en'] }
-function encabezadosProveedores() { return ['id','nit','nombre','nombre_contacto','telefono','correo','direccion','dias_credito','porcentaje_descuento','activo','creado_en'] }
-function encabezadosVentas()      { return ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas'] }
-function encabezadosVentaItems()  { return ['venta_id','producto_id','nombre','cantidad','precio_unitario','subtotal'] }
-function encabezadosCompras()     { return ['id','numero_documento','proveedor_id','proveedor_nombre','fecha_documento','fecha_recepcion','subtotal','descuento','impuesto','total','estado'] }
-function encabezadosCompraItems() { return ['compra_id','producto_id','nombre','cantidad','costo_unitario','subtotal'] }
-function encabezadosCotizaciones()     { return ['id','numero_cotizacion','cliente_id','cliente_nombre','fecha','fecha_vencimiento','subtotal','descuento','impuesto','total','estado'] }
-function encabezadosCotizacionItems()  { return ['cotizacion_id','producto_id','nombre','cantidad','precio_unitario','subtotal'] }
-function encabezadosCuentasCobrar()    { return ['id','numero_documento','cliente_id','cliente_nombre','fecha_emision','fecha_vencimiento','monto_original','monto_pagado','saldo','estado'] }
-function encabezadosAbonos()           { return ['id','cuenta_por_cobrar_id','usuario_id','monto','metodo_pago','referencia','fecha','notas'] }
-function encabezadosCajaAperturas()    { return ['id','usuario_id','usuario_nombre','fecha_apertura','fecha_cierre','monto_apertura','monto_esperado','monto_real','diferencia','estado'] }
-function encabezadosCajaMovimientos()  { return ['id','apertura_caja_id','usuario_id','tipo','monto','concepto','referencia','fecha'] }
-function encabezadosMovimientos()      { return ['id','producto_id','producto_nombre','tipo','cantidad','motivo','referencia','fecha'] }
-function encabezadosEmpresa()          { return ['nit','nombre_comercial','razon_social','direccion_fiscal','telefono','correo_electronico','regimen_tributario','moneda_codigo','iva_porcentaje'] }
-function encabezadosUsuarios()         { return ['id','nombre','email','password_hash','rol','activo','creado_en'] }
-function encabezadosCatalogos()        { return ['tipo','codigo','valor','descripcion','orden'] }
-
-function filaProducto(p)        { return [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.ubicacion||'',p.activo,p.creado_en] }
-function filaCliente(c)         { return [c.id,c.nombre,c.telefono,c.email,c.direccion,c.nit,c.tipo,c.activo,c.creado_en] }
-function filaProveedor(p)       { return [p.id,p.nit,p.nombre,p.nombre_contacto,p.telefono,p.correo,p.direccion,p.dias_credito,p.porcentaje_descuento,p.activo,p.creado_en] }
-function filaVenta(v)           { return [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre || '',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas || ''] }
-function filaVentaItem(i)       { return [i.venta_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal] }
-function filaCompra(c)          { return [c.id,c.numero_documento,c.proveedor_id,c.proveedor_nombre || '',c.fecha_documento,c.fecha_recepcion,c.subtotal,c.descuento,c.impuesto,c.total,c.estado] }
-function filaCompraItem(i)      { return [i.compra_id,i.producto_id,i.nombre,i.cantidad,i.costo_unitario,i.subtotal] }
-function filaCotizacion(c)      { return [c.id,c.numero_cotizacion,c.cliente_id,c.cliente_nombre || '',c.fecha,c.fecha_vencimiento,c.subtotal,c.descuento,c.impuesto,c.total,c.estado] }
-function filaCotizacionItem(i)  { return [i.cotizacion_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal] }
-function filaCuentaCobrar(c)    { return [c.id,c.numero_documento,c.cliente_id,c.cliente_nombre || '',c.fecha_emision,c.fecha_vencimiento,c.monto_original,c.monto_pagado,c.saldo,c.estado] }
-function filaAbono(a)           { return [a.id,a.cuenta_por_cobrar_id,a.usuario_id,a.monto,a.metodo_pago,a.referencia || '',a.fecha,a.notas || ''] }
-function filaCajaApertura(c)    { return [c.id,c.usuario_id,c.usuario_nombre || '',c.fecha_apertura,c.fecha_cierre || '',c.monto_apertura,c.monto_esperado,c.monto_real,c.diferencia,c.estado] }
-function filaCajaMovimiento(m)  { return [m.id,m.apertura_caja_id,m.usuario_id,m.tipo,m.monto,m.concepto,m.referencia || '',m.fecha] }
-function filaMovimiento(m)      { return [m.id,m.producto_id,m.producto_nombre || '',m.tipo,m.cantidad,m.motivo,m.referencia || '',m.fecha] }
-function filaEmpresa(e)         { return [e.nit,e.nombre_comercial,e.razon_social,e.direccion_fiscal,e.telefono,e.correo_electronico,e.regimen_tributario,e.moneda_codigo,e.iva_porcentaje] }
-function filaUsuario(u)         { return [u.id,u.nombre,u.email,u.password_hash || '',u.rol,u.activo,u.creado_en] }
-function filaCatalogo(c)        { return [c.tipo || '',c.codigo || '',c.valor || '',c.descripcion || '',c.orden || 0] }
-
-// ── CRUD genérico (offline-first) ────────────────────────────
-
-/**
- * Devuelve todos los registros de una hoja como array de objetos,
- * usando la fila 1 como encabezados/claves.
- */
 function getAllRecords(entity) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
   const sheetName = HOJAS[entity]
   if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
 
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
   if (!hoja) return { ok: true, data: [] }
 
@@ -322,33 +126,26 @@ function getAllRecords(entity) {
   const headers = valores[0]
   const data = valores.slice(1).map(fila => {
     const obj = {}
-    headers.forEach((key, i) => { obj[key] = fila[i] })
+    headers.forEach((key, i) => { if (key) obj[key] = fila[i] })
     return obj
   })
 
   return { ok: true, data }
 }
 
-/**
- * Agrega un nuevo registro al final de la hoja.
- * Utiliza la función mapper correspondiente a la entidad.
- */
 function insertRecord(entity, data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  if (!data) throw new Error('Sin datos para insertar')
   const sheetName = HOJAS[entity]
   if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
 
-  const mappers = _getMappers()
-  const headers = _getHeaders()
+  const ss      = SpreadsheetApp.getActiveSpreadsheet()
+  const headers = _headers()[entity] || []
+  const hoja    = _getOrCreateSheet(ss, sheetName, headers)
+  const mapFn   = _mappers()[entity]
 
-  const hoja = obtenerHoja(ss, sheetName, headers[entity] || [])
-  const mapFn = mappers[entity]
   if (mapFn) {
     hoja.appendRow(mapFn(data))
   } else {
-    // Fallback genérico — nunca para entidades con datos sensibles
-    const ENTIDADES_SIN_FALLBACK = ['usuarios']
-    if (ENTIDADES_SIN_FALLBACK.indexOf(entity) !== -1) throw new Error('Mapper requerido para: ' + entity)
     const existingHeaders = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0]
     hoja.appendRow(existingHeaders.map(h => (data[h] !== undefined ? data[h] : '')))
   }
@@ -356,14 +153,12 @@ function insertRecord(entity, data) {
   return { ok: true, id: data.id }
 }
 
-/**
- * Actualiza el registro cuya primera columna (id) coincida con el id dado.
- */
 function updateRecord(entity, id, data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  if (!id || !data) throw new Error('id y data son requeridos')
   const sheetName = HOJAS[entity]
   if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
 
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
   if (!hoja) throw new Error('Hoja no encontrada: ' + sheetName)
 
@@ -373,9 +168,7 @@ function updateRecord(entity, id, data) {
   for (let i = 1; i < valores.length; i++) {
     if (String(valores[i][0]) === String(id)) {
       headers.forEach((key, col) => {
-        if (key in data) {
-          hoja.getRange(i + 1, col + 1).setValue(data[key])
-        }
+        if (key && key in data) hoja.getRange(i + 1, col + 1).setValue(data[key])
       })
       return { ok: true, updated: 1 }
     }
@@ -384,31 +177,25 @@ function updateRecord(entity, id, data) {
   return { ok: false, error: 'Registro no encontrado: ' + id }
 }
 
-/**
- * Elimina (soft-delete) el registro cuya primera columna coincida con el id.
- * Si la hoja tiene columna "activo", la pone en false.
- * De lo contrario, elimina la fila físicamente.
- */
 function removeRecord(entity, id) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  if (!id) throw new Error('id es requerido')
   const sheetName = HOJAS[entity]
   if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
 
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
   if (!hoja) throw new Error('Hoja no encontrada: ' + sheetName)
 
-  const valores = hoja.getDataRange().getValues()
-  const headers = valores[0]
-  const activoCol = headers.indexOf('activo')
+  const valores    = hoja.getDataRange().getValues()
+  const headers    = valores[0]
+  const activoCol  = headers.indexOf('activo')
 
   for (let i = 1; i < valores.length; i++) {
     if (String(valores[i][0]) === String(id)) {
       if (activoCol !== -1) {
-        // Soft delete
-        hoja.getRange(i + 1, activoCol + 1).setValue(false)
+        hoja.getRange(i + 1, activoCol + 1).setValue(false) // soft-delete
       } else {
-        // Hard delete
-        hoja.deleteRow(i + 1)
+        hoja.deleteRow(i + 1) // hard-delete (tablas sin campo activo)
       }
       return { ok: true, removed: 1 }
     }
@@ -417,84 +204,163 @@ function removeRecord(entity, id) {
   return { ok: false, error: 'Registro no encontrado: ' + id }
 }
 
-/** Mapea nombres de entidad a sus funciones mapper */
-function _getMappers() {
-  return {
-    productos:         filaProducto,
-    clientes:          filaCliente,
-    proveedores:       filaProveedor,
-    ventas:            filaVenta,
-    ventaItems:        filaVentaItem,
-    compras:           filaCompra,
-    compraItems:       filaCompraItem,
-    cotizaciones:      filaCotizacion,
-    cotizacionItems:   filaCotizacionItem,
-    cuentasCobrar:     filaCuentaCobrar,
-    abonos:            filaAbono,
-    cajaAperturas:     filaCajaApertura,
-    cajaMovimientos:   filaCajaMovimiento,
-    movimientos:       filaMovimiento,
-    empresa:           filaEmpresa,
-    usuarios:          filaUsuario,
-    catalogos:         filaCatalogo,
-  }
-}
+// ── Backup completo ────────────────────────────────────────────
 
-/** Mapea nombres de entidad a sus encabezados */
-function _getHeaders() {
-  return {
-    productos:         encabezadosProductos(),
-    clientes:          encabezadosClientes(),
-    proveedores:       encabezadosProveedores(),
-    ventas:            encabezadosVentas(),
-    ventaItems:        encabezadosVentaItems(),
-    compras:           encabezadosCompras(),
-    compraItems:       encabezadosCompraItems(),
-    cotizaciones:      encabezadosCotizaciones(),
-    cotizacionItems:   encabezadosCotizacionItems(),
-    cuentasCobrar:     encabezadosCuentasCobrar(),
-    abonos:            encabezadosAbonos(),
-    cajaAperturas:     encabezadosCajaAperturas(),
-    cajaMovimientos:   encabezadosCajaMovimientos(),
-    movimientos:       encabezadosMovimientos(),
-    empresa:           encabezadosEmpresa(),
-    usuarios:          encabezadosUsuarios(),
-    catalogos:         encabezadosCatalogos(),
-  }
-}
-
-// ── Setup inicial ─────────────────────────────────────────────
-function configurarHojas() {
+function backupCompleto(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet()
-  const encabezadosMap = {
-    productos:         encabezadosProductos(),
-    clientes:          encabezadosClientes(),
-    proveedores:       encabezadosProveedores(),
-    ventas:            encabezadosVentas(),
-    ventaItems:        encabezadosVentaItems(),
-    compras:           encabezadosCompras(),
-    compraItems:       encabezadosCompraItems(),
-    cotizaciones:      encabezadosCotizaciones(),
-    cotizacionItems:   encabezadosCotizacionItems(),
-    cuentasCobrar:     encabezadosCuentasCobrar(),
-    abonos:            encabezadosAbonos(),
-    cajaAperturas:     encabezadosCajaAperturas(),
-    cajaMovimientos:   encabezadosCajaMovimientos(),
-    movimientos:       encabezadosMovimientos(),
-    empresa:           encabezadosEmpresa(),
-    usuarios:          encabezadosUsuarios(),
-    catalogos:         encabezadosCatalogos(),
+
+  _escribirHoja(ss, 'productos',       data.productos    || [])
+  _escribirHoja(ss, 'clientes',        data.clientes     || [])
+  _escribirHoja(ss, 'proveedores',     data.proveedores  || [])
+  _escribirHoja(ss, 'movimientos',     (data.movimientos || []).map(m => {
+    const prod = (data.productos || []).find(p => p.id === m.producto_id)
+    return { ...m, producto_nombre: prod ? prod.nombre : '' }
+  }))
+  _escribirHoja(ss, 'ventas',          data.ventas || [])
+  _escribirHoja(ss, 'ventaItems',      (data.ventas || []).flatMap(v => (v.items || []).map(i => ({ ...i, venta_id: v.id }))))
+  _escribirHoja(ss, 'compras',         data.compras || [])
+  _escribirHoja(ss, 'compraItems',     (data.compras || []).flatMap(c => (c.items || []).map(i => ({ ...i, compra_id: c.id }))))
+  _escribirHoja(ss, 'cotizaciones',    data.cotizaciones || [])
+  _escribirHoja(ss, 'cotizacionItems', (data.cotizaciones || []).flatMap(c => (c.items || []).map(i => ({ ...i, cotizacion_id: c.id }))))
+  _escribirHoja(ss, 'cuentasCobrar',   data.cuentas_cobrar || [])
+  _escribirHoja(ss, 'abonos',          data.abonos || [])
+  _escribirHoja(ss, 'cajaAperturas',   data.caja_aperturas || [])
+  _escribirHoja(ss, 'cajaMovimientos', data.caja_movimientos || [])
+  _escribirHoja(ss, 'catalogos',       data.catalogos || [])
+
+  if (data.empresa) {
+    const hoja = _getOrCreateSheet(ss, HOJAS.empresa, _headers().empresa)
+    hoja.clearContents()
+    hoja.appendRow(_headers().empresa)
+    hoja.appendRow(_mappers().empresa(data.empresa))
+  }
+  if (data.usuarios?.length) _escribirHoja(ss, 'usuarios', data.usuarios)
+
+  return {
+    mensaje: `Backup completado: ${(data.productos||[]).length} productos, `
+           + `${(data.ventas||[]).length} ventas, ${(data.clientes||[]).length} clientes`,
+  }
+}
+
+// ── Sync de entidad completa ───────────────────────────────────
+
+function syncEntidad(entity, datos) {
+  if (!Array.isArray(datos)) return { ok: false, error: 'datos debe ser un array' }
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  _escribirHoja(ss, entity, datos)
+  return { mensaje: `${datos.length} registros sincronizados en ${entity}` }
+}
+
+// ── Reporte resumen ────────────────────────────────────────────
+
+function getResumen(periodo) {
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
+  const hoja = ss.getSheetByName(HOJAS.ventas)
+  if (!hoja) return { total: 0, cantidad: 0, periodo: periodo || 'todos' }
+
+  const datos  = hoja.getDataRange().getValues().slice(1)
+  const hoy    = new Date()
+  let filtrado = datos
+
+  if (periodo === 'hoy' || periodo === 'dia') {
+    const dStr = hoy.toDateString()
+    filtrado = datos.filter(f => new Date(f[4]).toDateString() === dStr)
+  } else if (periodo === 'mes') {
+    filtrado = datos.filter(f => {
+      const d = new Date(f[4])
+      return d.getMonth() === hoy.getMonth() && d.getFullYear() === hoy.getFullYear()
+    })
   }
 
-  Object.entries(HOJAS).forEach(([key, nombre]) => {
-    if (!ss.getSheetByName(nombre)) {
-      const h = ss.insertSheet(nombre)
-      const enc = encabezadosMap[key]
-      if (enc) {
-        h.appendRow(enc)
-        h.getRange(1, 1, 1, enc.length).setBackground('#1e40af').setFontColor('#ffffff').setFontWeight('bold')
-      }
+  const total = filtrado.reduce((acc, f) => acc + (parseFloat(f[8]) || 0), 0)
+  return { total, cantidad: filtrado.length, periodo: periodo || 'todos' }
+}
+
+// ── Helpers internos ──────────────────────────────────────────
+
+/**
+ * Obtiene la hoja por nombre. Si no existe, la crea con los encabezados dados.
+ * Esto es lo que hace innecesario correr configurarHojas() manualmente.
+ */
+function _getOrCreateSheet(ss, nombre, encabezados) {
+  let hoja = ss.getSheetByName(nombre)
+  if (!hoja) {
+    hoja = ss.insertSheet(nombre)
+    if (encabezados && encabezados.length) {
+      hoja.appendRow(encabezados)
+      hoja.getRange(1, 1, 1, encabezados.length)
+          .setBackground('#1e40af')
+          .setFontColor('#ffffff')
+          .setFontWeight('bold')
+      hoja.setFrozenRows(1)
     }
-  })
-  SpreadsheetApp.getUi().alert('¡Hojas creadas exitosamente! Ya puedes desplegar como Web App.')
+  }
+  return hoja
+}
+
+/** Sobreescribe una hoja completa con los datos dados */
+function _escribirHoja(ss, entity, datos) {
+  const sheetName  = HOJAS[entity]
+  if (!sheetName) return
+  const encabezados = _headers()[entity] || []
+  const mapFn       = _mappers()[entity]
+  const hoja        = _getOrCreateSheet(ss, sheetName, encabezados)
+
+  hoja.clearContents()
+  if (encabezados.length) hoja.appendRow(encabezados)
+  if (datos.length && mapFn) {
+    const filas = datos.map(mapFn)
+    hoja.getRange(2, 1, filas.length, filas[0].length).setValues(filas)
+  }
+}
+
+function json(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON)
+}
+
+// ── Encabezados ───────────────────────────────────────────────
+function _headers() {
+  return {
+    productos:         ['id','codigo','nombre','categoria','precio_compra','precio_venta','stock','stock_minimo','unidad','ubicacion','activo','creado_en'],
+    clientes:          ['id','nombre','telefono','email','direccion','nit','tipo','activo','creado_en'],
+    proveedores:       ['id','nit','nombre','nombre_contacto','telefono','correo','direccion','dias_credito','porcentaje_descuento','activo','creado_en'],
+    ventas:            ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas'],
+    ventaItems:        ['venta_id','producto_id','nombre','cantidad','precio_unitario','subtotal'],
+    compras:           ['id','numero_documento','proveedor_id','proveedor_nombre','fecha_documento','fecha_recepcion','subtotal','descuento','impuesto','total','estado'],
+    compraItems:       ['compra_id','producto_id','nombre','cantidad','costo_unitario','subtotal'],
+    cotizaciones:      ['id','numero_cotizacion','cliente_id','cliente_nombre','fecha','fecha_vencimiento','subtotal','descuento','impuesto','total','estado'],
+    cotizacionItems:   ['cotizacion_id','producto_id','nombre','cantidad','precio_unitario','subtotal'],
+    cuentasCobrar:     ['id','numero_documento','cliente_id','cliente_nombre','fecha_emision','fecha_vencimiento','monto_original','monto_pagado','saldo','estado'],
+    abonos:            ['id','cuenta_por_cobrar_id','usuario_id','monto','metodo_pago','referencia','fecha','notas'],
+    cajaAperturas:     ['id','usuario_id','usuario_nombre','fecha_apertura','fecha_cierre','monto_apertura','monto_esperado','monto_real','diferencia','estado'],
+    cajaMovimientos:   ['id','apertura_caja_id','usuario_id','tipo','monto','concepto','referencia','fecha'],
+    movimientos:       ['id','producto_id','producto_nombre','tipo','cantidad','motivo','referencia','fecha'],
+    empresa:           ['nit','nombre_comercial','razon_social','direccion_fiscal','telefono','correo_electronico','regimen_tributario','moneda_codigo','iva_porcentaje'],
+    usuarios:          ['id','nombre','email','password_hash','rol','activo','creado_en'],
+    catalogos:         ['tipo','codigo','valor','descripcion','orden'],
+  }
+}
+
+// ── Mappers (objeto → fila de Sheet) ──────────────────────────
+function _mappers() {
+  return {
+    productos:       p => [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.ubicacion||'',p.activo,p.creado_en],
+    clientes:        c => [c.id,c.nombre,c.telefono,c.email,c.direccion,c.nit,c.tipo,c.activo,c.creado_en],
+    proveedores:     p => [p.id,p.nit,p.nombre,p.nombre_contacto,p.telefono,p.correo,p.direccion,p.dias_credito,p.porcentaje_descuento,p.activo,p.creado_en],
+    ventas:          v => [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre||'',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas||''],
+    ventaItems:      i => [i.venta_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal],
+    compras:         c => [c.id,c.numero_documento,c.proveedor_id,c.proveedor_nombre||'',c.fecha_documento,c.fecha_recepcion,c.subtotal,c.descuento,c.impuesto,c.total,c.estado],
+    compraItems:     i => [i.compra_id,i.producto_id,i.nombre,i.cantidad,i.costo_unitario,i.subtotal],
+    cotizaciones:    c => [c.id,c.numero_cotizacion,c.cliente_id,c.cliente_nombre||'',c.fecha,c.fecha_vencimiento,c.subtotal,c.descuento,c.impuesto,c.total,c.estado],
+    cotizacionItems: i => [i.cotizacion_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal],
+    cuentasCobrar:   c => [c.id,c.numero_documento,c.cliente_id,c.cliente_nombre||'',c.fecha_emision,c.fecha_vencimiento,c.monto_original,c.monto_pagado,c.saldo,c.estado],
+    abonos:          a => [a.id,a.cuenta_por_cobrar_id,a.usuario_id,a.monto,a.metodo_pago,a.referencia||'',a.fecha,a.notas||''],
+    cajaAperturas:   c => [c.id,c.usuario_id,c.usuario_nombre||'',c.fecha_apertura,c.fecha_cierre||'',c.monto_apertura,c.monto_esperado,c.monto_real,c.diferencia,c.estado],
+    cajaMovimientos: m => [m.id,m.apertura_caja_id,m.usuario_id,m.tipo,m.monto,m.concepto,m.referencia||'',m.fecha],
+    movimientos:     m => [m.id,m.producto_id,m.producto_nombre||'',m.tipo,m.cantidad,m.motivo,m.referencia||'',m.fecha],
+    empresa:         e => [e.nit,e.nombre_comercial,e.razon_social,e.direccion_fiscal,e.telefono,e.correo_electronico,e.regimen_tributario,e.moneda_codigo,e.iva_porcentaje],
+    usuarios:        u => [u.id,u.nombre,u.email,u.password_hash||'',u.rol,u.activo,u.creado_en],
+    catalogos:       c => [c.tipo||'',c.codigo||'',c.valor||'',c.descripcion||'',c.orden||0],
+  }
 }
