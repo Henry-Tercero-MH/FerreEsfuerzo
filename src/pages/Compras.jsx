@@ -140,7 +140,7 @@ export default function Compras() {
               <tr>
                 <td colSpan={6} className="py-12 text-center text-gray-400">
                   <Package size={32} className="mx-auto mb-2 opacity-30" />
-                  No hay compras registradas
+                  {compras.length === 0 ? 'Aún no hay compras registradas. ¡Crea la primera!' : 'No se encontraron compras'}
                 </td>
               </tr>
             ) : (

@@ -160,7 +160,7 @@ export default function CuentasPorCobrar() {
               <tr>
                 <td colSpan={9} className="py-12 text-center text-gray-400">
                   <IconQ size={32} className="mx-auto mb-2 opacity-30" />
-                  No hay cuentas por cobrar
+                  {cuentas.length === 0 ? 'Aún no hay cuentas por cobrar registradas' : 'No se encontraron cuentas'}
                 </td>
               </tr>
             ) : (

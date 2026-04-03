@@ -63,7 +63,7 @@ export default function Ventas() {
             {ventasFiltradas.length === 0 ? (
               <tr><td colSpan={7} className="py-12 text-center text-gray-400">
                 <ShoppingCart size={32} className="mx-auto mb-2 opacity-30" />
-                No hay ventas registradas
+                {ventas.length === 0 ? 'Aún no hay ventas registradas. ¡Crea la primera!' : 'No se encontraron ventas'}
               </td></tr>
             ) : ventasFiltradas.map((v, i) => {
               const estado = ESTADOS_VENTA[v.estado]

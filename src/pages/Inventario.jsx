@@ -90,7 +90,7 @@ export default function Inventario() {
       <div className="card">
         <h2 className="mb-4 text-base font-semibold text-gray-900">Últimos movimientos</h2>
         {ultimosMovimientos.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">Sin movimientos registrados</p>
+          <p className="py-6 text-center text-sm text-gray-400">{movimientos.length === 0 ? 'Aún no hay movimientos de inventario' : 'Sin movimientos en este período'}</p>
         ) : (
           <div className="space-y-2">
             {ultimosMovimientos.map(m => {

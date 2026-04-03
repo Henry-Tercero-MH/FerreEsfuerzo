@@ -78,7 +78,8 @@ export default function Clientes() {
           <tbody>
             {clientesFiltrados.length === 0 ? (
               <tr><td colSpan={7} className="py-12 text-center text-gray-400">
-                <Users size={32} className="mx-auto mb-2 opacity-30" />No hay clientes
+                <Users size={32} className="mx-auto mb-2 opacity-30" />
+                {clientes.length === 0 ? 'Aún no hay clientes registrados. ¡Agrega el primero!' : 'No se encontraron clientes'}
               </td></tr>
             ) : clientesFiltrados.map(c => (
               <tr key={c.id}>

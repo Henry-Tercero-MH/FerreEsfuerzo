@@ -134,7 +134,7 @@ export default function Proveedores() {
               <tr>
                 <td colSpan={7} className="py-12 text-center text-gray-400">
                   <Truck size={32} className="mx-auto mb-2 opacity-30" />
-                  No se encontraron proveedores
+                  {proveedores.length === 0 ? 'Aún no hay proveedores registrados. ¡Agrega el primero!' : 'No se encontraron proveedores'}
                 </td>
               </tr>
             ) : (

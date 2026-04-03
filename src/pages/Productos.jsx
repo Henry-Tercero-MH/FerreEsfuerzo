@@ -121,7 +121,7 @@ export default function Productos() {
             {productosFiltrados.length === 0 ? (
               <tr><td colSpan={8} className="py-12 text-center text-gray-400">
                 <Package size={32} className="mx-auto mb-2 opacity-30" />
-                No se encontraron productos
+                {productos.length === 0 ? 'Aún no hay productos registrados. ¡Agrega el primero!' : 'No se encontraron productos'}
               </td></tr>
             ) : productosFiltrados.map(p => {
               const { label, variant } = stockBadge(p)

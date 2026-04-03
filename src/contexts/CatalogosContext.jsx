@@ -152,9 +152,9 @@ export function CatalogosProvider({ children }) {
 
   return (
     <CatalogosContext.Provider value={{
-      categorias:    catalogos.categorias,
-      unidades:      catalogos.unidades,
-      metodos_pago:  catalogos.metodos_pago,
+      categorias:    catalogos.categorias    || SEED.categorias,
+      unidades:      catalogos.unidades      || SEED.unidades,
+      metodos_pago:  catalogos.metodos_pago  || SEED.metodos_pago,
       ubicaciones:   catalogos.ubicaciones   || SEED.ubicaciones,
       tipos_cliente: catalogos.tipos_cliente || SEED.tipos_cliente,
       catalogos, // raw — para backup
