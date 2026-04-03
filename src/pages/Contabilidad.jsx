@@ -172,7 +172,10 @@ export default function Contabilidad() {
     w.document.write(html)
     w.document.close()
     w.focus()
-    setTimeout(() => { w.print(); w.close() }, 400)
+    w.onload = () => {
+      w.print()
+      w.onafterprint = () => w.close()
+    }
   }
 
   return (

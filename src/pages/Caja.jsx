@@ -20,6 +20,8 @@ export default function Caja() {
   const [formCierre, setFormCierre] = useState({ monto_real: '', notas: '' })
   const [formMovimiento, setFormMovimiento] = useState({ tipo: 'INGRESO', monto: '', concepto: '', referencia: '' })
   const [loading, setLoading] = useState(false)
+  const [errCierre, setErrCierre] = useState('')
+  const [errMovimiento, setErrMovimiento] = useState('')
 
   const handleAbrirCaja = async () => {
     setLoading(true)
@@ -27,7 +29,7 @@ export default function Caja() {
     abrirCaja({
       usuario_id: sesion.id,
       usuario_nombre: sesion.nombre,
-      monto_apertura: Number(montoApertura) || 0,
+      monto_apertura: Math.max(Number(montoApertura) || 0, 0),
     })
     setLoading(false)
     setModalApertura(false)
@@ -36,6 +38,11 @@ export default function Caja() {
 
   const handleCerrarCaja = async () => {
     if (!cajaAbierta) return
+    if (formCierre.monto_real === '' || Number(formCierre.monto_real) < 0) {
+      setErrCierre('Ingresa el monto real en caja')
+      return
+    }
+    setErrCierre('')
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
     cerrarCaja(cajaAbierta.id, {
@@ -50,7 +57,9 @@ export default function Caja() {
 
   const handleMovimiento = async () => {
     if (!cajaAbierta) return
-    if (!formMovimiento.concepto.trim() || !formMovimiento.monto) return
+    if (!formMovimiento.concepto.trim()) { setErrMovimiento('El concepto es requerido'); return }
+    if (!formMovimiento.monto || Number(formMovimiento.monto) <= 0) { setErrMovimiento('El monto debe ser mayor a 0'); return }
+    setErrMovimiento('')
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -117,28 +126,28 @@ export default function Caja() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Ventas efectivo"
-              value={formatCurrency(cajaAbierta.total_ventas_efectivo)}
+              value={formatCurrency(Number(cajaAbierta.total_ventas_efectivo) || 0)}
               icon={IconQ}
               iconBg="bg-green-100"
               iconColor="text-green-600"
             />
             <StatCard
               label="Ventas tarjeta"
-              value={formatCurrency(cajaAbierta.total_ventas_tarjeta)}
+              value={formatCurrency(Number(cajaAbierta.total_ventas_tarjeta) || 0)}
               icon={IconQ}
               iconBg="bg-blue-100"
               iconColor="text-blue-600"
             />
             <StatCard
               label="Ingresos"
-              value={formatCurrency(cajaAbierta.total_ingresos)}
+              value={formatCurrency(Number(cajaAbierta.total_ingresos) || 0)}
               icon={TrendingUp}
               iconBg="bg-purple-100"
               iconColor="text-purple-600"
             />
             <StatCard
               label="Egresos"
-              value={formatCurrency(cajaAbierta.total_egresos)}
+              value={formatCurrency(Number(cajaAbierta.total_egresos) || 0)}
               icon={TrendingDown}
               iconBg="bg-red-100"
               iconColor="text-red-600"
@@ -249,7 +258,7 @@ export default function Caja() {
       {/* Modal Cierre */}
       <Modal
         open={modalCierre}
-        onClose={() => setModalCierre(false)}
+        onClose={() => { setModalCierre(false); setErrCierre('') }}
         title="Cerrar Caja"
         footer={
           <>
@@ -292,8 +301,9 @@ export default function Caja() {
             min="0"
             step="0.01"
             value={formCierre.monto_real}
-            onChange={e => setFormCierre(p => ({ ...p, monto_real: e.target.value }))}
+            onChange={e => { setErrCierre(''); setFormCierre(p => ({ ...p, monto_real: e.target.value })) }}
             placeholder="0.00"
+            error={errCierre}
           />
 
           <div>
@@ -312,7 +322,7 @@ export default function Caja() {
       {/* Modal Movimiento */}
       <Modal
         open={modalMovimiento}
-        onClose={() => setModalMovimiento(false)}
+        onClose={() => { setModalMovimiento(false); setErrMovimiento('') }}
         title="Registrar Movimiento"
         footer={
           <>
@@ -355,14 +365,15 @@ export default function Caja() {
             min="0"
             step="0.01"
             value={formMovimiento.monto}
-            onChange={e => setFormMovimiento(p => ({ ...p, monto: e.target.value }))}
+            onChange={e => { setErrMovimiento(''); setFormMovimiento(p => ({ ...p, monto: e.target.value })) }}
             placeholder="0.00"
+            error={errMovimiento}
           />
 
           <Input
             label="Concepto *"
             value={formMovimiento.concepto}
-            onChange={e => setFormMovimiento(p => ({ ...p, concepto: e.target.value }))}
+            onChange={e => { setErrMovimiento(''); setFormMovimiento(p => ({ ...p, concepto: e.target.value })) }}
             placeholder="Ej: Pago a proveedor, Compra de suministros..."
           />
 

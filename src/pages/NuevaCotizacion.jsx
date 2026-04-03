@@ -1,26 +1,31 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, FileText, CheckCircle } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, FileText, CheckCircle, UserPlus } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { formatCurrency } from '../utils/formatters'
 import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
-import { Select } from '../components/ui/Input'
+import Modal from '../components/ui/Modal'
+import Input from '../components/ui/Input'
+import ClienteSelector from '../components/shared/ClienteSelector'
 
 export default function NuevaCotizacion() {
-  const { productos, clientes } = useApp()
+  const { productos, clientes, agregarCliente } = useApp()
   const { crearCotizacion } = useCotizaciones()
   const navigate = useNavigate()
 
   const [busqueda, setBusqueda] = useState('')
   const [items, setItems] = useState([])
-  const [clienteId, setClienteId] = useState('c1')
+  const [clienteId, setClienteId] = useState('')
   const [descuentoGlobal, setDescuentoGlobal] = useState(0)
   const [notas, setNotas] = useState('')
   const [fechaVencimiento, setFechaVencimiento] = useState('')
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(null)
+  const [modalCliente, setModalCliente] = useState(false)
+  const [nuevoCliente, setNuevoCliente] = useState({ nombre: '', telefono: '', nit: '' })
+  const [errCliente, setErrCliente] = useState('')
 
   const productosFiltrados = useMemo(() => {
     if (!busqueda) return []
@@ -58,10 +63,18 @@ export default function NuevaCotizacion() {
     }))
   }
 
+  const setCantidadDirecta = (id, valor) => {
+    setItems(prev => prev.map(i => {
+      if (i.producto_id !== id) return i
+      const nueva = Math.max(1, parseInt(valor) || 1)
+      return { ...i, cantidad: nueva, subtotal: nueva * i.precio_unitario }
+    }))
+  }
+
   const cambiarPrecio = (id, precio) => {
     setItems(prev => prev.map(i => {
       if (i.producto_id !== id) return i
-      const p = parseFloat(precio) || 0
+      const p = Math.max(parseFloat(precio) || 0.01, 0.01)
       return { ...i, precio_unitario: p, subtotal: i.cantidad * p }
     }))
   }
@@ -69,15 +82,28 @@ export default function NuevaCotizacion() {
   const eliminarItem = (id) => setItems(prev => prev.filter(i => i.producto_id !== id))
 
   const subtotal = items.reduce((acc, i) => acc + i.subtotal, 0)
-  const descuento = Math.min(Number(descuentoGlobal) || 0, subtotal)
+  const descuento = Math.min(Math.max(Number(descuentoGlobal) || 0, 0), subtotal)
   const baseImponible = subtotal - descuento
   const impuesto = baseImponible * IMPUESTO_DEFAULT
   const total = baseImponible + impuesto
 
   const clienteNombre = clientes.find(c => c.id === clienteId)?.nombre || ''
 
+  const handleCrearCliente = () => {
+    if (!nuevoCliente.nombre.trim()) { setErrCliente('El nombre es requerido'); return }
+    const nuevo = agregarCliente({ ...nuevoCliente, tipo: 'natural', activo: true })
+    setClienteId(nuevo.id)
+    setModalCliente(false)
+    setNuevoCliente({ nombre: '', telefono: '', nit: '' })
+    setErrCliente('')
+  }
+
   const handleConfirmar = async () => {
     if (items.length === 0) return
+    if (!clienteId) return
+    if (Number(descuentoGlobal) < 0) return
+    const hoy = new Date().toISOString().split('T')[0]
+    if (fechaVencimiento && fechaVencimiento < hoy) return
     setLoading(true)
     const cot = await crearCotizacion({
       items,
@@ -185,7 +211,13 @@ export default function NuevaCotizacion() {
                     />
                     <div className="flex items-center gap-1">
                       <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="btn-icon btn-ghost w-7 h-7"><Minus size={12} /></button>
-                      <span className="w-8 text-center text-sm font-semibold">{item.cantidad}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.cantidad}
+                        onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
+                        className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
+                      />
                       <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="btn-icon btn-ghost w-7 h-7"><Plus size={12} /></button>
                     </div>
                     <p className="w-20 text-right text-sm font-semibold text-gray-900">{formatCurrency(item.subtotal)}</p>
@@ -201,9 +233,22 @@ export default function NuevaCotizacion() {
         <div className="card h-fit space-y-4 lg:sticky lg:top-24">
           <h3 className="font-semibold text-gray-900">Datos de la cotización</h3>
 
-          <Select label="Cliente" value={clienteId} onChange={e => setClienteId(e.target.value)}>
-            {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </Select>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <p className="label">Cliente *</p>
+              <button
+                type="button"
+                onClick={() => setModalCliente(true)}
+                className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-medium"
+              >
+                <UserPlus size={12} /> Nuevo cliente
+              </button>
+            </div>
+            <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} label={null} showCF={false} />
+            {!clienteId && (
+              <p className="text-xs text-red-500 mt-1">Selecciona o crea un cliente para continuar</p>
+            )}
+          </div>
 
           <div>
             <label className="label">Fecha de vencimiento</label>
@@ -251,7 +296,7 @@ export default function NuevaCotizacion() {
           <Button
             variant="primary"
             className="w-full btn-lg"
-            disabled={items.length === 0}
+            disabled={items.length === 0 || !clienteId}
             loading={loading}
             onClick={handleConfirmar}
           >
@@ -259,6 +304,41 @@ export default function NuevaCotizacion() {
           </Button>
         </div>
       </div>
+
+      {/* Modal nuevo cliente rápido */}
+      <Modal
+        open={modalCliente}
+        onClose={() => { setModalCliente(false); setErrCliente('') }}
+        title="Nuevo cliente"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setModalCliente(false); setErrCliente('') }}>Cancelar</Button>
+            <Button variant="primary" onClick={handleCrearCliente}>Crear y seleccionar</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Nombre *"
+            value={nuevoCliente.nombre}
+            onChange={e => { setNuevoCliente(p => ({ ...p, nombre: e.target.value })); setErrCliente('') }}
+            error={errCliente}
+            placeholder="Nombre completo o razón social"
+          />
+          <Input
+            label="NIT"
+            value={nuevoCliente.nit}
+            onChange={e => setNuevoCliente(p => ({ ...p, nit: e.target.value }))}
+            placeholder="000-0"
+          />
+          <Input
+            label="Teléfono"
+            value={nuevoCliente.telefono}
+            onChange={e => setNuevoCliente(p => ({ ...p, telefono: e.target.value }))}
+            placeholder="Opcional"
+          />
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { db } from '../services/db'
+import { gasInsert, gasUpdate } from '../services/googleAppsScript'
 
 export const EmpresaContext = createContext(null)
 
@@ -54,9 +55,12 @@ export function EmpresaProvider({ children }) {
     localStorage.setItem('ferreapp_empresa', JSON.stringify(nuevo))
     setEmpresa(nuevo)
     const id = nuevo.nit || 'empresa'
-    // Intentar update primero; si no existe el registro, insertar
-    await db.update('empresa', id, { ...nuevo, id })
-      .catch(() => db.insert('empresa', { ...nuevo, id }))
+    const data = { ...nuevo, id }
+    // Intentar update; si el Sheet devuelve ok:false (registro no existe), insertar
+    const res = await gasUpdate('empresa', id, data).catch(() => ({ ok: false }))
+    if (!res?.ok) {
+      await gasInsert('empresa', data).catch(() => {})
+    }
   }, [])
 
   const actualizarEmpresa = useCallback((data) => {

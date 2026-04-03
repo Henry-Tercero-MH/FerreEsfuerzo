@@ -21,13 +21,35 @@ function lsSet(val) {
   localStorage.setItem(LS_KEY, JSON.stringify(val))
 }
 
+function normalizar(c) {
+  return {
+    categorias:    Array.isArray(c?.categorias)    ? c.categorias    : SEED.categorias,
+    unidades:      Array.isArray(c?.unidades)      ? c.unidades      : SEED.unidades,
+    metodos_pago:  Array.isArray(c?.metodos_pago)  ? c.metodos_pago  : SEED.metodos_pago,
+    ubicaciones:   Array.isArray(c?.ubicaciones)   ? c.ubicaciones   : SEED.ubicaciones,
+    tipos_cliente: Array.isArray(c?.tipos_cliente) ? c.tipos_cliente : SEED.tipos_cliente,
+  }
+}
+
 export function CatalogosProvider({ children }) {
-  const [catalogos, setCatalogos] = useState(lsGet)
+  const [catalogos, setCatalogos] = useState(() => normalizar(lsGet()))
 
   // Carga desde el Sheet al arrancar
   useEffect(() => {
     gasGetAll('catalogos').then(res => {
-      if (!res.ok || !res.data?.length) return
+      if (!res.ok || !res.data?.length) {
+        // No hay hoja o está vacía — sincronizar los SEED para crearla
+        const datos = normalizar(lsGet())
+        const filas = [
+          ...datos.categorias.map((v, i)    => ({ tipo: 'categoria',    codigo: `cat-${i}`,  valor: v,       descripcion: v,       orden: i })),
+          ...datos.unidades.map((v, i)      => ({ tipo: 'unidad',       codigo: `uni-${i}`,  valor: v,       descripcion: v,       orden: i })),
+          ...datos.metodos_pago.map((m, i)  => ({ tipo: 'metodo_pago',  codigo: m.value,     valor: m.label, descripcion: m.label, orden: i })),
+          ...datos.ubicaciones.map((v, i)   => ({ tipo: 'ubicacion',    codigo: `ubi-${i}`,  valor: v,       descripcion: v,       orden: i })),
+          ...datos.tipos_cliente.map((v, i) => ({ tipo: 'tipo_cliente', codigo: `tc-${i}`,   valor: v,       descripcion: v,       orden: i })),
+        ]
+        sincronizarCatalogos(filas).catch(() => {})
+        return
+      }
       // El Sheet guarda filas por tipo: categorias, unidades, metodos_pago
       const cats   = res.data.filter(r => r.tipo === 'categoria').map(r => r.valor)
       const units  = res.data.filter(r => r.tipo === 'unidad').map(r => r.valor)
@@ -35,13 +57,13 @@ export function CatalogosProvider({ children }) {
       const ubics  = res.data.filter(r => r.tipo === 'ubicacion').map(r => r.valor)
       const tclien = res.data.filter(r => r.tipo === 'tipo_cliente').map(r => r.valor)
       if (cats.length || units.length || metods.length || ubics.length || tclien.length) {
-        const remoto = {
+        const remoto = normalizar({
           categorias:    cats.length   ? cats   : SEED.categorias,
           unidades:      units.length  ? units  : SEED.unidades,
           metodos_pago:  metods.length ? metods : SEED.metodos_pago,
           ubicaciones:   ubics.length  ? ubics  : SEED.ubicaciones,
           tipos_cliente: tclien.length ? tclien : SEED.tipos_cliente,
-        }
+        })
         setCatalogos(remoto)
         lsSet(remoto)
       }
@@ -49,7 +71,8 @@ export function CatalogosProvider({ children }) {
   }, [])
 
   // Sincroniza todo el catálogo al Sheet (sobreescribe filas por tipo)
-  const _syncSheet = useCallback(async (nuevo) => {
+  const _syncSheet = useCallback(async (datos) => {
+    const nuevo = normalizar(datos)
     lsSet(nuevo)
     setCatalogos(nuevo)
     // Construir filas planas para el Sheet
@@ -57,8 +80,8 @@ export function CatalogosProvider({ children }) {
       ...nuevo.categorias.map((v, i)    => ({ id: `cat-${i}`,  tipo: 'categoria',    codigo: `cat-${i}`,  valor: v,       descripcion: v,       orden: i })),
       ...nuevo.unidades.map((v, i)      => ({ id: `uni-${i}`,  tipo: 'unidad',       codigo: `uni-${i}`,  valor: v,       descripcion: v,       orden: i })),
       ...nuevo.metodos_pago.map((m, i)  => ({ id: `mp-${i}`,   tipo: 'metodo_pago',  codigo: m.value,     valor: m.label, descripcion: m.label, orden: i })),
-      ...(nuevo.ubicaciones  || []).map((v, i) => ({ id: `ubi-${i}`, tipo: 'ubicacion',   codigo: `ubi-${i}`, valor: v, descripcion: v, orden: i })),
-      ...(nuevo.tipos_cliente|| []).map((v, i) => ({ id: `tc-${i}`,  tipo: 'tipo_cliente',codigo: `tc-${i}`,  valor: v, descripcion: v, orden: i })),
+      ...nuevo.ubicaciones.map((v, i)   => ({ id: `ubi-${i}`,  tipo: 'ubicacion',    codigo: `ubi-${i}`,  valor: v,       descripcion: v,       orden: i })),
+      ...nuevo.tipos_cliente.map((v, i) => ({ id: `tc-${i}`,   tipo: 'tipo_cliente', codigo: `tc-${i}`,   valor: v,       descripcion: v,       orden: i })),
     ]
     try {
       await sincronizarCatalogos(filas)

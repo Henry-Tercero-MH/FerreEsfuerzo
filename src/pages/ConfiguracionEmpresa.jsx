@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Building2, Save, AlertCircle } from 'lucide-react'
 import { useEmpresa } from '../contexts/EmpresaContext'
+import { validateEmpresa } from '../utils/validators'
 import Button from '../components/ui/Button'
 import Input, { Select } from '../components/ui/Input'
 import Alert from '../components/ui/Alert'
@@ -8,18 +9,25 @@ import Alert from '../components/ui/Alert'
 export default function ConfiguracionEmpresa() {
   const { empresa, actualizarEmpresa } = useEmpresa()
   const [form, setForm] = useState({ ...empresa })
+  // Sync form cuando empresa se carga desde el Sheet (valores undefined → string vacío)
+  const formNormalizado = Object.fromEntries(
+    Object.entries(form).map(([k, v]) => [k, v ?? ''])
+  )
   const [loading, setLoading] = useState(false)
   const [alerta, setAlerta] = useState(null)
+  const [errors, setErrors] = useState({})
+
+  const f = formNormalizado // alias corto para usar en el JSX
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const handleGuardar = async () => {
+    const errs = validateEmpresa(f)
+    if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
     actualizarEmpresa(form)
@@ -47,69 +55,76 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="NIT *"
             name="nit"
-            value={form.nit}
+            value={f.nit}
             onChange={handleChange}
+            error={errors.nit}
             placeholder="12345678-9"
           />
           <Input
             label="Régimen Tributario"
             name="regimen_tributario"
-            value={form.regimen_tributario}
+            value={f.regimen_tributario}
             onChange={handleChange}
             placeholder="GENERAL"
           />
           <Input
             label="Nombre Comercial *"
             name="nombre_comercial"
-            value={form.nombre_comercial}
+            value={f.nombre_comercial}
             onChange={handleChange}
+            error={errors.nombre_comercial}
             className="sm:col-span-2"
           />
           <Input
             label="Razón Social *"
             name="razon_social"
-            value={form.razon_social}
+            value={f.razon_social}
             onChange={handleChange}
+            error={errors.razon_social}
             className="sm:col-span-2"
           />
           <Input
             label="Dirección Fiscal *"
             name="direccion_fiscal"
-            value={form.direccion_fiscal}
+            value={f.direccion_fiscal}
             onChange={handleChange}
+            error={errors.direccion_fiscal}
             className="sm:col-span-2"
           />
           <Input
             label="Municipio"
             name="municipio"
-            value={form.municipio}
+            value={f.municipio}
             onChange={handleChange}
           />
           <Input
             label="Departamento"
             name="departamento"
-            value={form.departamento}
+            value={f.departamento}
             onChange={handleChange}
           />
           <Input
             label="Teléfono"
             name="telefono"
-            value={form.telefono}
+            value={f.telefono}
             onChange={handleChange}
+            error={errors.telefono}
             placeholder="2234-5678"
           />
           <Input
             label="Correo Electrónico"
             name="correo_electronico"
             type="email"
-            value={form.correo_electronico}
+            value={f.correo_electronico}
             onChange={handleChange}
+            error={errors.correo_electronico}
           />
           <Input
             label="Sitio Web"
             name="sitio_web"
-            value={form.sitio_web}
+            value={f.sitio_web}
             onChange={handleChange}
+            error={errors.sitio_web}
             placeholder="https://..."
             className="sm:col-span-2"
           />
@@ -136,7 +151,7 @@ export default function ConfiguracionEmpresa() {
               <input
                 type="checkbox"
                 name="fel_habilitado"
-                checked={form.fel_habilitado}
+                checked={f.fel_habilitado}
                 onChange={handleChange}
                 className="w-4 h-4 rounded border-gray-300"
                 disabled
@@ -148,7 +163,7 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="Certificador"
             name="certificador_nombre"
-            value={form.certificador_nombre}
+            value={f.certificador_nombre}
             onChange={handleChange}
             disabled
             placeholder="Nombre del certificador FEL"
@@ -156,7 +171,7 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="NIT Certificador"
             name="certificador_nit"
-            value={form.certificador_nit}
+            value={f.certificador_nit}
             onChange={handleChange}
             disabled
             placeholder="NIT del certificador"
@@ -164,7 +179,7 @@ export default function ConfiguracionEmpresa() {
           <Select
             label="Ambiente"
             name="fel_ambiente"
-            value={form.fel_ambiente}
+            value={f.fel_ambiente}
             onChange={handleChange}
             disabled
           >
@@ -174,7 +189,7 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="API URL"
             name="fel_api_url"
-            value={form.fel_api_url}
+            value={f.fel_api_url}
             onChange={handleChange}
             disabled
             placeholder="https://..."
@@ -189,14 +204,14 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="Código de Moneda"
             name="moneda_codigo"
-            value={form.moneda_codigo}
+            value={f.moneda_codigo}
             onChange={handleChange}
             placeholder="GTQ"
           />
           <Input
             label="Símbolo de Moneda"
             name="moneda_simbolo"
-            value={form.moneda_simbolo}
+            value={f.moneda_simbolo}
             onChange={handleChange}
             placeholder="Q"
           />
@@ -207,15 +222,16 @@ export default function ConfiguracionEmpresa() {
             min="0"
             max="100"
             step="0.01"
-            value={form.iva_porcentaje}
+            value={f.iva_porcentaje}
             onChange={handleChange}
+            error={errors.iva_porcentaje}
           />
           <div className="flex items-center">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 name="iva_incluido_precio"
-                checked={form.iva_incluido_precio}
+                checked={f.iva_incluido_precio}
                 onChange={handleChange}
                 className="w-4 h-4 rounded border-gray-300"
               />
@@ -233,7 +249,7 @@ export default function ConfiguracionEmpresa() {
             <label className="label">Pie de factura</label>
             <textarea
               name="pie_factura"
-              value={form.pie_factura}
+              value={f.pie_factura}
               onChange={handleChange}
               rows={2}
               className="input resize-none"
@@ -243,7 +259,7 @@ export default function ConfiguracionEmpresa() {
           <Input
             label="Ruta del logo"
             name="logo_path"
-            value={form.logo_path}
+            value={f.logo_path}
             onChange={handleChange}
             placeholder="/ruta/al/logo.png"
           />

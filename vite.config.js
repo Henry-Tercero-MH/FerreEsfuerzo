@@ -30,7 +30,7 @@ export default defineConfig({
       '/api/gas': {
         target: 'https://script.google.com',
         changeOrigin: true,
-        rewrite: () => '/macros/s/AKfycbx4XI0b8RLZ3Y1lmwJ6tdiVy2UU4HBt7745U7mqZ-EcFWqU_NAdk-KnZ2ts1GlfOw7D7g/exec',
+        rewrite: () => '/macros/s/AKfycbzoIYW-AJXdWBf8LDGSiS-grK1J7S1XvH48fBWo851eXqR3Q002BaHBNceJ_I3wXAw9YQ/exec',
       },
     },
   },

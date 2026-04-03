@@ -12,15 +12,19 @@ import SearchBar from '../components/shared/SearchBar'
 import Badge from '../components/ui/Badge'
 import Input, { Select } from '../components/ui/Input'
 import { StatCard } from '../components/ui/Card'
+import ClienteSelector from '../components/shared/ClienteSelector'
 
 export default function CuentasPorCobrar() {
-  const { cuentas, cuentasVencidas, totalPorCobrar, registrarAbono, abonos } = useCuentasPorCobrar()
+  const { cuentas, cuentasVencidas, totalPorCobrar, registrarAbono, abonos, crearCuenta } = useCuentasPorCobrar()
   const { clientes } = useApp()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [modalAbono, setModalAbono] = useState({ open: false, cuenta: null })
   const [formAbono, setFormAbono] = useState({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '' })
   const [loading, setLoading] = useState(false)
+  const [modalNueva, setModalNueva] = useState(false)
+  const [formNueva, setFormNueva] = useState({ cliente_id: '', monto_original: '', fecha_vencimiento: '', notas: '' })
+  const [errNueva, setErrNueva] = useState('')
 
   const termino = useDebounce(busqueda)
 
@@ -87,6 +91,25 @@ export default function CuentasPorCobrar() {
     return abonos.filter(a => a.cuenta_por_cobrar_id === cuentaId)
   }
 
+  const handleCrearCuenta = async () => {
+    if (!formNueva.cliente_id) { setErrNueva('Selecciona un cliente'); return }
+    if (!formNueva.monto_original || Number(formNueva.monto_original) <= 0) { setErrNueva('Ingresa un monto válido'); return }
+    if (!formNueva.fecha_vencimiento) { setErrNueva('Ingresa la fecha de vencimiento'); return }
+    const hoy = new Date().toISOString().split('T')[0]
+    if (formNueva.fecha_vencimiento < hoy) { setErrNueva('La fecha de vencimiento debe ser futura'); return }
+    setErrNueva('')
+    const clienteNombre = clientes.find(c => c.id === formNueva.cliente_id)?.nombre || ''
+    await crearCuenta({
+      cliente_id: formNueva.cliente_id,
+      cliente_nombre: clienteNombre,
+      monto_original: Number(formNueva.monto_original),
+      fecha_vencimiento: formNueva.fecha_vencimiento,
+      notas: formNueva.notas,
+    })
+    setModalNueva(false)
+    setFormNueva({ cliente_id: '', monto_original: '', fecha_vencimiento: '', notas: '' })
+  }
+
   return (
     <div className="space-y-6">
       <div className="page-header">
@@ -94,6 +117,9 @@ export default function CuentasPorCobrar() {
           <h1 className="page-title">Cuentas por Cobrar</h1>
           <p className="page-subtitle">Control de créditos a clientes</p>
         </div>
+        <Button variant="primary" icon={Plus} onClick={() => setModalNueva(true)}>
+          Nueva cuenta
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -202,6 +228,58 @@ export default function CuentasPorCobrar() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal Nueva Cuenta Manual */}
+      <Modal
+        open={modalNueva}
+        onClose={() => { setModalNueva(false); setErrNueva('') }}
+        title="Nueva cuenta por cobrar"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setModalNueva(false); setErrNueva('') }}>Cancelar</Button>
+            <Button variant="primary" onClick={handleCrearCuenta}>Crear cuenta</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <ClienteSelector
+            clientes={clientes}
+            value={formNueva.cliente_id}
+            onChange={id => setFormNueva(p => ({ ...p, cliente_id: id }))}
+            showCF={false}
+          />
+          <Input
+            label="Monto (Q) *"
+            type="number"
+            min="0"
+            step="0.01"
+            value={formNueva.monto_original}
+            onChange={e => setFormNueva(p => ({ ...p, monto_original: e.target.value }))}
+            placeholder="0.00"
+          />
+          <div>
+            <label className="label">Fecha de vencimiento *</label>
+            <input
+              type="date"
+              value={formNueva.fecha_vencimiento}
+              onChange={e => setFormNueva(p => ({ ...p, fecha_vencimiento: e.target.value }))}
+              min={new Date().toISOString().split('T')[0]}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="label">Notas</label>
+            <textarea
+              value={formNueva.notas}
+              onChange={e => setFormNueva(p => ({ ...p, notas: e.target.value }))}
+              rows={2}
+              className="input resize-none"
+              placeholder="Concepto del crédito..."
+            />
+          </div>
+          {errNueva && <p className="text-xs text-red-500">{errNueva}</p>}
+        </div>
+      </Modal>
 
       {/* Modal Registrar Abono */}
       <Modal

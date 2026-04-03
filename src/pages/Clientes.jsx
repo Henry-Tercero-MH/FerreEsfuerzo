@@ -46,7 +46,7 @@ export default function Clientes() {
   }
 
   const handleGuardar = async () => {
-    const errs = validateCliente(form)
+    const errs = validateCliente(form, clientes, modal.modo === 'editar')
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -112,7 +112,7 @@ export default function Clientes() {
         </>}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Nombre *" name="nombre" value={form.nombre} onChange={handleChange} error={errors.nombre} className="sm:col-span-2" />
-          <Input label="NIT" name="nit" value={form.nit} onChange={handleChange} placeholder="Ej: 12345678 o CF" />
+          <Input label="NIT" name="nit" value={form.nit} onChange={handleChange} error={errors.nit} placeholder="Ej: 12345678 o CF" />
           <Select label="Tipo" name="tipo" value={form.tipo} onChange={handleChange}>
             {TIPOS_CLIENTE.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </Select>

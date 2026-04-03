@@ -43,7 +43,10 @@ function lsKey(entity)   { return `ferreapp_${entity}` }
 function lsTsKey(entity) { return `ferreapp_${entity}_ts` }
 
 function lsGet(entity) {
-  try { return JSON.parse(localStorage.getItem(lsKey(entity)) || '[]') } catch { return [] }
+  try {
+    const val = JSON.parse(localStorage.getItem(lsKey(entity)) || '[]')
+    return Array.isArray(val) ? val : []
+  } catch { return [] }
 }
 
 function lsSet(entity, data) {

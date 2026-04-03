@@ -53,13 +53,35 @@ export function CajaProvider({ children }) {
     const nuevo = { ...data, id: shortId(), fecha: new Date().toISOString() }
     setMovimientos(prev => [nuevo, ...prev])
     await db.insert('cajaMovimientos', nuevo)
+    // Actualizar totales de ingresos/egresos en la apertura
+    const abierta = aperturas.find(a => a.estado === 'ABIERTA')
+    if (abierta) {
+      const campo = data.tipo === 'INGRESO' ? 'total_ingresos' : 'total_egresos'
+      const actualizado = { [campo]: (Number(abierta[campo]) || 0) + Number(data.monto) }
+      setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
+      db.update('cajaAperturas', abierta.id, actualizado)
+    }
     return nuevo
-  }, [])
+  }, [aperturas])
 
   const cajaAbierta = useMemo(
     () => aperturas.find(a => a.estado === 'ABIERTA'),
     [aperturas]
   )
+
+  const registrarVentaEnCaja = useCallback((metodo_pago, total) => {
+    const abierta = aperturas.find(a => a.estado === 'ABIERTA')
+    if (!abierta) return
+    const campo =
+      metodo_pago === 'efectivo' ? 'total_ventas_efectivo' :
+      metodo_pago === 'tarjeta'  ? 'total_ventas_tarjeta'  :
+      metodo_pago === 'credito'  ? null :
+      'total_ventas_otros'
+    if (!campo) return // crédito no afecta caja
+    const actualizado = { [campo]: (Number(abierta[campo]) || 0) + Number(total) }
+    setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
+    db.update('cajaAperturas', abierta.id, actualizado)
+  }, [aperturas])
 
   return (
     <CajaContext.Provider value={{
@@ -69,6 +91,7 @@ export function CajaProvider({ children }) {
       abrirCaja,
       cerrarCaja,
       registrarMovimiento,
+      registrarVentaEnCaja,
     }}>
       {children}
     </CajaContext.Provider>

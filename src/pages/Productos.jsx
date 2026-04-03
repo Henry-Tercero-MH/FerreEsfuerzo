@@ -65,7 +65,7 @@ export default function Productos() {
   }
 
   const handleGuardar = async () => {
-    const errs = validateProducto(form)
+    const errs = validateProducto(form, productos, modal.modo === 'editar')
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))

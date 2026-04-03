@@ -25,6 +25,7 @@ const HOJAS = {
   proveedores:       'Proveedores',
   ventas:            'Ventas',
   ventaItems:        'VentaItems',
+  pedidos:           'Pedidos',
   compras:           'Compras',
   compraItems:       'CompraItems',
   cotizaciones:      'Cotizaciones',
@@ -110,12 +111,16 @@ function doGet(e) {
   return json({ ok: true, message: 'FerreApp API activa', version: '2.0', timestamp: new Date().toISOString() })
 }
 
+// ── Resuelve nombre de hoja (conocida o dinámica) ─────────────
+
+function _sheetName(entity) {
+  return HOJAS[entity] || (entity.charAt(0).toUpperCase() + entity.slice(1))
+}
+
 // ── CRUD genérico ─────────────────────────────────────────────
 
 function getAllRecords(entity) {
-  const sheetName = HOJAS[entity]
-  if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
-
+  const sheetName = _sheetName(entity)
   const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
   if (!hoja) return { ok: true, data: [] }
@@ -135,11 +140,9 @@ function getAllRecords(entity) {
 
 function insertRecord(entity, data) {
   if (!data) throw new Error('Sin datos para insertar')
-  const sheetName = HOJAS[entity]
-  if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
-
+  const sheetName = _sheetName(entity)
   const ss      = SpreadsheetApp.getActiveSpreadsheet()
-  const headers = _headers()[entity] || []
+  const headers = _headers()[entity] || Object.keys(data)
   const hoja    = _getOrCreateSheet(ss, sheetName, headers)
   const mapFn   = _mappers()[entity]
 
@@ -155,12 +158,10 @@ function insertRecord(entity, data) {
 
 function updateRecord(entity, id, data) {
   if (!id || !data) throw new Error('id y data son requeridos')
-  const sheetName = HOJAS[entity]
-  if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
-
+  const sheetName = _sheetName(entity)
   const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
-  if (!hoja) throw new Error('Hoja no encontrada: ' + sheetName)
+  if (!hoja) return { ok: false, error: 'Hoja no encontrada: ' + sheetName }
 
   const valores = hoja.getDataRange().getValues()
   const headers = valores[0]
@@ -179,12 +180,11 @@ function updateRecord(entity, id, data) {
 
 function removeRecord(entity, id) {
   if (!id) throw new Error('id es requerido')
-  const sheetName = HOJAS[entity]
-  if (!sheetName) throw new Error('Entidad desconocida: ' + entity)
+  const sheetName = _sheetName(entity)
 
   const ss   = SpreadsheetApp.getActiveSpreadsheet()
   const hoja = ss.getSheetByName(sheetName)
-  if (!hoja) throw new Error('Hoja no encontrada: ' + sheetName)
+  if (!hoja) return { ok: false, error: 'Hoja no encontrada: ' + sheetName }
 
   const valores    = hoja.getDataRange().getValues()
   const headers    = valores[0]
@@ -327,6 +327,7 @@ function _headers() {
     proveedores:       ['id','nit','nombre','nombre_contacto','telefono','correo','direccion','dias_credito','porcentaje_descuento','activo','creado_en'],
     ventas:            ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas'],
     ventaItems:        ['venta_id','producto_id','nombre','cantidad','precio_unitario','subtotal'],
+    pedidos:           ['id','numero_venta','cliente_id','cliente_nombre','fecha','total','estado_despacho','direccion_entrega','notas','metodo_pago'],
     compras:           ['id','numero_documento','proveedor_id','proveedor_nombre','fecha_documento','fecha_recepcion','subtotal','descuento','impuesto','total','estado'],
     compraItems:       ['compra_id','producto_id','nombre','cantidad','costo_unitario','subtotal'],
     cotizaciones:      ['id','numero_cotizacion','cliente_id','cliente_nombre','fecha','fecha_vencimiento','subtotal','descuento','impuesto','total','estado'],
@@ -350,6 +351,7 @@ function _mappers() {
     proveedores:     p => [p.id,p.nit,p.nombre,p.nombre_contacto,p.telefono,p.correo,p.direccion,p.dias_credito,p.porcentaje_descuento,p.activo,p.creado_en],
     ventas:          v => [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre||'',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas||''],
     ventaItems:      i => [i.venta_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal],
+    pedidos:         p => [p.id,p.numero_venta,p.cliente_id,p.cliente_nombre||'',p.fecha,p.total,p.estado_despacho||'pendiente',p.direccion_entrega||'',p.notas||'',p.metodo_pago||''],
     compras:         c => [c.id,c.numero_documento,c.proveedor_id,c.proveedor_nombre||'',c.fecha_documento,c.fecha_recepcion,c.subtotal,c.descuento,c.impuesto,c.total,c.estado],
     compraItems:     i => [i.compra_id,i.producto_id,i.nombre,i.cantidad,i.costo_unitario,i.subtotal],
     cotizaciones:    c => [c.id,c.numero_cotizacion,c.cliente_id,c.cliente_nombre||'',c.fecha,c.fecha_vencimiento,c.subtotal,c.descuento,c.impuesto,c.total,c.estado],

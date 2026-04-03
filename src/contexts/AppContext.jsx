@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect } from 'react'
+import { createContext, useContext, useCallback, useEffect, useState } from 'react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { db } from '../services/db'
 import { shortId, generateNumeroVenta, generateCodigoProducto } from '../utils/formatters'
@@ -23,6 +23,8 @@ export function AppProvider({ children }) {
   const [clientes, setClientes]             = useLocalStorage('ferreapp_clientes', CLIENTES_SEED)
   const [movimientos, setMovimientos]       = useLocalStorage('ferreapp_movimientos', MOVIMIENTOS_SEED)
 
+  const [loadingApp, setLoadingApp] = useState(true)
+
   // Al iniciar la app: cargar desde Google Sheets y actualizar el cache
   useEffect(() => {
     db.refreshAll().then(() => {
@@ -31,7 +33,7 @@ export function AppProvider({ children }) {
       const c = db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) })
       const m = db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) })
       return Promise.allSettled([p, v, c, m])
-    })
+    }).finally(() => setLoadingApp(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── PRODUCTOS ──────────────────────────────────────────────────────────────
@@ -100,6 +102,20 @@ export function AppProvider({ children }) {
     }
     setVentas(prev => [nueva, ...prev])
     db.insert('ventas', nueva)
+    if (esPedido) {
+      db.insert('pedidos', {
+        id: nueva.id,
+        numero_venta: nueva.numero_venta,
+        cliente_id: nueva.cliente_id,
+        cliente_nombre: nueva.cliente_nombre || '',
+        fecha: nueva.fecha,
+        total: nueva.total,
+        estado_despacho: 'pendiente',
+        direccion_entrega: nueva.direccion_entrega || '',
+        notas: nueva.notas || '',
+        metodo_pago: nueva.metodo_pago || '',
+      })
+    }
     nueva.items.forEach(item => {
       ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero)
     })
@@ -119,6 +135,7 @@ export function AppProvider({ children }) {
   const actualizarDespacho = useCallback((id, updates) => {
     setVentas(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))
     db.update('ventas', id, updates)
+    db.update('pedidos', id, updates)
   }, [setVentas])
 
   // ── CLIENTES ───────────────────────────────────────────────────────────────
@@ -170,6 +187,8 @@ export function AppProvider({ children }) {
       crearVenta, cancelarVenta, actualizarDespacho,
       // Acciones clientes
       agregarCliente, editarCliente, eliminarCliente,
+      // Loading
+      loadingApp,
       // Stats
       productosStockBajo,
       totalVentasHoy,

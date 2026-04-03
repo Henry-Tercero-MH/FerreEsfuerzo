@@ -4,6 +4,7 @@ import { useCompras } from '../contexts/ComprasContext'
 import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
+import { validateCompra } from '../utils/validators'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import SearchBar from '../components/shared/SearchBar'
@@ -68,15 +69,8 @@ export default function Compras() {
   }
 
   const handleGuardar = async () => {
-    const errs = {}
-    if (!form.proveedor_id) errs.proveedor_id = 'Proveedor requerido'
-    if (!form.numero_documento?.trim()) errs.numero_documento = 'Número de documento requerido'
-    if (!form.total || Number(form.total) <= 0) errs.total = 'Total debe ser mayor a 0'
-
-    if (Object.keys(errs).length) {
-      setErrors(errs)
-      return
-    }
+    const errs = validateCompra(form)
+    if (Object.keys(errs).length) { setErrors(errs); return }
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -236,6 +230,7 @@ export default function Compras() {
             min="0"
             step="0.01"
             value={form.subtotal}
+            error={errors.subtotal}
             onChange={(e) => {
               handleChange(e)
               setTimeout(calcularTotales, 0)
@@ -249,6 +244,7 @@ export default function Compras() {
             min="0"
             step="0.01"
             value={form.descuento}
+            error={errors.descuento}
             onChange={(e) => {
               handleChange(e)
               setTimeout(calcularTotales, 0)

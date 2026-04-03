@@ -4,6 +4,7 @@ import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
 import { formatDate } from '../utils/formatters'
+import { validateProveedor } from '../utils/validators'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -65,14 +66,8 @@ export default function Proveedores() {
   }
 
   const handleGuardar = async () => {
-    const errs = {}
-    if (!form.nombre?.trim()) errs.nombre = 'Nombre requerido'
-    if (!form.nit?.trim()) errs.nit = 'NIT requerido'
-
-    if (Object.keys(errs).length) {
-      setErrors(errs)
-      return
-    }
+    const errs = validateProveedor(form, proveedores, modal.modo === 'editar')
+    if (Object.keys(errs).length) { setErrors(errs); return }
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -219,6 +214,7 @@ export default function Proveedores() {
             name="telefono"
             value={form.telefono}
             onChange={handleChange}
+            error={errors.telefono}
           />
           <Input
             label="Correo electrónico"
@@ -226,6 +222,7 @@ export default function Proveedores() {
             type="email"
             value={form.correo}
             onChange={handleChange}
+            error={errors.correo}
           />
           <Input
             label="Dirección"
@@ -241,6 +238,7 @@ export default function Proveedores() {
             onChange={handleChange}
             className="sm:col-span-2"
             placeholder="https://..."
+            error={errors.sitio_web}
           />
           <Input
             label="Días de crédito"
@@ -249,6 +247,7 @@ export default function Proveedores() {
             min="0"
             value={form.dias_credito}
             onChange={handleChange}
+            error={errors.dias_credito}
           />
           <Input
             label="% Descuento"
@@ -259,6 +258,7 @@ export default function Proveedores() {
             step="0.01"
             value={form.porcentaje_descuento}
             onChange={handleChange}
+            error={errors.porcentaje_descuento}
           />
           <div className="sm:col-span-2">
             <label className="label">Notas</label>
