@@ -13,7 +13,7 @@ import Badge from '../components/ui/Badge'
 
 export default function Caja() {
   const { sesion } = useAuth()
-  const { aperturas, cajaAbierta, abrirCaja, cerrarCaja, registrarMovimiento, movimientos } = useCaja()
+  const { aperturas, cajaAbierta, abrirCaja, cerrarCaja, registrarMovimiento, movimientos, refrescarCaja } = useCaja()
   const [modalApertura, setModalApertura] = useState(false)
   const [modalCierre, setModalCierre] = useState(false)
   const [modalMovimiento, setModalMovimiento] = useState(false)
@@ -21,6 +21,7 @@ export default function Caja() {
   const [formCierre, setFormCierre] = useState({ monto_real: '', notas: '' })
   const [formMovimiento, setFormMovimiento] = useState({ tipo: 'INGRESO', monto: '', concepto: '', referencia: '' })
   const [loading, setLoading] = useState(false)
+  const [loadingCierre, setLoadingCierre] = useState(false)
   const [errCierre, setErrCierre] = useState('')
   const [errMovimiento, setErrMovimiento] = useState('')
 
@@ -102,7 +103,12 @@ export default function Caja() {
             <Button variant="secondary" icon={IconQ} onClick={() => setModalMovimiento(true)}>
               Registrar movimiento
             </Button>
-            <Button variant="danger" icon={Lock} onClick={() => setModalCierre(true)}>
+            <Button variant="danger" icon={Lock} loading={loadingCierre} onClick={async () => {
+              setLoadingCierre(true)
+              await refrescarCaja()
+              setLoadingCierre(false)
+              setModalCierre(true)
+            }}>
               Cerrar caja
             </Button>
           </div>

@@ -146,6 +146,25 @@ export function CajaProvider({ children }) {
     db.update('cajaAperturas', abierta.id, actualizado)
   }, [aperturas])
 
+  const refrescarCaja = useCallback(async () => {
+    const [ap, mv] = await Promise.all([
+      db.forceRefresh('cajaAperturas'),
+      db.forceRefresh('cajaMovimientos'),
+    ])
+    if (ap.length) {
+      setAperturas(prev => ap.map(normalizarApertura).map(remota => {
+        const local = prev.find(a => a.id === remota.id)
+        if (!local || remota.estado !== 'ABIERTA') return remota
+        const merged = { ...remota }
+        CAMPOS_ACUMULADOS.forEach(c => {
+          merged[c] = Math.max(local[c] || 0, remota[c] || 0)
+        })
+        return merged
+      }))
+    }
+    if (mv.length) setMovimientos(mv)
+  }, [])
+
   return (
     <CajaContext.Provider value={{
       aperturas,
@@ -155,6 +174,7 @@ export function CajaProvider({ children }) {
       cerrarCaja,
       registrarMovimiento,
       registrarVentaEnCaja,
+      refrescarCaja,
     }}>
       {children}
     </CajaContext.Provider>
