@@ -30,6 +30,7 @@ import Catalogos from './pages/Catalogos'
 import Pedidos from './pages/Pedidos'
 import Contabilidad from './pages/Contabilidad'
 import Auditoria from './pages/Auditoria'
+import Bi from './pages/Bi'
 
 export default function App() {
   return (
@@ -68,6 +69,7 @@ export default function App() {
                           <Route path="/configuracion"       element={<ConfiguracionEmpresa />} />
                           <Route path="/ajustes"             element={<Ajustes />} />
                           <Route path="/auditoria"           element={<Auditoria />} />
+                          <Route path="/bi"                  element={<Bi />} />
                         </Route>
 
                         {/* Fallback */}

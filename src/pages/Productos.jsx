@@ -97,7 +97,9 @@ export default function Productos() {
           <h1 className="page-title">Productos</h1>
           <p className="page-subtitle">{productos.length} productos registrados</p>
         </div>
-        <Button variant="primary" icon={Plus} onClick={abrirCrear}>Nuevo producto</Button>
+        {sesion?.rol === 'admin' && (
+          <Button variant="primary" icon={Plus} onClick={abrirCrear}>Nuevo producto</Button>
+        )}
       </div>
 
       {/* Filtros */}
@@ -119,7 +121,8 @@ export default function Productos() {
           <thead>
             <tr>
               <th>Código</th><th>Nombre</th><th>Categoría</th>
-              <th>Ubicación</th><th>P. Venta</th><th>Stock</th><th>Estado</th><th></th>
+              <th>Ubicación</th><th>P. Venta</th><th>Stock</th><th>Estado</th>
+              {sesion?.rol === 'admin' && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -139,12 +142,14 @@ export default function Productos() {
                   <td className="font-semibold">{formatCurrency(p.precio_venta)}</td>
                   <td>{p.stock} {p.unidad}</td>
                   <td><Badge variant={variant}>{label}</Badge></td>
-                  <td>
-                    <div className="flex gap-1 justify-end">
-                      <button onClick={() => abrirEditar(p)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
-                      <button onClick={() => setConfirm(p)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
-                    </div>
-                  </td>
+                  {sesion?.rol === 'admin' && (
+                    <td>
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => abrirEditar(p)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
+                        <button onClick={() => setConfirm(p)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               )
             })}

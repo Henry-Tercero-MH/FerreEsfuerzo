@@ -133,6 +133,8 @@ export default function NuevaVenta() {
       subtotal, descuento, impuesto, total, notas,
       es_pedido: esPedido,
       direccion_entrega: esPedido ? direccionEntrega.trim() : '',
+      usuario_id: sesion?.id || '',
+      usuario_nombre: sesion?.nombre || '',
     })
     registrarVentaEnCaja(metodoPago, total)
     auditar({

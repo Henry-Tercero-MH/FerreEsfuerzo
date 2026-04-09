@@ -27,6 +27,7 @@ export default function Inventario() {
   , [productos, termino])
 
   const handleAjuste = async () => {
+    if (sesion?.rol !== 'admin') return
     if (!form.producto_id || !form.cantidad) return
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -54,7 +55,9 @@ export default function Inventario() {
           <h1 className="page-title">Inventario</h1>
           <p className="page-subtitle">Control de stock y movimientos</p>
         </div>
-        <Button variant="primary" icon={RotateCcw} onClick={() => setModal(true)}>Ajustar stock</Button>
+        {sesion?.rol === 'admin' && (
+          <Button variant="primary" icon={RotateCcw} onClick={() => setModal(true)}>Ajustar stock</Button>
+        )}
       </div>
 
       {/* Búsqueda */}
