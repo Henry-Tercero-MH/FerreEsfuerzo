@@ -49,7 +49,9 @@ export function CajaProvider({ children }) {
   )
 
   // Polling contra Google Sheets para sincronizar entre dispositivos distintos (móvil ↔ PC)
-  // Solo corre mientras haya una caja abierta
+  // Solo corre mientras haya una caja abierta.
+  // Para aperturas ABIERTA: hace merge tomando el mayor valor en cada campo acumulado,
+  // así una actualización tardía del Sheet no borra totales ya vistos en memoria.
   const hayaCajaAbierta = !!cajaAbierta
   useEffect(() => {
     if (!hayaCajaAbierta) return
@@ -58,7 +60,19 @@ export function CajaProvider({ children }) {
         db.forceRefresh('cajaAperturas'),
         db.forceRefresh('cajaMovimientos'),
       ])
-      if (ap.length) setAperturas(ap)
+      if (ap.length) {
+        setAperturas(prev => ap.map(remota => {
+          const local = prev.find(a => a.id === remota.id)
+          if (!local || remota.estado !== 'ABIERTA') return remota
+          // Merge: para campos acumulados tomar el mayor valor entre local y remoto
+          const CAMPOS = ['total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos']
+          const merged = { ...remota }
+          CAMPOS.forEach(c => {
+            merged[c] = Math.max(Number(local[c]) || 0, Number(remota[c]) || 0)
+          })
+          return merged
+        }))
+      }
       if (mv.length) setMovimientos(mv)
     }
     const id = setInterval(tick, POLLING_MS)

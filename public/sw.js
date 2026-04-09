@@ -15,14 +15,18 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
+  // No interceptar requests a Google (Apps Script, OAuth, etc.)
+  if (e.request.url.includes('google') || e.request.url.includes('googleapis')) return
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(e.request, clone))
+        if (res && res.status === 200) {
+          const clone = res.clone()
+          caches.open(CACHE).then(c => c.put(e.request, clone))
+        }
         return res
       })
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match(e.request).then(cached => cached || Response.error()))
   )
 })
 
