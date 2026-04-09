@@ -58,9 +58,10 @@ export const validateCliente = (data, clientes = [], modoEditar = false) => {
   if (!isEmail(data.email))      errors.email    = 'Email inválido'
 
   // NIT duplicado
-  if (data.nit?.trim() && data.nit.trim().toUpperCase() !== 'CF') {
+  const nitCliente = String(data.nit ?? '').trim()
+  if (nitCliente && nitCliente.toUpperCase() !== 'CF') {
     const duplicado = clientes.find(c =>
-      c.nit?.toLowerCase() === data.nit.trim().toLowerCase() &&
+      String(c.nit ?? '').toLowerCase() === nitCliente.toLowerCase() &&
       (!modoEditar || c.id !== data.id)
     )
     if (duplicado) errors.nit = 'Ya existe un cliente con este NIT'
@@ -85,9 +86,10 @@ export const validateProveedor = (data, proveedores = [], modoEditar = false) =>
   if (isNaN(pd) || pd < 0 || pd > 100) errors.porcentaje_descuento = 'El descuento debe estar entre 0 y 100'
 
   // NIT duplicado
-  if (data.nit?.trim()) {
+  const nitStr = String(data.nit ?? '').trim()
+  if (nitStr) {
     const duplicado = proveedores.find(p =>
-      p.nit?.toLowerCase() === data.nit.trim().toLowerCase() &&
+      String(p.nit ?? '').toLowerCase() === nitStr.toLowerCase() &&
       (!modoEditar || p.id !== data.id)
     )
     if (duplicado) errors.nit = 'Ya existe un proveedor con este NIT'

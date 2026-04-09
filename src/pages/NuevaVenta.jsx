@@ -5,6 +5,8 @@ import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useCaja } from '../contexts/CajaContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { formatCurrency } from '../utils/formatters'
 import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
@@ -16,6 +18,7 @@ export default function NuevaVenta() {
   const { metodos_pago = [] } = useCatalogos()
   const { crearCuenta } = useCuentasPorCobrar()
   const { registrarVentaEnCaja } = useCaja()
+  const { sesion } = useAuth()
   const navigate = useNavigate()
 
   const [busqueda, setBusqueda] = useState('')
@@ -132,6 +135,13 @@ export default function NuevaVenta() {
       direccion_entrega: esPedido ? direccionEntrega.trim() : '',
     })
     registrarVentaEnCaja(metodoPago, total)
+    auditar({
+      accion: esPedido ? 'pedido_creado' : 'venta_creada',
+      entidad: 'ventas', entidad_id: venta.id,
+      descripcion: `${esPedido ? 'Pedido' : 'Venta'} ${venta.numero_venta} — ${formatCurrency(total)} — ${metodoPago}`,
+      detalle: { numero: venta.numero_venta, total, items: items.length, cliente_id: clienteId, metodo_pago: metodoPago },
+      sesion,
+    })
     if (esCredito) {
       const fechaVenc = new Date()
       fechaVenc.setDate(fechaVenc.getDate() + Number(diasCredito))

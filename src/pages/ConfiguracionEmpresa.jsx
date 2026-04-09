@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { Building2, Save, AlertCircle } from 'lucide-react'
 import { useEmpresa } from '../contexts/EmpresaContext'
+import { useAuth } from '../contexts/AuthContext'
 import { validateEmpresa } from '../utils/validators'
+import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Input, { Select } from '../components/ui/Input'
 import Alert from '../components/ui/Alert'
 
 export default function ConfiguracionEmpresa() {
   const { empresa, actualizarEmpresa } = useEmpresa()
+  const { sesion } = useAuth()
   const [form, setForm] = useState({ ...empresa })
   // Sync form cuando empresa se carga desde el Sheet (valores undefined → string vacío)
   const formNormalizado = Object.fromEntries(
@@ -31,6 +34,7 @@ export default function ConfiguracionEmpresa() {
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
     actualizarEmpresa(form)
+    auditar({ accion: 'empresa_actualizada', entidad: 'empresa', descripcion: `Configuración de empresa actualizada: ${f.nombre}`, detalle: { nombre: f.nombre, nit: f.nit, regimen: f.regimen }, sesion })
     setLoading(false)
     setAlerta({ type: 'success', message: 'Configuración guardada correctamente' })
     setTimeout(() => setAlerta(null), 3000)

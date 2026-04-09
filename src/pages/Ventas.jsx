@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react'
 import { Plus, Eye, XCircle, ShoppingCart, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
+import { auditar } from '../services/auditoria'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import { ESTADOS_VENTA, METODOS_PAGO } from '../utils/constants'
 import Button from '../components/ui/Button'
@@ -15,6 +17,7 @@ import SearchBar from '../components/shared/SearchBar'
 
 export default function Ventas() {
   const { ventas, cancelarVenta, clientes } = useApp()
+  const { sesion } = useAuth()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -128,7 +131,11 @@ export default function Ventas() {
       <ConfirmModal
         open={!!confirm}
         onClose={() => setConfirm(null)}
-        onConfirm={() => { cancelarVenta(confirm.id); toast(`Venta ${confirm.numero_venta} cancelada`, 'warning') }}
+        onConfirm={() => {
+          cancelarVenta(confirm.id)
+          auditar({ accion: 'venta_cancelada', entidad: 'ventas', entidad_id: confirm.id, descripcion: `Venta cancelada: ${confirm.numero_venta} — ${formatCurrency(confirm.total)}`, sesion })
+          toast(`Venta ${confirm.numero_venta} cancelada`, 'warning')
+        }}
         title="¿Cancelar venta?"
         message={`Se cancelará la venta ${confirm?.numero_venta}. El stock será restituido automáticamente.`}
         confirmText="Cancelar venta"

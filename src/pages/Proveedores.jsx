@@ -5,6 +5,8 @@ import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
 import { formatDate } from '../utils/formatters'
 import { validateProveedor } from '../utils/validators'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -28,6 +30,7 @@ const FORM_VACÍO = {
 
 export default function Proveedores() {
   const { proveedores, agregarProveedor, editarProveedor, eliminarProveedor } = useProveedores()
+  const { sesion } = useAuth()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', proveedor: null })
@@ -73,11 +76,12 @@ export default function Proveedores() {
     await new Promise(r => setTimeout(r, 300))
 
     if (modal.modo === 'crear') {
-      agregarProveedor({
+      const nuevo = agregarProveedor({
         ...form,
         dias_credito: Number(form.dias_credito) || 0,
         porcentaje_descuento: Number(form.porcentaje_descuento) || 0,
       })
+      auditar({ accion: 'proveedor_creado', entidad: 'proveedores', entidad_id: nuevo?.id, descripcion: `Proveedor creado: ${form.nombre}`, sesion })
       toast('Proveedor creado correctamente', 'success')
     } else {
       editarProveedor(modal.proveedor.id, {
@@ -85,6 +89,7 @@ export default function Proveedores() {
         dias_credito: Number(form.dias_credito) || 0,
         porcentaje_descuento: Number(form.porcentaje_descuento) || 0,
       })
+      auditar({ accion: 'proveedor_editado', entidad: 'proveedores', entidad_id: modal.proveedor.id, descripcion: `Proveedor editado: ${form.nombre}`, sesion })
       toast('Proveedor actualizado', 'success')
     }
 
@@ -277,7 +282,11 @@ export default function Proveedores() {
       <ConfirmModal
         open={!!confirm}
         onClose={() => setConfirm(null)}
-        onConfirm={() => { eliminarProveedor(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        onConfirm={() => {
+          eliminarProveedor(confirm.id)
+          auditar({ accion: 'proveedor_eliminado', entidad: 'proveedores', entidad_id: confirm.id, descripcion: `Proveedor eliminado: ${confirm.nombre}`, sesion })
+          toast(`"${confirm.nombre}" eliminado`, 'warning')
+        }}
         title="¿Eliminar proveedor?"
         message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
       />

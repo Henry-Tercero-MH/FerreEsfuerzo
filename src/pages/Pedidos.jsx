@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { MapPin, ChevronRight, Printer, Package } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { ESTADOS_DESPACHO } from '../utils/constants'
 import { formatDateTime, formatCurrency } from '../utils/formatters'
 import Badge from '../components/ui/Badge'
@@ -24,6 +26,7 @@ const BADGE_MAP = {
 
 export default function Pedidos() {
   const { ventas, clientes, actualizarDespacho } = useApp()
+  const { sesion } = useAuth()
   const [tab, setTab] = useState('todos')
   const [boleta, setBoleta] = useState(null)
 
@@ -48,6 +51,7 @@ export default function Pedidos() {
     const siguiente = ESTADOS_DESPACHO[pedido.estado_despacho]?.next
     if (!siguiente) return
     actualizarDespacho(pedido.id, { estado_despacho: siguiente })
+    auditar({ accion: 'despacho_actualizado', entidad: 'pedidos', entidad_id: pedido.id, descripcion: `Pedido ${pedido.numero_venta} → ${ESTADOS_DESPACHO[siguiente]?.label || siguiente}`, detalle: { estado_anterior: pedido.estado_despacho, estado_nuevo: siguiente }, sesion })
   }
 
   const getNombreCliente = (id) =>

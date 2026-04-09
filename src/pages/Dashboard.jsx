@@ -7,12 +7,73 @@ import { formatCurrency, formatDateTime } from '../utils/formatters'
 import Badge from '../components/ui/Badge'
 import { ESTADOS_VENTA } from '../utils/constants'
 
+function DashboardBodeguero({ sesion, productosStockBajo, totalProductos }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-title">Bienvenido, {sesion?.nombre.split(' ')[0]}</h1>
+        <p className="page-subtitle">Panel de bodega</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Productos activos"
+          value={totalProductos.toLocaleString()}
+          icon={Package}
+          iconBg="bg-purple-100"
+          iconColor="text-purple-600"
+        />
+        <StatCard
+          label="Productos con stock bajo"
+          value={productosStockBajo.length.toLocaleString()}
+          icon={AlertTriangle}
+          iconBg="bg-yellow-100"
+          iconColor="text-yellow-600"
+        />
+      </div>
+
+      <div className="card">
+        <div className="mb-4 flex items-center gap-2">
+          <AlertTriangle size={16} className="text-yellow-500" />
+          <h2 className="text-base font-semibold text-gray-900">Productos con stock bajo</h2>
+          {productosStockBajo.length > 0 && (
+            <span className="ml-auto rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+              {productosStockBajo.length}
+            </span>
+          )}
+        </div>
+        {productosStockBajo.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">Todo el stock está bien</p>
+        ) : (
+          <div className="space-y-2">
+            {productosStockBajo.map(p => (
+              <div key={p.id} className="flex items-center justify-between rounded-lg bg-yellow-50 px-3 py-2">
+                <p className="text-sm font-medium text-gray-700 truncate pr-2">{p.nombre}</p>
+                <span className="flex-shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                  {p.stock} {p.unidad}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Link to="/inventario" className="mt-4 flex items-center justify-center gap-1 text-xs text-primary-600 hover:underline">
+          Ver inventario <ArrowRight size={12} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { sesion } = useAuth()
   const {
     totalVentasHoy, totalProductos, totalClientes, totalVentas,
     productosStockBajo, ventas,
   } = useApp()
+
+  if (sesion?.rol === 'bodeguero') {
+    return <DashboardBodeguero sesion={sesion} productosStockBajo={productosStockBajo} totalProductos={totalProductos} />
+  }
 
   const ultimasVentas = ventas.slice(0, 5)
 

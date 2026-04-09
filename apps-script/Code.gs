@@ -38,6 +38,7 @@ const HOJAS = {
   empresa:           'Empresa',
   usuarios:          'Usuarios',
   catalogos:         'Catalogos',
+  auditoria:         'Auditoria',
 }
 
 // ── Punto de entrada POST ──────────────────────────────────────
@@ -334,12 +335,13 @@ function _headers() {
     cotizacionItems:   ['cotizacion_id','producto_id','nombre','cantidad','precio_unitario','subtotal'],
     cuentasCobrar:     ['id','numero_documento','cliente_id','cliente_nombre','fecha_emision','fecha_vencimiento','monto_original','monto_pagado','saldo','estado'],
     abonos:            ['id','cuenta_por_cobrar_id','usuario_id','monto','metodo_pago','referencia','fecha','notas'],
-    cajaAperturas:     ['id','usuario_id','usuario_nombre','fecha_apertura','fecha_cierre','monto_apertura','monto_esperado','monto_real','diferencia','estado'],
+    cajaAperturas:     ['id','usuario_id','usuario_nombre','fecha_apertura','fecha_cierre','monto_apertura','total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos','monto_esperado','monto_real','diferencia','estado','notas_cierre'],
     cajaMovimientos:   ['id','apertura_caja_id','usuario_id','tipo','monto','concepto','referencia','fecha'],
     movimientos:       ['id','producto_id','producto_nombre','tipo','cantidad','motivo','referencia','fecha'],
     empresa:           ['nit','nombre_comercial','razon_social','direccion_fiscal','telefono','correo_electronico','regimen_tributario','moneda_codigo','iva_porcentaje'],
     usuarios:          ['id','nombre','email','password_hash','rol','activo','creado_en'],
     catalogos:         ['tipo','codigo','valor','descripcion','orden'],
+    auditoria:         ['id','fecha','usuario_id','usuario_nombre','usuario_rol','accion','entidad','entidad_id','descripcion','detalle'],
   }
 }
 
@@ -358,11 +360,12 @@ function _mappers() {
     cotizacionItems: i => [i.cotizacion_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal],
     cuentasCobrar:   c => [c.id,c.numero_documento,c.cliente_id,c.cliente_nombre||'',c.fecha_emision,c.fecha_vencimiento,c.monto_original,c.monto_pagado,c.saldo,c.estado],
     abonos:          a => [a.id,a.cuenta_por_cobrar_id,a.usuario_id,a.monto,a.metodo_pago,a.referencia||'',a.fecha,a.notas||''],
-    cajaAperturas:   c => [c.id,c.usuario_id,c.usuario_nombre||'',c.fecha_apertura,c.fecha_cierre||'',c.monto_apertura,c.monto_esperado,c.monto_real,c.diferencia,c.estado],
+    cajaAperturas:   c => [c.id,c.usuario_id,c.usuario_nombre||'',c.fecha_apertura,c.fecha_cierre||'',c.monto_apertura,c.total_ventas_efectivo||0,c.total_ventas_tarjeta||0,c.total_ventas_otros||0,c.total_ingresos||0,c.total_egresos||0,c.monto_esperado||0,c.monto_real||0,c.diferencia||0,c.estado,c.notas_cierre||''],
     cajaMovimientos: m => [m.id,m.apertura_caja_id,m.usuario_id,m.tipo,m.monto,m.concepto,m.referencia||'',m.fecha],
     movimientos:     m => [m.id,m.producto_id,m.producto_nombre||'',m.tipo,m.cantidad,m.motivo,m.referencia||'',m.fecha],
     empresa:         e => [e.nit,e.nombre_comercial,e.razon_social,e.direccion_fiscal,e.telefono,e.correo_electronico,e.regimen_tributario,e.moneda_codigo,e.iva_porcentaje],
     usuarios:        u => [u.id,u.nombre,u.email,u.password_hash||'',u.rol,u.activo,u.creado_en],
     catalogos:       c => [c.tipo||'',c.codigo||'',c.valor||'',c.descripcion||'',c.orden||0],
+    auditoria:       a => [a.id,a.fecha,a.usuario_id,a.usuario_nombre||'',a.usuario_rol||'',a.accion,a.entidad,a.entidad_id||'',a.descripcion,a.detalle||''],
   }
 }

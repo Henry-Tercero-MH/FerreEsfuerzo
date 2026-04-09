@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Minus, Trash2, FileText, CheckCircle, UserPlus } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { formatCurrency } from '../utils/formatters'
 import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
@@ -13,6 +15,7 @@ import ClienteSelector from '../components/shared/ClienteSelector'
 export default function NuevaCotizacion() {
   const { productos, clientes, agregarCliente } = useApp()
   const { crearCotizacion } = useCotizaciones()
+  const { sesion } = useAuth()
   const navigate = useNavigate()
 
   const [busqueda, setBusqueda] = useState('')
@@ -116,6 +119,7 @@ export default function NuevaCotizacion() {
       notas,
       fecha_vencimiento: fechaVencimiento || null,
     })
+    auditar({ accion: 'cotizacion_creada', entidad: 'cotizaciones', entidad_id: cot?.id, descripcion: `Cotización ${cot?.numero_cotizacion} — ${formatCurrency(total)}`, detalle: { total, items: items.length, cliente_id: clienteId }, sesion })
     setLoading(false)
     setExito(cot)
   }

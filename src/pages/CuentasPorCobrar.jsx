@@ -3,6 +3,8 @@ import { AlertCircle, Plus } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useApp } from '../contexts/AppContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import { METODOS_PAGO } from '../utils/constants'
@@ -17,6 +19,7 @@ import ClienteSelector from '../components/shared/ClienteSelector'
 export default function CuentasPorCobrar() {
   const { cuentas, cuentasVencidas, totalPorCobrar, registrarAbono, abonos, crearCuenta } = useCuentasPorCobrar()
   const { clientes } = useApp()
+  const { sesion } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [modalAbono, setModalAbono] = useState({ open: false, cuenta: null })
@@ -66,6 +69,7 @@ export default function CuentasPorCobrar() {
       referencia: formAbono.referencia,
       notas: formAbono.notas,
     })
+    auditar({ accion: 'abono_registrado', entidad: 'cuentasCobrar', entidad_id: modalAbono.cuenta.id, descripcion: `Abono de ${formatCurrency(montoAbono)} a cuenta de ${modalAbono.cuenta.cliente_nombre}`, detalle: { monto: montoAbono, metodo_pago: formAbono.metodo_pago, saldo_anterior: modalAbono.cuenta.saldo }, sesion })
 
     setLoading(false)
     cerrarModalAbono()
@@ -99,13 +103,14 @@ export default function CuentasPorCobrar() {
     if (formNueva.fecha_vencimiento < hoy) { setErrNueva('La fecha de vencimiento debe ser futura'); return }
     setErrNueva('')
     const clienteNombre = clientes.find(c => c.id === formNueva.cliente_id)?.nombre || ''
-    await crearCuenta({
+    const cuenta = await crearCuenta({
       cliente_id: formNueva.cliente_id,
       cliente_nombre: clienteNombre,
       monto_original: Number(formNueva.monto_original),
       fecha_vencimiento: formNueva.fecha_vencimiento,
       notas: formNueva.notas,
     })
+    auditar({ accion: 'cuenta_cobrar_creada', entidad: 'cuentasCobrar', entidad_id: cuenta?.id, descripcion: `Cuenta por cobrar creada: ${clienteNombre} — ${formatCurrency(Number(formNueva.monto_original))}`, detalle: { cliente: clienteNombre, monto: formNueva.monto_original, vencimiento: formNueva.fecha_vencimiento }, sesion })
     setModalNueva(false)
     setFormNueva({ cliente_id: '', monto_original: '', fecha_vencimiento: '', notas: '' })
   }

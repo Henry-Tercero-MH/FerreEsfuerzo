@@ -4,6 +4,8 @@ import { db } from '../services/db'
 
 export const CajaContext = createContext(null)
 
+const POLLING_MS = 20_000 // cada 20 segundos cuando hay caja abierta
+
 export function CajaProvider({ children }) {
   const [aperturas, setAperturas] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_caja_aperturas') || '[]') } catch { return [] }
@@ -12,10 +14,56 @@ export function CajaProvider({ children }) {
     try { return JSON.parse(localStorage.getItem('ferreapp_caja_movimientos') || '[]') } catch { return [] }
   })
 
+  // Persistir en localStorage cada vez que cambia el estado
+  useEffect(() => {
+    localStorage.setItem('ferreapp_caja_aperturas', JSON.stringify(aperturas))
+  }, [aperturas])
+
+  useEffect(() => {
+    localStorage.setItem('ferreapp_caja_movimientos', JSON.stringify(movimientos))
+  }, [movimientos])
+
+  // Carga inicial desde Google Sheets
   useEffect(() => {
     db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data) })
     db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
   }, [])
+
+  // Sincronizar entre pestañas del mismo navegador (mismo dispositivo, distintas pestañas)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'ferreapp_caja_aperturas' && e.newValue) {
+        try { setAperturas(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      }
+      if (e.key === 'ferreapp_caja_movimientos' && e.newValue) {
+        try { setMovimientos(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  const cajaAbierta = useMemo(
+    () => aperturas.find(a => a.estado === 'ABIERTA'),
+    [aperturas]
+  )
+
+  // Polling contra Google Sheets para sincronizar entre dispositivos distintos (móvil ↔ PC)
+  // Solo corre mientras haya una caja abierta
+  const hayaCajaAbierta = !!cajaAbierta
+  useEffect(() => {
+    if (!hayaCajaAbierta) return
+    const tick = async () => {
+      const [ap, mv] = await Promise.all([
+        db.forceRefresh('cajaAperturas'),
+        db.forceRefresh('cajaMovimientos'),
+      ])
+      if (ap.length) setAperturas(ap)
+      if (mv.length) setMovimientos(mv)
+    }
+    const id = setInterval(tick, POLLING_MS)
+    return () => clearInterval(id)
+  }, [hayaCajaAbierta])
 
   const abrirCaja = useCallback(async (data) => {
     const nueva = {
@@ -53,7 +101,6 @@ export function CajaProvider({ children }) {
     const nuevo = { ...data, id: shortId(), fecha: new Date().toISOString() }
     setMovimientos(prev => [nuevo, ...prev])
     await db.insert('cajaMovimientos', nuevo)
-    // Actualizar totales de ingresos/egresos en la apertura
     const abierta = aperturas.find(a => a.estado === 'ABIERTA')
     if (abierta) {
       const campo = data.tipo === 'INGRESO' ? 'total_ingresos' : 'total_egresos'
@@ -63,11 +110,6 @@ export function CajaProvider({ children }) {
     }
     return nuevo
   }, [aperturas])
-
-  const cajaAbierta = useMemo(
-    () => aperturas.find(a => a.estado === 'ABIERTA'),
-    [aperturas]
-  )
 
   const registrarVentaEnCaja = useCallback((metodo_pago, total) => {
     const abierta = aperturas.find(a => a.estado === 'ABIERTA')

@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Download, Wifi, RefreshCw } from 'lucide-react'
 import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
 import { testConexion } from '../services/googleAppsScript.js'
+import { auditar } from '../services/auditoria'
 import { storage } from '../services/storage.js'
 import { db } from '../services/db.js'
 import { useToast } from '../hooks/useToast'
@@ -59,11 +60,13 @@ export default function Ajustes() {
     if (modal.modo === 'crear') {
       const result = await agregarUsuario(form)
       if (!result.ok) { setErrores({ email: result.error }); setLoading(false); return }
+      auditar({ accion: 'usuario_creado', entidad: 'usuarios', descripcion: `Usuario creado: ${form.nombre} (${form.rol})`, detalle: { nombre: form.nombre, email: form.email, rol: form.rol }, sesion })
       mostrarAlerta('success', 'Usuario creado correctamente')
     } else {
       const data = { nombre: form.nombre, rol: form.rol }
       if (form.password) data.password = form.password
       await editarUsuario(modal.usuario.id, data)
+      auditar({ accion: 'usuario_editado', entidad: 'usuarios', entidad_id: modal.usuario.id, descripcion: `Usuario editado: ${form.nombre} (${form.rol})`, sesion })
       mostrarAlerta('success', 'Usuario actualizado')
     }
     setLoading(false)
@@ -73,7 +76,10 @@ export default function Ajustes() {
   const ejecutarEliminar = async (usuario) => {
     const result = await eliminarUsuario(usuario.id)
     if (!result.ok) toast(result.error, 'error')
-    else toast(`Usuario "${usuario.nombre}" desactivado`, 'warning')
+    else {
+      toast(`Usuario "${usuario.nombre}" desactivado`, 'warning')
+      auditar({ accion: 'usuario_eliminado', entidad: 'usuarios', entidad_id: usuario.id, descripcion: `Usuario desactivado: ${usuario.nombre} (${usuario.rol})`, detalle: { nombre: usuario.nombre, email: usuario.email, rol: usuario.rol }, sesion })
+    }
   }
 
   const handleTestConexion = async () => {

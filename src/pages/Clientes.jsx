@@ -6,6 +6,8 @@ import { useToast } from '../hooks/useToast'
 import { validateCliente } from '../utils/validators'
 import { TIPOS_CLIENTE } from '../utils/constants'
 import { formatDate } from '../utils/formatters'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -18,6 +20,7 @@ const FORM_VACÍO = { nombre: '', telefono: '', email: '', nit: '', direccion: '
 
 export default function Clientes() {
   const { clientes, agregarCliente, editarCliente, eliminarCliente } = useApp()
+  const { sesion } = useAuth()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', cliente: null })
@@ -50,8 +53,15 @@ export default function Clientes() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
-    if (modal.modo === 'crear') { agregarCliente(form); toast('Cliente creado correctamente', 'success') }
-    else { editarCliente(modal.cliente.id, form); toast('Cliente actualizado', 'success') }
+    if (modal.modo === 'crear') {
+      const nuevo = agregarCliente(form)
+      auditar({ accion: 'cliente_creado', entidad: 'clientes', entidad_id: nuevo.id, descripcion: `Cliente creado: ${form.nombre}`, sesion })
+      toast('Cliente creado correctamente', 'success')
+    } else {
+      editarCliente(modal.cliente.id, form)
+      auditar({ accion: 'cliente_editado', entidad: 'clientes', entidad_id: modal.cliente.id, descripcion: `Cliente editado: ${form.nombre}`, sesion })
+      toast('Cliente actualizado', 'success')
+    }
     setLoading(false)
     cerrar()
   }
@@ -125,7 +135,11 @@ export default function Clientes() {
       <ConfirmModal
         open={!!confirm}
         onClose={() => setConfirm(null)}
-        onConfirm={() => { eliminarCliente(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        onConfirm={() => {
+          eliminarCliente(confirm.id)
+          auditar({ accion: 'cliente_eliminado', entidad: 'clientes', entidad_id: confirm.id, descripcion: `Cliente eliminado: ${confirm.nombre}`, sesion })
+          toast(`"${confirm.nombre}" eliminado`, 'warning')
+        }}
         title="¿Eliminar cliente?"
         message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
       />

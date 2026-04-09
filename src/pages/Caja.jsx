@@ -3,6 +3,7 @@ import { Lock, Unlock, TrendingUp, TrendingDown } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import { useCaja } from '../contexts/CajaContext'
 import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -26,11 +27,12 @@ export default function Caja() {
   const handleAbrirCaja = async () => {
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
-    abrirCaja({
+    const apertura = await abrirCaja({
       usuario_id: sesion.id,
       usuario_nombre: sesion.nombre,
       monto_apertura: Math.max(Number(montoApertura) || 0, 0),
     })
+    auditar({ accion: 'caja_abierta', entidad: 'cajaAperturas', entidad_id: apertura?.id, descripcion: `Caja abierta con ${formatCurrency(Number(montoApertura) || 0)} de monto inicial`, detalle: { monto_apertura: montoApertura }, sesion })
     setLoading(false)
     setModalApertura(false)
     setMontoApertura('100.00')
@@ -45,11 +47,14 @@ export default function Caja() {
     setErrCierre('')
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
+    const montoEsperado = (Number(cajaAbierta.monto_apertura) || 0) + (Number(cajaAbierta.total_ventas_efectivo) || 0) + (Number(cajaAbierta.total_ingresos) || 0) - (Number(cajaAbierta.total_egresos) || 0)
+    const montoReal = Number(formCierre.monto_real) || 0
     cerrarCaja(cajaAbierta.id, {
-      monto_real: Number(formCierre.monto_real) || 0,
+      monto_real: montoReal,
       notas_cierre: formCierre.notas,
-      monto_esperado: cajaAbierta.monto_apertura + cajaAbierta.total_ventas_efectivo + cajaAbierta.total_ingresos - cajaAbierta.total_egresos,
+      monto_esperado: montoEsperado,
     })
+    auditar({ accion: 'caja_cerrada', entidad: 'cajaAperturas', entidad_id: cajaAbierta.id, descripcion: `Caja cerrada — Esperado: ${formatCurrency(montoEsperado)} / Real: ${formatCurrency(montoReal)} / Diferencia: ${formatCurrency(montoReal - montoEsperado)}`, detalle: { monto_esperado: montoEsperado, monto_real: montoReal, diferencia: montoReal - montoEsperado }, sesion })
     setLoading(false)
     setModalCierre(false)
     setFormCierre({ monto_real: '', notas: '' })
@@ -71,6 +76,7 @@ export default function Caja() {
       concepto: formMovimiento.concepto,
       referencia: formMovimiento.referencia,
     })
+    auditar({ accion: 'caja_movimiento', entidad: 'cajaMovimientos', entidad_id: cajaAbierta.id, descripcion: `${formMovimiento.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'} de ${formatCurrency(Number(formMovimiento.monto))}: ${formMovimiento.concepto}`, detalle: { tipo: formMovimiento.tipo, monto: formMovimiento.monto, concepto: formMovimiento.concepto }, sesion })
     setLoading(false)
     setModalMovimiento(false)
     setFormMovimiento({ tipo: 'INGRESO', monto: '', concepto: '', referencia: '' })

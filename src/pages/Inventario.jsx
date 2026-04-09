@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Warehouse, ArrowUpCircle, ArrowDownCircle, RotateCcw } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import { TIPOS_MOVIMIENTO } from '../utils/constants'
@@ -12,6 +14,7 @@ import Input, { Select } from '../components/ui/Input'
 
 export default function Inventario() {
   const { productos, movimientos, ajustarStock } = useApp()
+  const { sesion } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ producto_id: '', tipo: 'entrada', cantidad: 1, motivo: '' })
@@ -28,6 +31,8 @@ export default function Inventario() {
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
     ajustarStock(form.producto_id, Number(form.cantidad), form.tipo, form.motivo)
+    const nombreProducto = productos.find(p => p.id === form.producto_id)?.nombre || form.producto_id
+    auditar({ accion: 'stock_ajustado_manual', entidad: 'inventario', entidad_id: form.producto_id, descripcion: `Ajuste de stock: ${nombreProducto} — ${form.tipo} de ${form.cantidad} unidades`, detalle: { producto: nombreProducto, tipo: form.tipo, cantidad: form.cantidad, motivo: form.motivo }, sesion })
     setLoading(false)
     setModal(false)
     setForm({ producto_id: '', tipo: 'entrada', cantidad: 1, motivo: '' })

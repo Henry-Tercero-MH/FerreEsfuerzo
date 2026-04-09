@@ -6,6 +6,8 @@ import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
 import { validateProducto } from '../utils/validators'
 import { formatCurrency } from '../utils/formatters'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -22,6 +24,7 @@ const FORM_VACÍO = {
 
 export default function Productos() {
   const { productos, agregarProducto, editarProducto, eliminarProducto } = useApp()
+  const { sesion } = useAuth()
   const { categorias, unidades, ubicaciones } = useCatalogos()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
@@ -70,9 +73,11 @@ export default function Productos() {
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
     if (modal.modo === 'crear') {
-      agregarProducto({ ...form, precio_compra: Number(form.precio_compra), precio_venta: Number(form.precio_venta), stock: Number(form.stock), stock_minimo: Number(form.stock_minimo) })
+      const nuevo = agregarProducto({ ...form, precio_compra: Number(form.precio_compra), precio_venta: Number(form.precio_venta), stock: Number(form.stock), stock_minimo: Number(form.stock_minimo) })
+      auditar({ accion: 'producto_creado', entidad: 'productos', entidad_id: nuevo.id, descripcion: `Producto creado: ${form.nombre}`, detalle: { nombre: form.nombre, codigo: form.codigo, precio_venta: form.precio_venta }, sesion })
     } else {
       editarProducto(modal.producto.id, { ...form, precio_compra: Number(form.precio_compra), precio_venta: Number(form.precio_venta), stock: Number(form.stock), stock_minimo: Number(form.stock_minimo) })
+      auditar({ accion: 'producto_editado', entidad: 'productos', entidad_id: modal.producto.id, descripcion: `Producto editado: ${form.nombre}`, sesion })
     }
     setLoading(false)
     cerrarModal()
@@ -184,7 +189,11 @@ export default function Productos() {
       <ConfirmModal
         open={!!confirm}
         onClose={() => setConfirm(null)}
-        onConfirm={() => { eliminarProducto(confirm.id); toast(`"${confirm.nombre}" eliminado`, 'warning') }}
+        onConfirm={() => {
+          eliminarProducto(confirm.id)
+          auditar({ accion: 'producto_eliminado', entidad: 'productos', entidad_id: confirm.id, descripcion: `Producto eliminado: ${confirm.nombre}`, sesion })
+          toast(`"${confirm.nombre}" eliminado`, 'warning')
+        }}
         title="¿Eliminar producto?"
         message={`Se eliminará "${confirm?.nombre}". Esta acción no se puede deshacer.`}
       />

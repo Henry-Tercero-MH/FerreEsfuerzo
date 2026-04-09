@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { shortId } from '../utils/formatters'
 import { db } from '../services/db'
 import { sha256 } from '../services/googleAppsScript'
+import { auditar } from '../services/auditoria'
 
 export const AuthContext = createContext(null)
 
@@ -10,7 +11,7 @@ export const AuthContext = createContext(null)
 export const ROLES = {
   admin: {
     label: 'Administrador',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/contabilidad', '/ajustes', '/pedidos', '/catalogos', '/compras', '/proveedores', '/cotizaciones', '/cuentas-por-cobrar', '/caja', '/configuracion'],
+    rutas: ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/contabilidad', '/ajustes', '/pedidos', '/catalogos', '/compras', '/proveedores', '/cotizaciones', '/cuentas-por-cobrar', '/caja', '/configuracion', '/auditoria'],
   },
   vendedor: {
     label: 'Vendedor',
@@ -58,13 +59,20 @@ export function AuthProvider({ children }) {
     const usuario = usuarios.find(
       u => u.email.toLowerCase() === email.toLowerCase() && u.password_hash === hash && u.activo
     )
-    if (!usuario) return { ok: false, error: 'Credenciales incorrectas' }
+    if (!usuario) {
+      auditar({ accion: 'login_fallido', entidad: 'usuarios', descripcion: `Intento de login fallido: ${email}` })
+      return { ok: false, error: 'Credenciales incorrectas' }
+    }
     const { password_hash: _, ...sesionData } = usuario
     setSesion(sesionData)
+    auditar({ accion: 'login', entidad: 'usuarios', entidad_id: usuario.id, descripcion: `${usuario.nombre} inició sesión`, sesion: sesionData })
     return { ok: true }
   }, [usuarios, setSesion])
 
-  const logout = useCallback(() => setSesion(null), [setSesion])
+  const logout = useCallback(() => {
+    if (sesion) auditar({ accion: 'logout', entidad: 'usuarios', entidad_id: sesion.id, descripcion: `${sesion.nombre} cerró sesión`, sesion })
+    setSesion(null)
+  }, [sesion, setSesion])
 
   const tieneAcceso = useCallback((ruta) => {
     if (!sesion || !ruta) return false

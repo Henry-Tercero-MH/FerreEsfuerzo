@@ -5,6 +5,8 @@ import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import { validateCompra } from '../utils/validators'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import SearchBar from '../components/shared/SearchBar'
@@ -26,6 +28,7 @@ const FORM_VACÍO = {
 export default function Compras() {
   const { compras, crearCompra } = useCompras()
   const { proveedores } = useProveedores()
+  const { sesion } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false })
   const [form, setForm] = useState(FORM_VACÍO)
@@ -76,7 +79,7 @@ export default function Compras() {
     await new Promise(r => setTimeout(r, 300))
 
     const proveedor = proveedores.find(p => p.id === form.proveedor_id)
-    crearCompra({
+    const compra = crearCompra({
       ...form,
       proveedor_nombre: proveedor?.nombre || 'Desconocido',
       subtotal: Number(form.subtotal) || 0,
@@ -85,6 +88,7 @@ export default function Compras() {
       total: Number(form.total) || 0,
     })
 
+    auditar({ accion: 'compra_registrada', entidad: 'compras', entidad_id: compra?.id, descripcion: `Compra ${form.numero_documento} — ${proveedor?.nombre} — Q${form.total}`, detalle: { numero: form.numero_documento, proveedor: proveedor?.nombre, total: form.total }, sesion })
     setLoading(false)
     cerrar()
   }

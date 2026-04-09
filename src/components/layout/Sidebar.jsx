@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
   Users, Truck, Wallet, BarChart3, Building2, Settings, X, LogOut,
-  ClipboardList, BookOpen, Calculator, ChevronLeft, ChevronRight,
+  ClipboardList, BookOpen, Calculator, ChevronLeft, ChevronRight, ShieldCheck,
 } from 'lucide-react'
 import IconQ from '../ui/IconQ'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   { to: '/catalogos',          label: 'Catálogos',          icon: BookOpen },
   { to: '/configuracion',      label: 'Empresa',            icon: Building2 },
   { to: '/ajustes',            label: 'Sistema',            icon: Settings },
+  { to: '/auditoria',          label: 'Auditoría',          icon: ShieldCheck },
 ]
 
 export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) {
