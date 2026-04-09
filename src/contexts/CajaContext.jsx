@@ -4,7 +4,16 @@ import { db } from '../services/db'
 
 export const CajaContext = createContext(null)
 
-const POLLING_MS = 20_000 // cada 20 segundos cuando hay caja abierta
+const POLLING_MS = 20_000
+const CAMPOS_NUM = ['monto_apertura','total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos','monto_esperado','monto_real','diferencia']
+const CAMPOS_ACUMULADOS = ['total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos']
+
+// Normaliza una apertura que viene de Sheets (strings → números, campos faltantes → 0)
+function normalizarApertura(a) {
+  const n = { ...a }
+  CAMPOS_NUM.forEach(c => { n[c] = Number(n[c]) || 0 })
+  return n
+}
 
 export function CajaProvider({ children }) {
   const [aperturas, setAperturas] = useState(() => {
@@ -23,9 +32,11 @@ export function CajaProvider({ children }) {
     localStorage.setItem('ferreapp_caja_movimientos', JSON.stringify(movimientos))
   }, [movimientos])
 
-  // Carga inicial desde Google Sheets
+  // Carga inicial desde Google Sheets — normaliza campos numéricos que vienen como string de Sheets
   useEffect(() => {
-    db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data) })
+    db.forceRefresh('cajaAperturas').then(data => {
+      if (data.length) setAperturas(data.map(normalizarApertura))
+    })
     db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
   }, [])
 
@@ -48,27 +59,23 @@ export function CajaProvider({ children }) {
     [aperturas]
   )
 
-  // Polling contra Google Sheets para sincronizar entre dispositivos distintos (móvil ↔ PC)
-  // Solo corre mientras haya una caja abierta.
-  // Para aperturas ABIERTA: hace merge tomando el mayor valor en cada campo acumulado,
-  // así una actualización tardía del Sheet no borra totales ya vistos en memoria.
-  const hayaCajaAbierta = !!cajaAbierta
+  // Polling contra Google Sheets para sincronizar entre dispositivos distintos (móvil ↔ PC).
+  // Corre siempre para detectar si otra sesión abrió/cerró caja.
+  // Para aperturas ABIERTA: merge tomando el mayor valor acumulado (evita borrar totales locales).
   useEffect(() => {
-    if (!hayaCajaAbierta) return
     const tick = async () => {
       const [ap, mv] = await Promise.all([
         db.forceRefresh('cajaAperturas'),
         db.forceRefresh('cajaMovimientos'),
       ])
       if (ap.length) {
-        setAperturas(prev => ap.map(remota => {
+        setAperturas(prev => ap.map(normalizarApertura).map(remota => {
           const local = prev.find(a => a.id === remota.id)
           if (!local || remota.estado !== 'ABIERTA') return remota
-          // Merge: para campos acumulados tomar el mayor valor entre local y remoto
-          const CAMPOS = ['total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos']
+          // Merge: tomar el mayor valor acumulado entre local y remoto
           const merged = { ...remota }
-          CAMPOS.forEach(c => {
-            merged[c] = Math.max(Number(local[c]) || 0, Number(remota[c]) || 0)
+          CAMPOS_ACUMULADOS.forEach(c => {
+            merged[c] = Math.max(local[c] || 0, remota[c] || 0)
           })
           return merged
         }))
@@ -77,7 +84,7 @@ export function CajaProvider({ children }) {
     }
     const id = setInterval(tick, POLLING_MS)
     return () => clearInterval(id)
-  }, [hayaCajaAbierta])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirCaja = useCallback(async (data) => {
     const nueva = {
