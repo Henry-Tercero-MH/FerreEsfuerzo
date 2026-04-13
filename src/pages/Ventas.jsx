@@ -3,6 +3,8 @@ import { Plus, Eye, XCircle, ShoppingCart, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useCaja } from '../contexts/CajaContext'
+import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
 import { auditar } from '../services/auditoria'
@@ -18,6 +20,8 @@ import SearchBar from '../components/shared/SearchBar'
 export default function Ventas() {
   const { ventas, cancelarVenta, clientes } = useApp()
   const { sesion } = useAuth()
+  const { revertirVentaEnCaja } = useCaja()
+  const { cancelarCuenta } = useCuentasPorCobrar()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -133,6 +137,8 @@ export default function Ventas() {
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           cancelarVenta(confirm.id)
+          revertirVentaEnCaja(confirm.metodo_pago, confirm.total)
+          if (confirm.metodo_pago === 'credito') cancelarCuenta(confirm.id)
           auditar({ accion: 'venta_cancelada', entidad: 'ventas', entidad_id: confirm.id, descripcion: `Venta cancelada: ${confirm.numero_venta} — ${formatCurrency(confirm.total)}`, sesion })
           toast(`Venta ${confirm.numero_venta} cancelada`, 'warning')
         }}

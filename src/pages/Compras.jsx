@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Plus, Package, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Package, FileText, CheckCircle } from 'lucide-react'
 import { useCompras } from '../contexts/ComprasContext'
 import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
@@ -26,8 +27,9 @@ const FORM_VACÍO = {
 }
 
 export default function Compras() {
-  const { compras, crearCompra } = useCompras()
+  const { compras, crearCompra, aplicarCompra } = useCompras()
   const { proveedores } = useProveedores()
+  const navigate = useNavigate()
   const { sesion } = useAuth()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false })
@@ -155,9 +157,18 @@ export default function Compras() {
                     </td>
                     <td>
                       <div className="flex gap-1 justify-end">
-                        <button className="btn-icon btn-ghost text-gray-400 hover:text-primary-600">
+                        <button className="btn-icon btn-ghost text-gray-400 hover:text-primary-600" title="Ver detalle">
                           <FileText size={15} />
                         </button>
+                        {c.estado === 'REGISTRADA' && (
+                          <button
+                            title="Marcar como aplicada al inventario"
+                            onClick={() => { aplicarCompra(c.id); navigate('/inventario') }}
+                            className="btn-icon btn-ghost text-gray-400 hover:text-green-600"
+                          >
+                            <CheckCircle size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

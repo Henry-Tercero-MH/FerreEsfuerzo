@@ -27,7 +27,7 @@ export default function Inventario() {
   , [productos, termino])
 
   const handleAjuste = async () => {
-    if (sesion?.rol !== 'admin') return
+    if (sesion?.rol !== 'admin' && sesion?.rol !== 'bodeguero') return
     if (!form.producto_id || !form.cantidad) return
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))

@@ -209,9 +209,29 @@ export async function syncPending() {
 
   for (const item of sorted) {
     try {
-      if (item.action === 'insert')      await gasInsert(item.entity, item.data)
-      else if (item.action === 'update') await gasUpdate(item.entity, item.recordId, item.data)
-      else if (item.action === 'remove') await gasRemove(item.entity, item.recordId)
+      if (item.action === 'insert') {
+        await gasInsert(item.entity, item.data)
+        // Sincronizar items relacionados, igual que el path online en insert()
+        if (item.entity === 'ventas' && item.data.items?.length) {
+          await Promise.all(item.data.items.map(i =>
+            gasInsert('ventaItems', { ...i, venta_id: item.data.id })
+          ))
+        }
+        if (item.entity === 'cotizaciones' && item.data.items?.length) {
+          await Promise.all(item.data.items.map(i =>
+            gasInsert('cotizacionItems', { ...i, cotizacion_id: item.data.id })
+          ))
+        }
+        if (item.entity === 'compras' && item.data.items?.length) {
+          await Promise.all(item.data.items.map(i =>
+            gasInsert('compraItems', { ...i, compra_id: item.data.id })
+          ))
+        }
+      } else if (item.action === 'update') {
+        await gasUpdate(item.entity, item.recordId, item.data)
+      } else if (item.action === 'remove') {
+        await gasRemove(item.entity, item.recordId)
+      }
 
       const current = getQueue()
       saveQueue(current.filter(q => q.id !== item.id))

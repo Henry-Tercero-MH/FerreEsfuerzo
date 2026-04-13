@@ -121,14 +121,6 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Credenciales demo */}
-          <div className="mt-6 rounded-xl bg-gray-50 border border-gray-100 p-4">
-            <p className="text-xs font-medium text-gray-500 mb-2">Credenciales de acceso</p>
-            <div className="space-y-1 text-xs text-gray-600 font-mono">
-              <p><span className="text-gray-400">Email:</span> admin@ferreapp.com</p>
-              <p><span className="text-gray-400">Pass: </span> admin123</p>
-            </div>
-          </div>
         </div>
 
         <p className="mt-4 text-center text-xs text-white/50">

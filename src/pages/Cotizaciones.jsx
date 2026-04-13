@@ -13,11 +13,12 @@ import Modal from '../components/ui/Modal'
 
 export default function Cotizaciones() {
   const { cotizaciones, cambiarEstado } = useCotizaciones()
-  const { crearVenta } = useApp()
+  const { crearVenta, productos } = useApp()
   const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [detalle, setDetalle] = useState(null)
+  const [stockError, setStockError] = useState('')
   // confirm: { tipo: 'pedido'|'venta'|'cancelar', cot }
   const [confirm, setConfirm] = useState(null)
 
@@ -48,6 +49,21 @@ export default function Cotizaciones() {
   const ejecutarConfirm = () => {
     if (!confirm) return
     const { tipo, cot } = confirm
+
+    // Validar stock antes de convertir
+    if (tipo === 'venta' || tipo === 'pedido') {
+      const sinStock = (cot.items || []).filter(item => {
+        const p = productos.find(p => p.id === item.producto_id)
+        return !p || p.stock < item.cantidad
+      })
+      if (sinStock.length > 0) {
+        setStockError(`Stock insuficiente: ${sinStock.map(i => i.nombre).join(', ')}`)
+        setConfirm(null)
+        return
+      }
+    }
+    setStockError('')
+
     if (tipo === 'pedido') {
       crearVenta({
         cliente_id: cot.cliente_id,
@@ -120,6 +136,13 @@ export default function Cotizaciones() {
           Nueva cotización
         </Button>
       </div>
+
+      {stockError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <span><span className="font-semibold">Stock insuficiente:</span> {stockError.replace('Stock insuficiente: ', '')}</span>
+          <button onClick={() => setStockError('')} className="text-red-400 hover:text-red-600 font-bold ml-4">✕</button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <SearchBar

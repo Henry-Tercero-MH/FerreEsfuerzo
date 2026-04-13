@@ -13,7 +13,7 @@ const PRODUCTOS_SEED   = []
 const VENTAS_SEED      = []
 const MOVIMIENTOS_SEED = []
 const CLIENTES_SEED    = [
-  { id: 'c1', nombre: 'Consumidor Final', telefono: '', email: '', nit: 'CF', tipo: 'natural', activo: true, creado_en: new Date().toISOString() },
+  { id: 'cf', nombre: 'Consumidor Final', telefono: '', email: '', nit: 'CF', tipo: 'natural', activo: true, creado_en: new Date().toISOString() },
 ]
 
 // ── Provider ─────────────────────────────────────────────────────────────────
@@ -27,13 +27,12 @@ export function AppProvider({ children }) {
 
   // Al iniciar la app: cargar desde Google Sheets y actualizar el cache
   useEffect(() => {
-    db.refreshAll().then(() => {
-      const p = db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) })
-      const v = db.forceRefresh('ventas').then(data => { if (data.length) setVentas(data) })
-      const c = db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) })
-      const m = db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) })
-      return Promise.allSettled([p, v, c, m])
-    }).finally(() => setLoadingApp(false))
+    Promise.allSettled([
+      db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) }),
+      db.forceRefresh('ventas').then(data => { if (data.length) setVentas(data) }),
+      db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) }),
+      db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) }),
+    ]).finally(() => setLoadingApp(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── PRODUCTOS ──────────────────────────────────────────────────────────────
@@ -84,7 +83,8 @@ export function AppProvider({ children }) {
 
   // ── VENTAS ─────────────────────────────────────────────────────────────────
   const crearVenta = useCallback((data) => {
-    const numero = generateNumeroVenta(ventas.length + 1)
+    const nums = ventas.map(v => parseInt(v.numero_venta?.replace('VTA-', '') || '0')).filter(n => !isNaN(n))
+    const numero = generateNumeroVenta((nums.length ? Math.max(...nums) : 0) + 1)
     const esPedido = !!data.es_pedido
     const nueva = {
       ...data,
@@ -120,7 +120,7 @@ export function AppProvider({ children }) {
       ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero)
     })
     return nueva
-  }, [ventas.length, setVentas, ajustarStock])
+  }, [ventas, setVentas, ajustarStock])
 
   const cancelarVenta = useCallback((id) => {
     const venta = ventas.find(v => v.id === id)
@@ -157,7 +157,7 @@ export function AppProvider({ children }) {
   }, [setClientes])
 
   const eliminarCliente = useCallback((id) => {
-    if (id === 'c1') return // CF no se elimina
+    if (id === 'cf') return // CF no se elimina
     setClientes(prev => prev.map(c => c.id === id ? { ...c, activo: false } : c))
     db.remove('clientes', id)
   }, [setClientes])

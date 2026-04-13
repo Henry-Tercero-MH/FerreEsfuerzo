@@ -17,7 +17,7 @@ export default function NuevaVenta() {
   const { productos, clientes, crearVenta } = useApp()
   const { metodos_pago = [] } = useCatalogos()
   const { crearCuenta } = useCuentasPorCobrar()
-  const { registrarVentaEnCaja } = useCaja()
+  const { registrarVentaEnCaja, cajaAbierta } = useCaja()
   const { sesion } = useAuth()
   const navigate = useNavigate()
 
@@ -197,6 +197,13 @@ export default function NuevaVenta() {
           <p className="page-subtitle">Busca productos y agrega al carrito</p>
         </div>
       </div>
+
+      {!cajaAbierta && (
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 flex items-center gap-2">
+          <span className="font-semibold">⚠ Caja no abierta.</span>
+          Esta venta no se registrará en el arqueo de caja. Abre la caja antes de vender.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Buscador de productos */}

@@ -80,7 +80,7 @@ export default function Bi() {
   const clientesTop = useMemo(() => {
     const acum = {}
     ventasFiltradas.forEach(v => {
-      if (!v.cliente_id || v.cliente_id === 'c1') return
+      if (!v.cliente_id || v.cliente_id === 'cf') return
       if (!acum[v.cliente_id]) {
         const cli = clientes.find(c => c.id === v.cliente_id)
         acum[v.cliente_id] = { nombre: cli?.nombre || v.cliente_nombre || '—', compras: 0, total: 0 }
@@ -118,7 +118,7 @@ export default function Bi() {
 
   const totalPeriodo   = ventasFiltradas.reduce((acc, v) => acc + (Number(v.total) || 0), 0)
   const ticketPromedio = ventasFiltradas.length ? totalPeriodo / ventasFiltradas.length : 0
-  const clientesUnicos = new Set(ventasFiltradas.filter(v => v.cliente_id !== 'c1').map(v => v.cliente_id)).size
+  const clientesUnicos = new Set(ventasFiltradas.filter(v => v.cliente_id !== 'cf').map(v => v.cliente_id)).size
 
   return (
     <div className="space-y-6">

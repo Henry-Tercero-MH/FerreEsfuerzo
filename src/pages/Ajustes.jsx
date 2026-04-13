@@ -4,7 +4,6 @@ import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
 import { testConexion } from '../services/googleAppsScript.js'
 import { auditar } from '../services/auditoria'
-import { storage } from '../services/storage.js'
 import { db } from '../services/db.js'
 import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
@@ -102,7 +101,9 @@ export default function Ajustes() {
   }
 
   const handleExportarJSON = () => {
-    const data = storage.exportAll()
+    const data = Object.keys(localStorage)
+      .filter(k => k.startsWith('ferreapp_'))
+      .reduce((acc, k) => { try { acc[k.replace('ferreapp_', '')] = JSON.parse(localStorage.getItem(k)) } catch { acc[k.replace('ferreapp_', '')] = null }; return acc }, {})
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')

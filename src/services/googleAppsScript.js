@@ -135,17 +135,3 @@ export async function testConexion() {
   }
 }
 
-// ── Alias de compatibilidad ───────────────────────────────────
-export const backupCompleto = gasBackupCompleto
-
-export const appsScript = {
-  gasGetAll,
-  gasInsert,
-  gasUpdate,
-  gasRemove,
-  gasBackupCompleto,
-  backupCompleto,
-  sincronizarCatalogos,
-  sincronizarVentasHoy,
-  obtenerReporteSheet,
-}

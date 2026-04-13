@@ -7,6 +7,7 @@ import { validateCliente } from '../utils/validators'
 import { TIPOS_CLIENTE } from '../utils/constants'
 import { formatDate } from '../utils/formatters'
 import { useAuth } from '../contexts/AuthContext'
+import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -21,6 +22,7 @@ const FORM_VACÍO = { nombre: '', telefono: '', email: '', nit: '', direccion: '
 export default function Clientes() {
   const { clientes, agregarCliente, editarCliente, eliminarCliente } = useApp()
   const { sesion } = useAuth()
+  const { cuentas } = useCuentasPorCobrar()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false, modo: 'crear', cliente: null })
@@ -100,7 +102,7 @@ export default function Clientes() {
                 <td><Badge variant="blue">{tipoLabel(c.tipo)}</Badge></td>
                 <td className="text-xs text-gray-400">{formatDate(c.creado_en)}</td>
                 <td>
-                  {c.id !== 'c1' && (
+                  {c.id !== 'cf' && (
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => abrirEditar(c)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
                       <button onClick={() => setConfirm(c)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
@@ -136,6 +138,12 @@ export default function Clientes() {
         open={!!confirm}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
+          const deudas = cuentas.filter(c => c.cliente_id === confirm.id && (c.estado === 'PENDIENTE' || c.estado === 'PARCIAL'))
+          if (deudas.length > 0) {
+            toast(`"${confirm.nombre}" tiene ${deudas.length} cuenta(s) pendiente(s). Salda las deudas antes de eliminar.`, 'error')
+            setConfirm(null)
+            return
+          }
           eliminarCliente(confirm.id)
           auditar({ accion: 'cliente_eliminado', entidad: 'clientes', entidad_id: confirm.id, descripcion: `Cliente eliminado: ${confirm.nombre}`, sesion })
           toast(`"${confirm.nombre}" eliminado`, 'warning')

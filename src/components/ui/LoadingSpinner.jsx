@@ -8,10 +8,3 @@ export default function LoadingSpinner({ text = 'Cargando...', size = 'md' }) {
   )
 }
 
-export function PageLoader() {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-      <LoadingSpinner text="Iniciando Ferretería El Esfuerzo..." size="lg" />
-    </div>
-  )
-}

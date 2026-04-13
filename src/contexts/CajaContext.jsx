@@ -22,6 +22,9 @@ export function CajaProvider({ children }) {
   const [movimientos, setMovimientos] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_caja_movimientos') || '[]') } catch { return [] }
   })
+  const [loading, setLoading] = useState(() => {
+    try { const c = JSON.parse(localStorage.getItem('ferreapp_caja_aperturas') || '[]'); return !Array.isArray(c) || c.length === 0 } catch { return true }
+  })
 
   // Persistir en localStorage cada vez que cambia el estado
   useEffect(() => {
@@ -34,10 +37,10 @@ export function CajaProvider({ children }) {
 
   // Carga inicial desde Google Sheets — normaliza campos numéricos que vienen como string de Sheets
   useEffect(() => {
-    db.forceRefresh('cajaAperturas').then(data => {
-      if (data.length) setAperturas(data.map(normalizarApertura))
-    })
-    db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) })
+    Promise.all([
+      db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data.map(normalizarApertura)) }),
+      db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) }),
+    ]).finally(() => setLoading(false))
   }, [])
 
   // Sincronizar entre pestañas del mismo navegador (mismo dispositivo, distintas pestañas)
@@ -64,6 +67,7 @@ export function CajaProvider({ children }) {
   // Para aperturas ABIERTA: merge tomando el mayor valor acumulado (evita borrar totales locales).
   useEffect(() => {
     const tick = async () => {
+      if (document.visibilityState === 'hidden') return
       const [ap, mv] = await Promise.all([
         db.forceRefresh('cajaAperturas'),
         db.forceRefresh('cajaMovimientos'),
@@ -146,6 +150,20 @@ export function CajaProvider({ children }) {
     db.update('cajaAperturas', abierta.id, actualizado)
   }, [aperturas])
 
+  const revertirVentaEnCaja = useCallback((metodo_pago, total) => {
+    const abierta = aperturas.find(a => a.estado === 'ABIERTA')
+    if (!abierta) return
+    const campo =
+      metodo_pago === 'efectivo' ? 'total_ventas_efectivo' :
+      metodo_pago === 'tarjeta'  ? 'total_ventas_tarjeta'  :
+      metodo_pago === 'credito'  ? null :
+      'total_ventas_otros'
+    if (!campo) return
+    const actualizado = { [campo]: Math.max(0, (Number(abierta[campo]) || 0) - Number(total)) }
+    setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
+    db.update('cajaAperturas', abierta.id, actualizado)
+  }, [aperturas])
+
   const refrescarCaja = useCallback(async () => {
     const [ap, mv] = await Promise.all([
       db.forceRefresh('cajaAperturas'),
@@ -174,7 +192,9 @@ export function CajaProvider({ children }) {
       cerrarCaja,
       registrarMovimiento,
       registrarVentaEnCaja,
+      revertirVentaEnCaja,
       refrescarCaja,
+      loading,
     }}>
       {children}
     </CajaContext.Provider>

@@ -8,9 +8,16 @@ export function ProveedoresProvider({ children }) {
   const [proveedores, setProveedores] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_proveedores') || '[]') } catch { return [] }
   })
+  const [loading, setLoading] = useState(() => {
+    try { const c = JSON.parse(localStorage.getItem('ferreapp_proveedores') || '[]'); return !Array.isArray(c) || c.length === 0 } catch { return true }
+  })
 
   useEffect(() => {
-    db.forceRefresh('proveedores').then(data => { if (data.length) setProveedores(data) })
+    localStorage.setItem('ferreapp_proveedores', JSON.stringify(proveedores))
+  }, [proveedores])
+
+  useEffect(() => {
+    db.forceRefresh('proveedores').then(data => { if (data.length) setProveedores(data) }).finally(() => setLoading(false))
   }, [])
 
   const agregarProveedor = useCallback(async (data) => {
@@ -45,6 +52,7 @@ export function ProveedoresProvider({ children }) {
       agregarProveedor,
       editarProveedor,
       eliminarProveedor,
+      loading,
     }}>
       {children}
     </ProveedoresContext.Provider>
