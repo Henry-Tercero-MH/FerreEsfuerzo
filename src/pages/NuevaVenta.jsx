@@ -196,12 +196,20 @@ export default function NuevaVenta() {
           <h1 className="page-title">Nueva Venta</h1>
           <p className="page-subtitle">Busca productos y agrega al carrito</p>
         </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-400">Facturando como</p>
+          <p className="text-sm font-semibold text-gray-700">{sesion?.nombre}</p>
+          <p className="text-xs text-gray-400 capitalize">{sesion?.rol}</p>
+        </div>
       </div>
 
       {!cajaAbierta && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 flex items-center gap-2">
-          <span className="font-semibold">⚠ Caja no abierta.</span>
-          Esta venta no se registrará en el arqueo de caja. Abre la caja antes de vender.
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800 space-y-1">
+          <p className="font-bold text-base flex items-center gap-2">🔒 Caja cerrada — no se puede facturar</p>
+          <p>Para registrar ventas primero debes abrir la caja del día. Comunícate con el administrador del sistema para que la abra.</p>
+          {sesion?.rol === 'admin' && (
+            <p className="mt-2 font-semibold text-red-700">Eres administrador: ve a <a href="/caja" className="underline hover:text-red-900">Caja</a> y abre el turno para habilitar las ventas.</p>
+          )}
         </div>
       )}
 
@@ -239,9 +247,18 @@ export default function NuevaVenta() {
                     className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-primary-50 border-b border-gray-50 last:border-0 transition-colors">
                     <div>
                       <p className="text-sm font-medium text-gray-900">{p.nombre}</p>
-                      <p className="text-xs text-gray-400">{p.codigo} · Stock: {p.stock}</p>
+                      <p className="text-xs text-gray-400">{p.codigo}</p>
                     </div>
-                    <p className="text-sm font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</p>
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        p.stock === 0 ? 'bg-red-100 text-red-600' :
+                        p.stock <= (p.stock_minimo || 5) ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {p.stock} {p.unidad || 'uds'} disponibles
+                      </span>
+                      <p className="text-sm font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -263,17 +280,22 @@ export default function NuevaVenta() {
                       <p className="text-sm font-medium text-gray-900 truncate">{item.nombre}</p>
                       <p className="text-xs text-gray-400">{formatCurrency(item.precio_unitario)} c/u</p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="btn-icon btn-ghost w-7 h-7"><Minus size={12} /></button>
-                      <input
-                        type="number"
-                        min="1"
-                        max={item.stock_disponible}
-                        value={item.cantidad}
-                        onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
-                        className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
-                      />
-                      <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="btn-icon btn-ghost w-7 h-7"><Plus size={12} /></button>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="btn-icon btn-ghost w-7 h-7"><Minus size={12} /></button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.stock_disponible}
+                          value={item.cantidad}
+                          onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
+                          className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
+                        />
+                        <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="btn-icon btn-ghost w-7 h-7"><Plus size={12} /></button>
+                      </div>
+                      <span className={`text-xs font-medium ${item.cantidad >= item.stock_disponible ? 'text-red-500' : 'text-gray-400'}`}>
+                        máx. {item.stock_disponible}
+                      </span>
                     </div>
                     <p className="w-20 text-right text-sm font-semibold text-gray-900">{formatCurrency(item.subtotal)}</p>
                     <button onClick={() => eliminarItem(item.producto_id)} className="btn-icon btn-ghost text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
@@ -371,7 +393,7 @@ export default function NuevaVenta() {
           <Button
             variant="success"
             className="w-full btn-lg"
-            disabled={items.length === 0 || (esPedido && (clienteId === 'cf' || !direccionEntrega.trim())) || (esCredito && clienteId === 'cf')}
+            disabled={!cajaAbierta || items.length === 0 || (esPedido && (clienteId === 'cf' || !direccionEntrega.trim())) || (esCredito && clienteId === 'cf')}
             loading={loading}
             onClick={handleConfirmar}
           >

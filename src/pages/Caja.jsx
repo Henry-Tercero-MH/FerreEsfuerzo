@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Lock, Unlock, TrendingUp, TrendingDown } from 'lucide-react'
+import { Lock, Unlock, TrendingUp, TrendingDown, Eye, Printer } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import { useCaja } from '../contexts/CajaContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useApp } from '../contexts/AppContext'
 import { auditar } from '../services/auditoria'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import Button from '../components/ui/Button'
@@ -13,6 +14,7 @@ import Badge from '../components/ui/Badge'
 
 export default function Caja() {
   const { sesion } = useAuth()
+  const { ventas } = useApp()
   const { aperturas, cajaAbierta, abrirCaja, cerrarCaja, registrarMovimiento, movimientos, refrescarCaja } = useCaja()
   const [modalApertura, setModalApertura] = useState(false)
   const [modalCierre, setModalCierre] = useState(false)
@@ -83,9 +85,109 @@ export default function Caja() {
     setFormMovimiento({ tipo: 'INGRESO', monto: '', concepto: '', referencia: '' })
   }
 
+  const [detalleCierre, setDetalleCierre] = useState(null)
+
   const movimientosCajaActual = cajaAbierta
     ? movimientos.filter(m => m.apertura_caja_id === cajaAbierta.id)
     : []
+
+  const movimientosDetalle = detalleCierre
+    ? movimientos.filter(m => m.apertura_caja_id === detalleCierre.id)
+    : []
+
+  const ventasDetalle = detalleCierre
+    ? ventas.filter(v => {
+        const f = new Date(v.fecha).getTime()
+        return f >= new Date(detalleCierre.fecha_apertura).getTime() &&
+               f <= new Date(detalleCierre.fecha_cierre).getTime() &&
+               v.estado !== 'cancelada'
+      })
+    : []
+
+  const imprimirCierre = (a, movs, vtas) => {
+    const diff = Number(a.monto_real) - Number(a.monto_esperado)
+    const filasMov = movs.length
+      ? movs.map(m => `
+        <tr>
+          <td>${m.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</td>
+          <td>${m.concepto}</td>
+          <td style="text-align:right;color:${m.tipo === 'INGRESO' ? '#16a34a' : '#dc2626'}">${m.tipo === 'INGRESO' ? '+' : '-'}Q${Number(m.monto).toFixed(2)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:#9ca3af">Sin movimientos</td></tr>'
+
+    const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<title>Cierre de Caja — ${formatDateTime(a.fecha_cierre)}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; max-width: 700px; margin: 40px auto; color: #111; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+  .section { margin-bottom: 20px; }
+  .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 10px; }
+  .row { display: flex; justify-content: space-between; padding: 3px 0; }
+  .row.total { font-weight: 700; font-size: 15px; border-top: 2px solid #111; padding-top: 6px; margin-top: 4px; }
+  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; color: #6b7280; padding: 4px 6px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 5px 6px; border-bottom: 1px solid #f3f4f6; }
+  @media print { body { margin: 10px; } }
+</style></head><body>
+<h1>Arqueo de Caja</h1>
+<p class="sub">Ferretería · ${formatDateTime(a.fecha_cierre)}</p>
+
+<div class="section">
+  <h2>Turno</h2>
+  <div class="row"><span>Usuario</span><span>${a.usuario_nombre}</span></div>
+  <div class="row"><span>Apertura</span><span>${formatDateTime(a.fecha_apertura)}</span></div>
+  <div class="row"><span>Cierre</span><span>${formatDateTime(a.fecha_cierre)}</span></div>
+</div>
+
+<div class="section">
+  <h2>Resumen de efectivo</h2>
+  <div class="row"><span>Monto inicial</span><span>Q${Number(a.monto_apertura).toFixed(2)}</span></div>
+  <div class="row pos"><span>+ Ventas efectivo</span><span>Q${Number(a.total_ventas_efectivo || 0).toFixed(2)}</span></div>
+  <div class="row"><span>Ventas tarjeta</span><span>Q${Number(a.total_ventas_tarjeta || 0).toFixed(2)}</span></div>
+  <div class="row"><span>Ventas crédito</span><span>Q${Number(a.total_ventas_credito || 0).toFixed(2)}</span></div>
+  <div class="row pos"><span>+ Ingresos</span><span>Q${Number(a.total_ingresos || 0).toFixed(2)}</span></div>
+  <div class="row neg"><span>- Egresos</span><span>Q${Number(a.total_egresos || 0).toFixed(2)}</span></div>
+  <div class="row total"><span>Esperado en caja</span><span>Q${Number(a.monto_esperado).toFixed(2)}</span></div>
+  <div class="row total"><span>Real contado</span><span>Q${Number(a.monto_real).toFixed(2)}</span></div>
+  <div class="row total ${diff >= 0 ? 'pos' : 'neg'}"><span>Diferencia</span><span>${diff >= 0 ? '+' : ''}Q${diff.toFixed(2)}</span></div>
+</div>
+
+${vtas.length ? `<div class="section">
+  <h2>Ventas del turno (${vtas.length})</h2>
+  <table><thead><tr><th>N° Venta</th><th>Cliente</th><th>Facturó</th><th>Método</th><th style="text-align:right">Total</th></tr></thead>
+  <tbody>${vtas.map(v => `
+    <tr>
+      <td style="font-family:monospace;font-size:11px">${v.numero_venta}</td>
+      <td>${v.cliente_nombre || 'Consumidor Final'}</td>
+      <td style="color:#6b7280">${v.usuario_nombre || '—'}</td>
+      <td>${v.metodo_pago === 'efectivo' ? 'Efectivo' : v.metodo_pago === 'tarjeta' ? 'Tarjeta' : v.metodo_pago === 'credito' ? 'Crédito' : v.metodo_pago}</td>
+      <td style="text-align:right;font-weight:600">Q${Number(v.total).toFixed(2)}</td>
+    </tr>
+    ${(v.items || []).map(i => `<tr style="background:#f9fafb"><td></td><td style="color:#6b7280;font-size:11px;padding-left:16px">↳ ${i.nombre}</td><td></td><td style="color:#6b7280;font-size:11px">${i.cantidad} × Q${Number(i.precio_unitario).toFixed(2)}</td><td style="text-align:right;color:#6b7280;font-size:11px">Q${Number(i.subtotal).toFixed(2)}</td></tr>`).join('')}
+  `).join('')}</tbody>
+  <tfoot><tr style="font-weight:700;border-top:2px solid #111"><td colspan="4">Total ventas</td><td style="text-align:right">Q${vtas.reduce((s, v) => s + Number(v.total), 0).toFixed(2)}</td></tr></tfoot>
+  </table>
+</div>` : ''}
+
+${movs.length ? `<div class="section">
+  <h2>Movimientos del turno</h2>
+  <table><thead><tr><th>Tipo</th><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead>
+  <tbody>${filasMov}</tbody></table>
+</div>` : ''}
+
+${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p></div>` : ''}
+
+<p style="margin-top:32px;font-size:11px;color:#9ca3af;text-align:center">Generado por FerreApp · ${new Date().toLocaleString('es-GT')}</p>
+</body></html>`
+
+    const w = window.open('', '_blank', 'width=800,height=700')
+    w.document.documentElement.innerHTML = html
+    w.focus()
+    setTimeout(() => w.print(), 400)
+  }
 
   return (
     <div className="space-y-6">
@@ -214,10 +316,11 @@ export default function Caja() {
                   <th>Esperado</th>
                   <th>Real</th>
                   <th>Diferencia</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {aperturas.filter(a => a.estado === 'CERRADA').slice(0, 10).map(a => (
+                {aperturas.filter(a => a.estado === 'CERRADA').map(a => (
                   <tr key={a.id}>
                     <td className="text-sm">{a.usuario_nombre}</td>
                     <td className="text-xs text-gray-500">{formatDateTime(a.fecha_apertura)}</td>
@@ -228,6 +331,15 @@ export default function Caja() {
                       <span className={`font-semibold ${a.diferencia >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {a.diferencia >= 0 ? '+' : ''}{formatCurrency(a.diferencia)}
                       </span>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => setDetalleCierre(a)}
+                        className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"
+                        title="Ver detalle"
+                      >
+                        <Eye size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -329,6 +441,137 @@ export default function Caja() {
             />
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Detalle Cierre */}
+      <Modal
+        open={!!detalleCierre}
+        onClose={() => setDetalleCierre(null)}
+        title={`Arqueo — ${formatDateTime(detalleCierre?.fecha_cierre)}`}
+        size="lg"
+        footer={
+          <div className="flex gap-2 w-full justify-end">
+            <Button variant="secondary" onClick={() => setDetalleCierre(null)}>Cerrar</Button>
+            <Button variant="primary" icon={Printer} onClick={() => imprimirCierre(detalleCierre, movimientosDetalle, ventasDetalle)}>
+              Imprimir
+            </Button>
+          </div>
+        }
+      >
+        {detalleCierre && (() => {
+          const a = detalleCierre
+          const diff = Number(a.monto_real) - Number(a.monto_esperado)
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                <div><p className="text-gray-400">Usuario</p><p className="font-medium">{a.usuario_nombre}</p></div>
+                <div><p className="text-gray-400">Apertura</p><p className="font-medium">{formatDateTime(a.fecha_apertura)}</p></div>
+                <div><p className="text-gray-400">Cierre</p><p className="font-medium">{formatDateTime(a.fecha_cierre)}</p></div>
+              </div>
+
+              <div className="rounded-xl bg-gray-50 p-4 space-y-1 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Resumen de efectivo</p>
+                <div className="flex justify-between text-gray-600"><span>Monto inicial</span><span>{formatCurrency(a.monto_apertura)}</span></div>
+                <div className="flex justify-between text-green-600"><span>+ Ventas efectivo</span><span>{formatCurrency(a.total_ventas_efectivo || 0)}</span></div>
+                <div className="flex justify-between text-gray-600"><span>Ventas tarjeta</span><span>{formatCurrency(a.total_ventas_tarjeta || 0)}</span></div>
+                <div className="flex justify-between text-gray-600"><span>Ventas crédito</span><span>{formatCurrency(a.total_ventas_credito || 0)}</span></div>
+                <div className="flex justify-between text-purple-600"><span>+ Ingresos</span><span>{formatCurrency(a.total_ingresos || 0)}</span></div>
+                <div className="flex justify-between text-red-600"><span>- Egresos</span><span>{formatCurrency(a.total_egresos || 0)}</span></div>
+                <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-2 text-base"><span>Esperado</span><span>{formatCurrency(a.monto_esperado)}</span></div>
+                <div className="flex justify-between font-bold text-gray-900 text-base"><span>Real contado</span><span>{formatCurrency(a.monto_real)}</span></div>
+                <div className={`flex justify-between font-bold text-base border-t border-gray-200 pt-2 ${diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span>Diferencia</span>
+                  <span>{diff >= 0 ? '+' : ''}{formatCurrency(diff)}</span>
+                </div>
+              </div>
+
+              {ventasDetalle.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Ventas del turno ({ventasDetalle.length})</p>
+                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">N° Venta</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Cliente</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Facturó</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Método</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ventasDetalle.map(v => (
+                          <>
+                            <tr key={v.id} className="border-t border-gray-50">
+                              <td className="px-3 py-2 font-mono text-xs text-gray-500">{v.numero_venta}</td>
+                              <td className="px-3 py-2 text-gray-700">{v.cliente_nombre || 'Consumidor Final'}</td>
+                              <td className="px-3 py-2 text-xs text-gray-500">{v.usuario_nombre || '—'}</td>
+                              <td className="px-3 py-2 text-gray-500 capitalize">{v.metodo_pago}</td>
+                              <td className="px-3 py-2 text-right font-semibold text-gray-900">{formatCurrency(v.total)}</td>
+                            </tr>
+                            {(v.items || []).map((item, i) => (
+                              <tr key={`${v.id}-${i}`} className="bg-gray-50/60">
+                                <td className="px-3 py-1"></td>
+                                <td className="px-3 py-1 text-xs text-gray-400 pl-6">↳ {item.nombre}</td>
+                                <td className="px-3 py-1 text-xs text-gray-400" colSpan={2}>{item.cantidad} × {formatCurrency(item.precio_unitario)}</td>
+                                <td className="px-3 py-1 text-right text-xs text-gray-400">{formatCurrency(item.subtotal)}</td>
+                              </tr>
+                            ))}
+                          </>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                        <tr>
+                          <td colSpan={4} className="px-3 py-2 font-semibold text-gray-700">Total ventas</td>
+                          <td className="px-3 py-2 text-right font-bold text-gray-900">
+                            {formatCurrency(ventasDetalle.reduce((s, v) => s + Number(v.total), 0))}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {movimientosDetalle.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Movimientos del turno ({movimientosDetalle.length})</p>
+                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Tipo</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">Concepto</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {movimientosDetalle.map(m => (
+                          <tr key={m.id} className="border-t border-gray-50">
+                            <td className="px-3 py-2">
+                              <Badge variant={m.tipo === 'INGRESO' ? 'green' : 'red'}>{m.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</Badge>
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">{m.concepto}</td>
+                            <td className={`px-3 py-2 text-right font-semibold ${m.tipo === 'INGRESO' ? 'text-green-600' : 'text-red-600'}`}>
+                              {m.tipo === 'INGRESO' ? '+' : '-'}{formatCurrency(m.monto)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {a.notas_cierre && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">Notas</p>
+                  <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{a.notas_cierre}</p>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </Modal>
 
       {/* Modal Movimiento */}

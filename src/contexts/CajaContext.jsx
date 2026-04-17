@@ -5,8 +5,8 @@ import { db } from '../services/db'
 export const CajaContext = createContext(null)
 
 const POLLING_MS = 20_000
-const CAMPOS_NUM = ['monto_apertura','total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos','monto_esperado','monto_real','diferencia']
-const CAMPOS_ACUMULADOS = ['total_ventas_efectivo','total_ventas_tarjeta','total_ventas_otros','total_ingresos','total_egresos']
+const CAMPOS_NUM = ['monto_apertura','total_ventas_efectivo','total_ventas_tarjeta','total_ventas_credito','total_ventas_otros','total_ingresos','total_egresos','monto_esperado','monto_real','diferencia']
+const CAMPOS_ACUMULADOS = ['total_ventas_efectivo','total_ventas_tarjeta','total_ventas_credito','total_ventas_otros','total_ingresos','total_egresos']
 
 // Normaliza una apertura que viene de Sheets (strings → números, campos faltantes → 0)
 function normalizarApertura(a) {
@@ -99,6 +99,7 @@ export function CajaProvider({ children }) {
       estado: 'ABIERTA',
       total_ventas_efectivo: 0,
       total_ventas_tarjeta: 0,
+      total_ventas_credito: 0,
       total_ventas_otros: 0,
       total_ingresos: 0,
       total_egresos: 0,
@@ -142,9 +143,8 @@ export function CajaProvider({ children }) {
     const campo =
       metodo_pago === 'efectivo' ? 'total_ventas_efectivo' :
       metodo_pago === 'tarjeta'  ? 'total_ventas_tarjeta'  :
-      metodo_pago === 'credito'  ? null :
+      metodo_pago === 'credito'  ? 'total_ventas_credito'  :
       'total_ventas_otros'
-    if (!campo) return // crédito no afecta caja
     const actualizado = { [campo]: (Number(abierta[campo]) || 0) + Number(total) }
     setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
     db.update('cajaAperturas', abierta.id, actualizado)
@@ -156,9 +156,8 @@ export function CajaProvider({ children }) {
     const campo =
       metodo_pago === 'efectivo' ? 'total_ventas_efectivo' :
       metodo_pago === 'tarjeta'  ? 'total_ventas_tarjeta'  :
-      metodo_pago === 'credito'  ? null :
+      metodo_pago === 'credito'  ? 'total_ventas_credito'  :
       'total_ventas_otros'
-    if (!campo) return
     const actualizado = { [campo]: Math.max(0, (Number(abierta[campo]) || 0) - Number(total)) }
     setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
     db.update('cajaAperturas', abierta.id, actualizado)

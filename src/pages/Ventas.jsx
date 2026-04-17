@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Eye, XCircle, ShoppingCart, Search } from 'lucide-react'
+import { Plus, Eye, XCircle, ShoppingCart, Lock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,7 +20,7 @@ import SearchBar from '../components/shared/SearchBar'
 export default function Ventas() {
   const { ventas, cancelarVenta, clientes } = useApp()
   const { sesion } = useAuth()
-  const { revertirVentaEnCaja } = useCaja()
+  const { revertirVentaEnCaja, aperturas } = useCaja()
   const { cancelarCuenta } = useCuentasPorCobrar()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
@@ -38,6 +38,15 @@ export default function Ventas() {
 
   const getClienteNombre = (id) => clientes.find(c => c.id === id)?.nombre ?? 'Consumidor Final'
   const getMetodoPago = (val) => METODOS_PAGO.find(m => m.value === val)?.label ?? val
+
+  const cajaYaCerrada = (venta) => {
+    const f = new Date(venta.fecha).getTime()
+    return aperturas.some(a =>
+      a.estado === 'CERRADA' &&
+      f >= new Date(a.fecha_apertura).getTime() &&
+      f <= new Date(a.fecha_cierre).getTime()
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -64,11 +73,11 @@ export default function Ventas() {
       <div className="table-wrapper">
         <table className="table">
           <thead>
-            <tr><th>N° Venta</th><th>Fecha</th><th>Cliente</th><th>Pago</th><th>Total</th><th>Estado</th><th></th></tr>
+            <tr><th>N° Venta</th><th>Fecha</th><th>Cliente</th><th>Facturó</th><th>Pago</th><th>Total</th><th>Estado</th><th></th></tr>
           </thead>
           <tbody>
             {ventasFiltradas.length === 0 ? (
-              <tr><td colSpan={7} className="py-12 text-center text-gray-400">
+              <tr><td colSpan={8} className="py-12 text-center text-gray-400">
                 <ShoppingCart size={32} className="mx-auto mb-2 opacity-30" />
                 {ventas.length === 0 ? 'Aún no hay ventas registradas. ¡Crea la primera!' : 'No se encontraron ventas'}
               </td></tr>
@@ -79,6 +88,7 @@ export default function Ventas() {
                   <td className="font-mono text-xs font-semibold text-primary-700">{v.numero_venta}</td>
                   <td className="text-xs text-gray-500">{formatDateTime(v.fecha)}</td>
                   <td className="text-sm">{getClienteNombre(v.cliente_id)}</td>
+                  <td className="text-xs text-gray-500">{v.usuario_nombre || '—'}</td>
                   <td><Badge variant="gray">{getMetodoPago(v.metodo_pago)}</Badge></td>
                   <td className="font-semibold text-gray-900">{formatCurrency(v.total)}</td>
                   <td><Badge variant={estado?.badge?.replace('badge-', '')}>{estado?.label}</Badge></td>
@@ -86,7 +96,13 @@ export default function Ventas() {
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => setVentaDetalle(v)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600" title="Ver detalle"><Eye size={15} /></button>
                       {v.estado !== 'cancelada' && (
-                        <button onClick={() => setConfirm(v)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500" title="Cancelar venta"><XCircle size={15} /></button>
+                        cajaYaCerrada(v)
+                          ? <button
+                              onClick={() => toast('La caja de ese turno ya fue cerrada. No se puede anular una venta de un arqueo cerrado.', 'error')}
+                              className="btn-icon btn-ghost text-gray-300 cursor-not-allowed"
+                              title="Caja cerrada — no se puede anular"
+                            ><Lock size={15} /></button>
+                          : <button onClick={() => setConfirm(v)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500" title="Cancelar venta"><XCircle size={15} /></button>
                       )}
                     </div>
                   </td>
@@ -106,6 +122,7 @@ export default function Ventas() {
               <div><p className="text-gray-400 text-xs">Fecha</p><p className="font-medium">{formatDateTime(ventaDetalle.fecha)}</p></div>
               <div><p className="text-gray-400 text-xs">Método de pago</p><p className="font-medium">{getMetodoPago(ventaDetalle.metodo_pago)}</p></div>
               <div><p className="text-gray-400 text-xs">Estado</p><Badge variant={ESTADOS_VENTA[ventaDetalle.estado]?.badge?.replace('badge-', '')}>{ESTADOS_VENTA[ventaDetalle.estado]?.label}</Badge></div>
+              <div><p className="text-gray-400 text-xs">Facturó</p><p className="font-medium">{ventaDetalle.usuario_nombre || '—'}</p></div>
             </div>
             <div className="rounded-xl border border-gray-100 overflow-hidden">
               <table className="table">
