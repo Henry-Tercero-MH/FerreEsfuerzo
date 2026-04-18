@@ -30,7 +30,7 @@ export function ComprasProvider({ children }) {
   }, [])
 
   const crearCompra = useCallback(async (data) => {
-    const nums = compras.map(c => parseInt(c.numero_documento?.replace('COM-', '') || '0')).filter(n => !isNaN(n))
+    const nums = compras.map(c => parseInt(String(c.numero_documento || '').replace('COM-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
       id: shortId(),

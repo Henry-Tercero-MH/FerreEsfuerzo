@@ -163,13 +163,14 @@
     @apply bg-gray-50 text-xs uppercase tracking-wider text-gray-500;
   }
   .table thead th {
-    @apply px-4 py-3 font-medium;
+    @apply px-4 py-3.5 font-medium;
   }
   .table tbody tr {
     @apply border-t border-gray-100 hover:bg-gray-50 transition-colors;
+    height: 48px;
   }
   .table tbody td {
-    @apply px-4 py-3;
+    @apply px-4 py-3.5;
   }
 
   /* ── Page layout ── */

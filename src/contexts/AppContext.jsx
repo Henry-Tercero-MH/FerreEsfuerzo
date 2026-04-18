@@ -29,7 +29,17 @@ export function AppProvider({ children }) {
   useEffect(() => {
     Promise.allSettled([
       db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) }),
-      db.forceRefresh('ventas').then(data => { if (data.length) setVentas(data) }),
+      Promise.all([
+        db.forceRefresh('ventas'),
+        db.forceRefresh('ventaItems'),
+      ]).then(([ventas, items]) => {
+        if (ventas.length) {
+          setVentas(ventas.map(v => ({
+            ...v,
+            items: items.filter(i => String(i.venta_id) === String(v.id)),
+          })))
+        }
+      }),
       db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) }),
       db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) }),
     ]).finally(() => setLoadingApp(false))

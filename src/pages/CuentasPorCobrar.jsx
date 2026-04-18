@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { AlertCircle, Plus } from 'lucide-react'
+import { AlertCircle, Plus, Printer } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useApp } from '../contexts/AppContext'
@@ -63,16 +63,21 @@ export default function CuentasPorCobrar() {
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
 
-    registrarAbono(modalAbono.cuenta.id, {
+    const saldoAnterior = modalAbono.cuenta.saldo
+    const cuentaSnapshot = { ...modalAbono.cuenta }
+    const abonoData = {
       monto: montoAbono,
       metodo_pago: formAbono.metodo_pago,
       referencia: formAbono.referencia,
       notas: formAbono.notas,
-    })
-    auditar({ accion: 'abono_registrado', entidad: 'cuentasCobrar', entidad_id: modalAbono.cuenta.id, descripcion: `Abono de ${formatCurrency(montoAbono)} a cuenta de ${modalAbono.cuenta.cliente_nombre}`, detalle: { monto: montoAbono, metodo_pago: formAbono.metodo_pago, saldo_anterior: modalAbono.cuenta.saldo }, sesion })
+    }
+
+    registrarAbono(modalAbono.cuenta.id, abonoData)
+    auditar({ accion: 'abono_registrado', entidad: 'cuentasCobrar', entidad_id: modalAbono.cuenta.id, descripcion: `Abono de ${formatCurrency(montoAbono)} a cuenta de ${modalAbono.cuenta.cliente_nombre}`, detalle: { monto: montoAbono, metodo_pago: formAbono.metodo_pago, saldo_anterior: saldoAnterior }, sesion })
 
     setLoading(false)
     cerrarModalAbono()
+    imprimirTicketAbono({ cuenta: cuentaSnapshot, ...abonoData, fecha: new Date().toISOString(), saldoAnterior })
   }
 
   const estadoBadge = (estado) => {
@@ -93,6 +98,63 @@ export default function CuentasPorCobrar() {
 
   const abonosPorCuenta = (cuentaId) => {
     return abonos.filter(a => a.cuenta_por_cobrar_id === cuentaId)
+  }
+
+  const imprimirTicketAbono = ({ cuenta, monto, metodo_pago, referencia, notas, fecha, saldoAnterior }) => {
+    const saldoNuevo = saldoAnterior - monto
+    const esCancelacion = saldoNuevo <= 0
+    const metodosLabel = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', cheque: 'Cheque' }
+    const ventana = window.open('', '_blank', 'width=380,height=600')
+    ventana.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Ticket de Abono</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Courier New', monospace; font-size: 12px; color: #111; width: 320px; margin: 0 auto; padding: 16px 8px; }
+    .center { text-align: center; }
+    .empresa { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
+    .subtitulo { font-size: 11px; color: #555; margin-bottom: 2px; }
+    .divider { border: none; border-top: 1px dashed #aaa; margin: 8px 0; }
+    .tipo-badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 3px 12px; border: 2px solid #111; border-radius: 4px; margin: 6px 0; letter-spacing: 0.08em; }
+    .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
+    .row .label { color: #555; }
+    .row .val { font-weight: 600; }
+    .monto-abono { text-align: center; font-size: 22px; font-weight: 700; margin: 10px 0 4px; }
+    .saldo-nuevo { text-align: center; font-size: 13px; color: ${esCancelacion ? '#16a34a' : '#d97706'}; font-weight: 700; margin-bottom: 4px; }
+    .notas { font-size: 11px; color: #555; font-style: italic; text-align: center; margin-top: 4px; }
+    .footer { font-size: 10px; color: #888; text-align: center; margin-top: 10px; }
+    @media print { body { width: 100%; padding: 8px; } }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <p class="empresa">Ferretería El Esfuerzo</p>
+    <p class="subtitulo">Comprobante de ${esCancelacion ? 'Cancelación' : 'Abono'}</p>
+    <div class="tipo-badge">${esCancelacion ? '✓ CANCELADO' : 'ABONO'}</div>
+  </div>
+  <hr class="divider"/>
+  <div class="row"><span class="label">Fecha:</span><span class="val">${formatDate(fecha || new Date().toISOString())}</span></div>
+  <div class="row"><span class="label">Documento:</span><span class="val">${cuenta.numero_documento}</span></div>
+  <div class="row"><span class="label">Cliente:</span><span class="val">${cuenta.cliente_nombre}</span></div>
+  <div class="row"><span class="label">Método pago:</span><span class="val">${metodosLabel[metodo_pago] || metodo_pago}</span></div>
+  ${referencia ? `<div class="row"><span class="label">Referencia:</span><span class="val">${referencia}</span></div>` : ''}
+  <hr class="divider"/>
+  <div class="row"><span class="label">Deuda original:</span><span class="val">${formatCurrency(cuenta.monto_original)}</span></div>
+  <div class="row"><span class="label">Pagado anterior:</span><span class="val">${formatCurrency(cuenta.monto_pagado)}</span></div>
+  <div class="row"><span class="label">Saldo anterior:</span><span class="val">${formatCurrency(saldoAnterior)}</span></div>
+  <hr class="divider"/>
+  <p class="monto-abono">${formatCurrency(monto)}</p>
+  <p class="saldo-nuevo">${esCancelacion ? '¡Cuenta CANCELADA!' : `Saldo restante: ${formatCurrency(saldoNuevo)}`}</p>
+  ${notas ? `<p class="notas">"${notas}"</p>` : ''}
+  <hr class="divider"/>
+  <p class="footer">Generado el ${formatDate(new Date().toISOString())}<br/>Ferretería El Esfuerzo &mdash; Gracias por su pago</p>
+</body>
+</html>`)
+    ventana.document.close()
+    ventana.focus()
+    setTimeout(() => { ventana.print() }, 400)
   }
 
   const handleCrearCuenta = async () => {
@@ -213,7 +275,27 @@ export default function CuentasPorCobrar() {
                       <Badge variant={variant}>{label}</Badge>
                     </td>
                     <td>
-                      <div className="flex gap-1 justify-end">
+                      <div className="flex gap-1 justify-end items-center">
+                        {abonosCuenta.length > 0 && (
+                          <button
+                            onClick={() => {
+                              const ultimo = abonosCuenta[abonosCuenta.length - 1]
+                              imprimirTicketAbono({
+                                cuenta: c,
+                                monto: ultimo.monto,
+                                metodo_pago: ultimo.metodo_pago,
+                                referencia: ultimo.referencia,
+                                notas: ultimo.notas,
+                                fecha: ultimo.fecha,
+                                saldoAnterior: c.saldo + ultimo.monto,
+                              })
+                            }}
+                            className="btn-icon btn-ghost text-gray-400 hover:text-blue-600"
+                            title="Imprimir último comprobante"
+                          >
+                            <Printer size={15} />
+                          </button>
+                        )}
                         {c.estado !== 'PAGADA' && c.estado !== 'CANCELADA' && (
                           <Button
                             variant="success"
@@ -332,9 +414,26 @@ export default function CuentasPorCobrar() {
                 <p className="text-xs font-semibold text-gray-600 mb-2">Abonos anteriores:</p>
                 <div className="space-y-1">
                   {abonosPorCuenta(modalAbono.cuenta.id).map(a => (
-                    <div key={a.id} className="flex justify-between text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
+                    <div key={a.id} className="flex justify-between items-center text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
                       <span>{formatDate(a.fecha)}</span>
-                      <span className="font-semibold text-green-600">{formatCurrency(a.monto)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-green-600">{formatCurrency(a.monto)}</span>
+                        <button
+                          onClick={() => imprimirTicketAbono({
+                            cuenta: modalAbono.cuenta,
+                            monto: a.monto,
+                            metodo_pago: a.metodo_pago,
+                            referencia: a.referencia,
+                            notas: a.notas,
+                            fecha: a.fecha,
+                            saldoAnterior: modalAbono.cuenta.saldo + a.monto,
+                          })}
+                          className="text-gray-400 hover:text-blue-600"
+                          title="Reimprimir ticket"
+                        >
+                          <Printer size={12} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

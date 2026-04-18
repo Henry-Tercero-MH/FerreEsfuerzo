@@ -57,6 +57,15 @@ export const validateCliente = (data, clientes = [], modoEditar = false) => {
   if (!isPhone(data.telefono))   errors.telefono = 'Teléfono inválido'
   if (!isEmail(data.email))      errors.email    = 'Email inválido'
 
+  // Nombre duplicado
+  if (data.nombre?.trim()) {
+    const nombreDup = clientes.find(c =>
+      c.nombre?.trim().toLowerCase() === data.nombre.trim().toLowerCase() &&
+      (!modoEditar || c.id !== data.id)
+    )
+    if (nombreDup) errors.nombre = 'Ya existe un cliente con ese nombre'
+  }
+
   // NIT duplicado
   const nitCliente = String(data.nit ?? '').trim()
   if (nitCliente && nitCliente.toUpperCase() !== 'CF') {
@@ -99,10 +108,16 @@ export const validateProveedor = (data, proveedores = [], modoEditar = false) =>
 }
 
 // ── Compra ─────────────────────────────────────────────────────
-export const validateCompra = (data) => {
+export const validateCompra = (data, comprasExistentes = []) => {
   const errors = {}
   if (!isRequired(data.proveedor_id))        errors.proveedor_id      = 'Proveedor requerido'
   if (!isRequired(data.numero_documento))    errors.numero_documento  = 'Número de documento requerido'
+  else {
+    const duplicado = comprasExistentes.some(c =>
+      String(c.numero_documento).trim().toLowerCase() === String(data.numero_documento).trim().toLowerCase()
+    )
+    if (duplicado) errors.numero_documento = 'Ya existe una compra con ese número de documento'
+  }
   if (!isPositiveNumber(data.subtotal))      errors.subtotal          = 'El subtotal debe ser mayor a 0'
 
   const sub = Number(data.subtotal) || 0

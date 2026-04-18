@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Check, X, Tag, Ruler, CreditCard, MapPin, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Tag, Ruler, CreditCard, Users } from 'lucide-react'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import Button from '../components/ui/Button'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -8,7 +8,6 @@ const TABS = [
   { key: 'categorias',    label: 'Categorías',       icon: Tag },
   { key: 'unidades',      label: 'Unidades',         icon: Ruler },
   { key: 'metodos_pago',  label: 'Métodos de pago',  icon: CreditCard },
-  { key: 'ubicaciones',   label: 'Ubicaciones',      icon: MapPin },
   { key: 'tipos_cliente', label: 'Tipos de cliente', icon: Users },
 ]
 
@@ -104,11 +103,10 @@ function FilaMetodoPago({ item, onGuardar, onEliminar }) {
 // ── Página principal ─────────────────────────────────────────────────────────
 export default function Catalogos() {
   const {
-    categorias, unidades, metodos_pago, ubicaciones, tipos_cliente,
+    categorias, unidades, metodos_pago, tipos_cliente,
     agregarCategoria,   editarCategoria,   eliminarCategoria,
     agregarUnidad,      editarUnidad,      eliminarUnidad,
     agregarMetodoPago,  editarMetodoPago,  eliminarMetodoPago,
-    agregarUbicacion,   editarUbicacion,   eliminarUbicacion,
     agregarTipoCliente, editarTipoCliente, eliminarTipoCliente,
   } = useCatalogos()
 
@@ -120,7 +118,6 @@ export default function Catalogos() {
   const SIMPLE_TABS = {
     categorias:    { lista: categorias,    agregar: agregarCategoria,    editar: editarCategoria,    eliminar: eliminarCategoria,    placeholder: 'Nueva categoría...' },
     unidades:      { lista: unidades,      agregar: agregarUnidad,       editar: editarUnidad,       eliminar: eliminarUnidad,       placeholder: 'Nueva unidad...' },
-    ubicaciones:   { lista: ubicaciones,   agregar: agregarUbicacion,    editar: editarUbicacion,    eliminar: eliminarUbicacion,    placeholder: 'Ej: Pasillo 1 · Estante A' },
     tipos_cliente: { lista: tipos_cliente, agregar: agregarTipoCliente,  editar: editarTipoCliente,  eliminar: eliminarTipoCliente,  placeholder: 'Ej: mayorista' },
   }
 

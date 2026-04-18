@@ -74,7 +74,7 @@ export default function Compras() {
   }
 
   const handleGuardar = async () => {
-    const errs = validateCompra(form)
+    const errs = validateCompra(form, compras)
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     setLoading(true)
