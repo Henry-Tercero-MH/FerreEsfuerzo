@@ -20,6 +20,29 @@ const FORM_VACÍO = {
   nombre: '', codigo: '', categoria: '', descripcion: '',
   precio_compra: '', precio_venta: '', stock: 0, stock_minimo: 5, unidad: 'unidad',
   ubicacion: '',
+  ubi_pasillo: '', ubi_estante: '', ubi_bandeja: '',
+}
+
+// Convierte P1-E3-B2 → { ubi_pasillo:'1', ubi_estante:'3', ubi_bandeja:'2' }
+function parsearUbicacion(str) {
+  if (!str) return { ubi_pasillo: '', ubi_estante: '', ubi_bandeja: '' }
+  const p = str.match(/P(\d+)/i)
+  const e = str.match(/E(\d+)/i)
+  const b = str.match(/B(\d+)/i)
+  return {
+    ubi_pasillo: p ? p[1] : '',
+    ubi_estante: e ? e[1] : '',
+    ubi_bandeja:  b ? b[1] : '',
+  }
+}
+
+// Convierte los 3 campos → 'P1-E3-B2' (solo incluye los que tienen valor)
+function armarUbicacion(pasillo, estante, bandeja) {
+  const partes = []
+  if (pasillo) partes.push(`P${pasillo}`)
+  if (estante) partes.push(`E${estante}`)
+  if (bandeja)  partes.push(`B${bandeja}`)
+  return partes.join('-')
 }
 
 export default function Productos() {
@@ -54,7 +77,7 @@ export default function Productos() {
   }
 
   const abrirEditar = (producto) => {
-    setForm({ ...producto })
+    setForm({ ...producto, ...parsearUbicacion(producto.ubicacion) })
     setErrors({})
     setModal({ open: true, modo: 'editar', producto })
   }
@@ -72,11 +95,20 @@ export default function Productos() {
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
+    const ubicacion = armarUbicacion(form.ubi_pasillo, form.ubi_estante, form.ubi_bandeja)
+    const datos = {
+      ...form,
+      ubicacion,
+      precio_compra: Number(form.precio_compra),
+      precio_venta: Number(form.precio_venta),
+      stock: Number(form.stock),
+      stock_minimo: Number(form.stock_minimo),
+    }
     if (modal.modo === 'crear') {
-      const nuevo = agregarProducto({ ...form, precio_compra: Number(form.precio_compra), precio_venta: Number(form.precio_venta), stock: Number(form.stock), stock_minimo: Number(form.stock_minimo) })
+      const nuevo = agregarProducto(datos)
       auditar({ accion: 'producto_creado', entidad: 'productos', entidad_id: nuevo.id, descripcion: `Producto creado: ${form.nombre}`, detalle: { nombre: form.nombre, codigo: form.codigo, precio_venta: form.precio_venta }, sesion })
     } else {
-      editarProducto(modal.producto.id, { ...form, precio_compra: Number(form.precio_compra), precio_venta: Number(form.precio_venta), stock: Number(form.stock), stock_minimo: Number(form.stock_minimo) })
+      editarProducto(modal.producto.id, datos)
       auditar({ accion: 'producto_editado', entidad: 'productos', entidad_id: modal.producto.id, descripcion: `Producto editado: ${form.nombre}`, sesion })
     }
     setLoading(false)
@@ -184,10 +216,57 @@ export default function Productos() {
           <Select label="Unidad" name="unidad" value={form.unidad} onChange={handleChange}>
             {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </Select>
-          <Select label="Ubicación" name="ubicacion" value={form.ubicacion} onChange={handleChange} className="sm:col-span-2">
-            <option value="">Sin ubicación</option>
-            {ubicaciones.map(u => <option key={u} value={u}>{u}</option>)}
-          </Select>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ubicación
+              {(form.ubi_pasillo || form.ubi_estante || form.ubi_bandeja) && (
+                <span className="ml-2 font-mono text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                  {armarUbicacion(form.ubi_pasillo, form.ubi_estante, form.ubi_bandeja)}
+                </span>
+              )}
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Pasillo</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">P</span>
+                  <input
+                    type="number" min="1" name="ubi_pasillo"
+                    value={form.ubi_pasillo}
+                    onChange={handleChange}
+                    placeholder="1"
+                    className="input pl-7"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Estante</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">E</span>
+                  <input
+                    type="number" min="1" name="ubi_estante"
+                    value={form.ubi_estante}
+                    onChange={handleChange}
+                    placeholder="1"
+                    className="input pl-7"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Bandeja</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">B</span>
+                  <input
+                    type="number" min="1" name="ubi_bandeja"
+                    value={form.ubi_bandeja}
+                    onChange={handleChange}
+                    placeholder="1"
+                    className="input pl-7"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </Modal>
 

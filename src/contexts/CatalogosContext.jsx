@@ -22,9 +22,12 @@ function lsSet(val) {
 }
 
 function normalizar(c) {
+  let unidades = Array.isArray(c?.unidades) ? c.unidades : SEED.unidades
+  // Migrar kg → lb si todavía existe el valor viejo
+  unidades = unidades.map(u => u === 'kg' ? 'lb' : u)
   return {
     categorias:    Array.isArray(c?.categorias)    ? c.categorias    : SEED.categorias,
-    unidades:      Array.isArray(c?.unidades)      ? c.unidades      : SEED.unidades,
+    unidades,
     metodos_pago:  Array.isArray(c?.metodos_pago)  ? c.metodos_pago  : SEED.metodos_pago,
     ubicaciones:   Array.isArray(c?.ubicaciones)   ? c.ubicaciones   : SEED.ubicaciones,
     tipos_cliente: Array.isArray(c?.tipos_cliente) ? c.tipos_cliente : SEED.tipos_cliente,

@@ -49,7 +49,7 @@ export const TIPOS_CLIENTE = [
 
 export const UNIDADES_SEED = [
   'unidad', 'par', 'caja', 'bolsa', 'saco',
-  'metro', 'litro', 'galón', 'kg', 'rollo',
+  'metro', 'litro', 'galón', 'lb', 'rollo',
 ]
 
 export const ESTADOS_DESPACHO = {
