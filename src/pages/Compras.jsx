@@ -81,7 +81,7 @@ export default function Compras() {
     await new Promise(r => setTimeout(r, 300))
 
     const proveedor = proveedores.find(p => p.id === form.proveedor_id)
-    const compra = crearCompra({
+    const compra = await crearCompra({
       ...form,
       proveedor_nombre: proveedor?.nombre || 'Desconocido',
       subtotal: Number(form.subtotal) || 0,
@@ -89,6 +89,7 @@ export default function Compras() {
       impuesto: Number(form.impuesto) || 0,
       total: Number(form.total) || 0,
     })
+    if (compra === null) { setLoading(false); alert('No autorizado para crear compras'); return }
 
     auditar({ accion: 'compra_registrada', entidad: 'compras', entidad_id: compra?.id, descripcion: `Compra ${form.numero_documento} — ${proveedor?.nombre} — Q${form.total}`, detalle: { numero: form.numero_documento, proveedor: proveedor?.nombre, total: form.total }, sesion })
     setLoading(false)
@@ -163,7 +164,7 @@ export default function Compras() {
                         {c.estado === 'REGISTRADA' && (
                           <button
                             title="Marcar como aplicada al inventario"
-                            onClick={() => { aplicarCompra(c.id); navigate('/inventario') }}
+                            onClick={async () => { const r = await aplicarCompra(c.id); if (r === null) { alert('No autorizado para aplicar compra'); return } navigate('/inventario') }}
                             className="btn-icon btn-ghost text-gray-400 hover:text-green-600"
                           >
                             <CheckCircle size={15} />

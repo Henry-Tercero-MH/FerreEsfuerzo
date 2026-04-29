@@ -72,7 +72,8 @@ export default function CuentasPorCobrar() {
       notas: formAbono.notas,
     }
 
-    registrarAbono(modalAbono.cuenta.id, abonoData)
+    const ab = await registrarAbono(modalAbono.cuenta.id, abonoData)
+    if (ab === null) { setLoading(false); alert('No autorizado para registrar abonos'); return }
     auditar({ accion: 'abono_registrado', entidad: 'cuentasCobrar', entidad_id: modalAbono.cuenta.id, descripcion: `Abono de ${formatCurrency(montoAbono)} a cuenta de ${modalAbono.cuenta.cliente_nombre}`, detalle: { monto: montoAbono, metodo_pago: formAbono.metodo_pago, saldo_anterior: saldoAnterior }, sesion })
 
     setLoading(false)
@@ -172,6 +173,7 @@ export default function CuentasPorCobrar() {
       fecha_vencimiento: formNueva.fecha_vencimiento,
       notas: formNueva.notas,
     })
+    if (cuenta === null) { setErrNueva('No autorizado para crear cuentas'); return }
     auditar({ accion: 'cuenta_cobrar_creada', entidad: 'cuentasCobrar', entidad_id: cuenta?.id, descripcion: `Cuenta por cobrar creada: ${clienteNombre} — ${formatCurrency(Number(formNueva.monto_original))}`, detalle: { cliente: clienteNombre, monto: formNueva.monto_original, vencimiento: formNueva.fecha_vencimiento }, sesion })
     setModalNueva(false)
     setFormNueva({ cliente_id: '', monto_original: '', fecha_vencimiento: '', notas: '' })

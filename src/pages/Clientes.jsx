@@ -57,10 +57,12 @@ export default function Clientes() {
     await new Promise(r => setTimeout(r, 300))
     if (modal.modo === 'crear') {
       const nuevo = agregarCliente(form)
+      if (!nuevo) { setLoading(false); return }
       auditar({ accion: 'cliente_creado', entidad: 'clientes', entidad_id: nuevo.id, descripcion: `Cliente creado: ${form.nombre}`, sesion })
       toast('Cliente creado correctamente', 'success')
     } else {
-      editarCliente(modal.cliente.id, form)
+      const actualizado = editarCliente(modal.cliente.id, form)
+      if (actualizado === null) { setLoading(false); return }
       auditar({ accion: 'cliente_editado', entidad: 'clientes', entidad_id: modal.cliente.id, descripcion: `Cliente editado: ${form.nombre}`, sesion })
       toast('Cliente actualizado', 'success')
     }
@@ -144,7 +146,8 @@ export default function Clientes() {
             setConfirm(null)
             return
           }
-          eliminarCliente(confirm.id)
+          const resultado = eliminarCliente(confirm.id)
+          if (resultado === null) return
           auditar({ accion: 'cliente_eliminado', entidad: 'clientes', entidad_id: confirm.id, descripcion: `Cliente eliminado: ${confirm.nombre}`, sesion })
           toast(`"${confirm.nombre}" eliminado`, 'warning')
         }}

@@ -1,10 +1,14 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import PropTypes from 'prop-types'
 import { shortId, generateNumeroSecuencial } from '../utils/formatters'
 import { db } from '../services/db'
+import { useAuth } from './AuthContext'
 
 export const CuentasPorCobrarContext = createContext(null)
 
 export function CuentasPorCobrarProvider({ children }) {
+  const { tieneAcceso, sesion } = useAuth()
+  const puede = useCallback(() => !!sesion && tieneAcceso('/cuentas-por-cobrar'), [sesion, tieneAcceso])
   const [cuentas, setCuentas] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_cuentas_cobrar') || '[]') } catch { return [] }
   })
@@ -17,7 +21,7 @@ export function CuentasPorCobrarProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem('ferreapp_cuentas_cobrar', JSON.stringify(cuentas))
-  }, [cuentas])
+  }, [cuentas, puede])
 
   useEffect(() => {
     localStorage.setItem('ferreapp_abonos', JSON.stringify(abonos))
@@ -31,6 +35,7 @@ export function CuentasPorCobrarProvider({ children }) {
   }, [])
 
   const crearCuenta = useCallback(async (data) => {
+    if (!puede()) return null
     const nums = cuentas.map(c => parseInt(c.numero_documento?.replace('CXC-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
@@ -45,17 +50,19 @@ export function CuentasPorCobrarProvider({ children }) {
     setCuentas(prev => [nueva, ...prev])
     await db.insert('cuentasCobrar', nueva)
     return nueva
-  }, [cuentas])
+  }, [cuentas, puede])
 
   const cancelarCuenta = useCallback(async (ventaId) => {
+    if (!puede()) return null
     const cuenta = cuentas.find(c => c.referencia_venta === ventaId && c.estado !== 'CANCELADA')
     if (!cuenta) return
     const cambio = { estado: 'CANCELADA', actualizado_en: new Date().toISOString() }
     setCuentas(prev => prev.map(c => c.id === cuenta.id ? { ...c, ...cambio } : c))
     await db.update('cuentasCobrar', cuenta.id, cambio)
-  }, [cuentas])
+  }, [cuentas, puede])
 
   const registrarAbono = useCallback(async (cuentaId, data) => {
+    if (!puede()) return null
     const cuenta = cuentas.find(c => c.id === cuentaId)
     if (!cuenta) return
 
@@ -82,7 +89,7 @@ export function CuentasPorCobrarProvider({ children }) {
     await db.update('cuentasCobrar', cuentaId, cambio)
 
     return nuevoAbono
-  }, [cuentas])
+  }, [cuentas, puede])
 
   const cuentasPendientes = useMemo(
     () => cuentas.filter(c => c.estado === 'PENDIENTE' || c.estado === 'PARCIAL'),
@@ -123,4 +130,8 @@ export const useCuentasPorCobrar = () => {
   const context = useContext(CuentasPorCobrarContext)
   if (!context) throw new Error('useCuentasPorCobrar debe usarse dentro de CuentasPorCobrarProvider')
   return context
+}
+
+CuentasPorCobrarProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }

@@ -136,6 +136,7 @@ export default function NuevaVenta() {
       usuario_id: sesion?.id || '',
       usuario_nombre: sesion?.nombre || '',
     })
+    if (!venta) { setLoading(false); return }
     registrarVentaEnCaja(metodoPago, total)
     auditar({
       accion: esPedido ? 'pedido_creado' : 'venta_creada',

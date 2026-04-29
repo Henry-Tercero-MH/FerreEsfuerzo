@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import PropTypes from 'prop-types'
 import { shortId } from '../utils/formatters'
 import { db } from '../services/db'
+import { useAuth } from './AuthContext'
 
 export const CajaContext = createContext(null)
 
@@ -16,6 +18,8 @@ function normalizarApertura(a) {
 }
 
 export function CajaProvider({ children }) {
+  const { tieneAcceso, sesion } = useAuth()
+  const puede = useCallback(() => !!sesion && tieneAcceso('/caja'), [sesion, tieneAcceso])
   const [aperturas, setAperturas] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_caja_aperturas') || '[]') } catch { return [] }
   })
@@ -41,7 +45,7 @@ export function CajaProvider({ children }) {
       db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data.map(normalizarApertura)) }),
       db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) }),
     ]).finally(() => setLoading(false))
-  }, [])
+  }, [puede])
 
   // Sincronizar entre pestañas del mismo navegador (mismo dispositivo, distintas pestañas)
   useEffect(() => {
@@ -55,7 +59,7 @@ export function CajaProvider({ children }) {
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, [])
+  }, [puede])
 
   const cajaAbierta = useMemo(
     () => aperturas.find(a => a.estado === 'ABIERTA'),
@@ -91,6 +95,7 @@ export function CajaProvider({ children }) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirCaja = useCallback(async (data) => {
+    if (!puede()) return null
     const nueva = {
       ...data,
       id: shortId(),
@@ -113,6 +118,7 @@ export function CajaProvider({ children }) {
   }, [])
 
   const cerrarCaja = useCallback(async (id, data) => {
+    if (!puede()) return null
     const cambio = {
       ...data,
       fecha_cierre: new Date().toISOString(),
@@ -124,6 +130,7 @@ export function CajaProvider({ children }) {
   }, [])
 
   const registrarMovimiento = useCallback(async (data) => {
+    if (!puede()) return null
     const nuevo = { ...data, id: shortId(), fecha: new Date().toISOString() }
     setMovimientos(prev => [nuevo, ...prev])
     await db.insert('cajaMovimientos', nuevo)
@@ -135,9 +142,10 @@ export function CajaProvider({ children }) {
       db.update('cajaAperturas', abierta.id, actualizado)
     }
     return nuevo
-  }, [aperturas])
+  }, [aperturas, puede])
 
   const registrarVentaEnCaja = useCallback((metodo_pago, total) => {
+    if (!puede()) return null
     const abierta = aperturas.find(a => a.estado === 'ABIERTA')
     if (!abierta) return
     const campo =
@@ -148,9 +156,10 @@ export function CajaProvider({ children }) {
     const actualizado = { [campo]: (Number(abierta[campo]) || 0) + Number(total) }
     setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
     db.update('cajaAperturas', abierta.id, actualizado)
-  }, [aperturas])
+  }, [aperturas, puede])
 
   const revertirVentaEnCaja = useCallback((metodo_pago, total) => {
+    if (!puede()) return null
     const abierta = aperturas.find(a => a.estado === 'ABIERTA')
     if (!abierta) return
     const campo =
@@ -161,7 +170,7 @@ export function CajaProvider({ children }) {
     const actualizado = { [campo]: Math.max(0, (Number(abierta[campo]) || 0) - Number(total)) }
     setAperturas(prev => prev.map(a => a.id === abierta.id ? { ...a, ...actualizado } : a))
     db.update('cajaAperturas', abierta.id, actualizado)
-  }, [aperturas])
+  }, [aperturas, puede])
 
   const refrescarCaja = useCallback(async () => {
     const [ap, mv] = await Promise.all([
@@ -204,4 +213,8 @@ export const useCaja = () => {
   const context = useContext(CajaContext)
   if (!context) throw new Error('useCaja debe usarse dentro de CajaProvider')
   return context
+}
+
+CajaProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }

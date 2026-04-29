@@ -31,7 +31,8 @@ export default function Inventario() {
     if (!form.producto_id || !form.cantidad) return
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
-    ajustarStock(form.producto_id, Number(form.cantidad), form.tipo, form.motivo)
+    const resultado = ajustarStock(form.producto_id, Number(form.cantidad), form.tipo, form.motivo)
+    if (resultado === null) { setLoading(false); return }
     const nombreProducto = productos.find(p => p.id === form.producto_id)?.nombre || form.producto_id
     auditar({ accion: 'stock_ajustado_manual', entidad: 'inventario', entidad_id: form.producto_id, descripcion: `Ajuste de stock: ${nombreProducto} — ${form.tipo} de ${form.cantidad} unidades`, detalle: { producto: nombreProducto, tipo: form.tipo, cantidad: form.cantidad, motivo: form.motivo }, sesion })
     setLoading(false)

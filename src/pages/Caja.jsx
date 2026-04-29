@@ -35,6 +35,7 @@ export default function Caja() {
       usuario_nombre: sesion.nombre,
       monto_apertura: Math.max(Number(montoApertura) || 0, 0),
     })
+    if (apertura === null) { setLoading(false); alert('No autorizado para abrir caja'); return }
     auditar({ accion: 'caja_abierta', entidad: 'cajaAperturas', entidad_id: apertura?.id, descripcion: `Caja abierta con ${formatCurrency(Number(montoApertura) || 0)} de monto inicial`, detalle: { monto_apertura: montoApertura }, sesion })
     setLoading(false)
     setModalApertura(false)
@@ -52,11 +53,12 @@ export default function Caja() {
     await new Promise(r => setTimeout(r, 300))
     const montoEsperado = (Number(cajaAbierta.monto_apertura) || 0) + (Number(cajaAbierta.total_ventas_efectivo) || 0) + (Number(cajaAbierta.total_ingresos) || 0) - (Number(cajaAbierta.total_egresos) || 0)
     const montoReal = Number(formCierre.monto_real) || 0
-    cerrarCaja(cajaAbierta.id, {
+    const res = await cerrarCaja(cajaAbierta.id, {
       monto_real: montoReal,
       notas_cierre: formCierre.notas,
       monto_esperado: montoEsperado,
     })
+    if (res === null) { setLoading(false); setErrCierre('No autorizado'); return }
     auditar({ accion: 'caja_cerrada', entidad: 'cajaAperturas', entidad_id: cajaAbierta.id, descripcion: `Caja cerrada — Esperado: ${formatCurrency(montoEsperado)} / Real: ${formatCurrency(montoReal)} / Diferencia: ${formatCurrency(montoReal - montoEsperado)}`, detalle: { monto_esperado: montoEsperado, monto_real: montoReal, diferencia: montoReal - montoEsperado }, sesion })
     setLoading(false)
     setModalCierre(false)
@@ -71,7 +73,7 @@ export default function Caja() {
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
-    registrarMovimiento({
+    const mv = await registrarMovimiento({
       apertura_caja_id: cajaAbierta.id,
       usuario_id: sesion.id,
       tipo: formMovimiento.tipo,
@@ -79,6 +81,7 @@ export default function Caja() {
       concepto: formMovimiento.concepto,
       referencia: formMovimiento.referencia,
     })
+    if (mv === null) { setLoading(false); setErrMovimiento('No autorizado'); return }
     auditar({ accion: 'caja_movimiento', entidad: 'cajaMovimientos', entidad_id: cajaAbierta.id, descripcion: `${formMovimiento.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'} de ${formatCurrency(Number(formMovimiento.monto))}: ${formMovimiento.concepto}`, detalle: { tipo: formMovimiento.tipo, monto: formMovimiento.monto, concepto: formMovimiento.concepto }, sesion })
     setLoading(false)
     setModalMovimiento(false)

@@ -50,7 +50,8 @@ export default function Pedidos() {
   const avanzarEstado = (pedido) => {
     const siguiente = ESTADOS_DESPACHO[pedido.estado_despacho]?.next
     if (!siguiente) return
-    actualizarDespacho(pedido.id, { estado_despacho: siguiente })
+    const resultado = actualizarDespacho(pedido.id, { estado_despacho: siguiente })
+    if (resultado === null) return
     auditar({ accion: 'despacho_actualizado', entidad: 'pedidos', entidad_id: pedido.id, descripcion: `Pedido ${pedido.numero_venta} → ${ESTADOS_DESPACHO[siguiente]?.label || siguiente}`, detalle: { estado_anterior: pedido.estado_despacho, estado_nuevo: siguiente }, sesion })
   }
 

@@ -6,9 +6,8 @@
  */
 
 // Siempre usamos el proxy /api/gas — en dev lo maneja Vite, en prod Vercel
-const GAS_URL    = import.meta.env.VITE_APPS_SCRIPT_URL || ''
-const GAS_SECRET = import.meta.env.VITE_GAS_SECRET      || ''
-const PROXY_URL  = '/api/gas'
+const GAS_URL   = import.meta.env.VITE_APPS_SCRIPT_URL || ''
+const PROXY_URL = '/api/gas'
 
 // ── Utilidad de hash ──────────────────────────────────────────
 
@@ -33,7 +32,7 @@ async function post(action, payload = {}) {
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, secret: GAS_SECRET, ...payload }),
+    body: JSON.stringify({ action, ...payload }),
   })
   if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
   return res.json()
@@ -121,7 +120,7 @@ export async function obtenerReporteSheet(periodo = 'mes') {
 // ── Test de conexión ─────────────────────────────────────────
 
 /**
- * Verifica que la URL esté configurada y que el secret sea válido.
+ * Verifica que la URL esté configurada y que el proxy responda correctamente.
  * Hace un GET simple — no escribe nada en el Sheet.
  * Retorna { ok: true } o { ok: false, error: '...' }
  */

@@ -48,7 +48,7 @@ function armarUbicacion(pasillo, estante, bandeja) {
 export default function Productos() {
   const { productos, agregarProducto, editarProducto, eliminarProducto } = useApp()
   const { sesion } = useAuth()
-  const { categorias, unidades, ubicaciones } = useCatalogos()
+  const { categorias, unidades } = useCatalogos()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
@@ -106,9 +106,11 @@ export default function Productos() {
     }
     if (modal.modo === 'crear') {
       const nuevo = agregarProducto(datos)
+      if (!nuevo) { setLoading(false); return }
       auditar({ accion: 'producto_creado', entidad: 'productos', entidad_id: nuevo.id, descripcion: `Producto creado: ${form.nombre}`, detalle: { nombre: form.nombre, codigo: form.codigo, precio_venta: form.precio_venta }, sesion })
     } else {
-      editarProducto(modal.producto.id, datos)
+      const actualizado = editarProducto(modal.producto.id, datos)
+      if (actualizado === null) { setLoading(false); return }
       auditar({ accion: 'producto_editado', entidad: 'productos', entidad_id: modal.producto.id, descripcion: `Producto editado: ${form.nombre}`, sesion })
     }
     setLoading(false)
@@ -274,7 +276,8 @@ export default function Productos() {
         open={!!confirm}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
-          eliminarProducto(confirm.id)
+          const resultado = eliminarProducto(confirm.id)
+          if (resultado === null) return
           auditar({ accion: 'producto_eliminado', entidad: 'productos', entidad_id: confirm.id, descripcion: `Producto eliminado: ${confirm.nombre}`, sesion })
           toast(`"${confirm.nombre}" eliminado`, 'warning')
         }}

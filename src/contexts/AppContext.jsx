@@ -1,5 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useState } from 'react'
+import PropTypes from 'prop-types'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useAuth } from './AuthContext'
 import { db } from '../services/db'
 import { shortId, generateNumeroVenta, generateCodigoProducto } from '../utils/formatters'
 
@@ -18,12 +20,15 @@ const CLIENTES_SEED    = [
 
 // ── Provider ─────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
+  const { sesion, tieneAcceso } = useAuth()
   const [productos, setProductos]           = useLocalStorage('ferreapp_productos', PRODUCTOS_SEED)
   const [ventas, setVentas]                 = useLocalStorage('ferreapp_ventas', VENTAS_SEED)
   const [clientes, setClientes]             = useLocalStorage('ferreapp_clientes', CLIENTES_SEED)
   const [movimientos, setMovimientos]       = useLocalStorage('ferreapp_movimientos', MOVIMIENTOS_SEED)
 
   const [loadingApp, setLoadingApp] = useState(true)
+
+  const puede = useCallback((ruta) => !!sesion && tieneAcceso(ruta), [sesion, tieneAcceso])
 
   // Al iniciar la app: cargar desde Google Sheets y actualizar el cache
   useEffect(() => {
@@ -47,6 +52,7 @@ export function AppProvider({ children }) {
 
   // ── PRODUCTOS ──────────────────────────────────────────────────────────────
   const agregarProducto = useCallback((data) => {
+    if (!puede('/productos')) return null
     const nuevo = {
       ...data,
       id: `p-${shortId()}`,
@@ -57,20 +63,23 @@ export function AppProvider({ children }) {
     setProductos(prev => [...prev, nuevo])
     db.insert('productos', nuevo)
     return nuevo
-  }, [setProductos])
+  }, [puede, setProductos])
 
   const editarProducto = useCallback((id, data) => {
+    if (!puede('/productos')) return null
     const cambios = { ...data, actualizado_en: new Date().toISOString() }
     setProductos(prev => prev.map(p => p.id === id ? { ...p, ...cambios } : p))
     db.update('productos', id, cambios)
-  }, [setProductos])
+  }, [puede, setProductos])
 
   const eliminarProducto = useCallback((id) => {
+    if (!puede('/productos')) return null
     setProductos(prev => prev.map(p => p.id === id ? { ...p, activo: false } : p))
     db.remove('productos', id)
-  }, [setProductos])
+  }, [puede, setProductos])
 
-  const ajustarStock = useCallback((productoId, cantidad, tipo, motivo = '', referencia = '') => {
+  const ajustarStock = useCallback((productoId, cantidad, tipo, motivo = '', referencia = '', opciones = {}) => {
+    if (!opciones.bypassAuth && !puede('/inventario')) return null
     setProductos(prev => prev.map(p => {
       if (p.id !== productoId) return p
       const delta = tipo === 'entrada' ? cantidad : -cantidad
@@ -89,10 +98,11 @@ export function AppProvider({ children }) {
     }
     setMovimientos(prev => [mov, ...prev])
     db.insert('movimientos', mov)
-  }, [setProductos, setMovimientos])
+  }, [puede, setProductos, setMovimientos])
 
   // ── VENTAS ─────────────────────────────────────────────────────────────────
   const crearVenta = useCallback((data) => {
+    if (!puede('/ventas')) return null
     const nums = ventas.map(v => parseInt(v.numero_venta?.replace('VTA-', '') || '0')).filter(n => !isNaN(n))
     const numero = generateNumeroVenta((nums.length ? Math.max(...nums) : 0) + 1)
     const esPedido = !!data.es_pedido
@@ -127,29 +137,32 @@ export function AppProvider({ children }) {
       })
     }
     nueva.items.forEach(item => {
-      ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero)
+      ajustarStock(item.producto_id, item.cantidad, 'salida', esPedido ? 'pedido' : 'venta', numero, { bypassAuth: true })
     })
     return nueva
-  }, [ventas, setVentas, ajustarStock])
+  }, [puede, ventas, setVentas, ajustarStock])
 
   const cancelarVenta = useCallback((id) => {
+    if (!puede('/ventas')) return null
     const venta = ventas.find(v => v.id === id)
     if (!venta || venta.estado === 'cancelada') return
     setVentas(prev => prev.map(v => v.id === id ? { ...v, estado: 'cancelada' } : v))
     db.update('ventas', id, { estado: 'cancelada' })
     venta.items.forEach(item => {
-      ajustarStock(item.producto_id, item.cantidad, 'entrada', 'cancelacion', venta.numero_venta)
+      ajustarStock(item.producto_id, item.cantidad, 'entrada', 'cancelacion', venta.numero_venta, { bypassAuth: true })
     })
-  }, [ventas, setVentas, ajustarStock])
+  }, [puede, ventas, setVentas, ajustarStock])
 
   const actualizarDespacho = useCallback((id, updates) => {
+    if (!puede('/pedidos')) return null
     setVentas(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v))
     db.update('ventas', id, updates)
     db.update('pedidos', id, updates)
-  }, [setVentas])
+  }, [puede, setVentas])
 
   // ── CLIENTES ───────────────────────────────────────────────────────────────
   const agregarCliente = useCallback((data) => {
+    if (!puede('/clientes')) return null
     const nuevo = {
       ...data,
       id: `c-${shortId()}`,
@@ -159,18 +172,20 @@ export function AppProvider({ children }) {
     setClientes(prev => [...prev, nuevo])
     db.insert('clientes', nuevo)
     return nuevo
-  }, [setClientes])
+  }, [puede, setClientes])
 
   const editarCliente = useCallback((id, data) => {
+    if (!puede('/clientes')) return null
     setClientes(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
     db.update('clientes', id, data)
-  }, [setClientes])
+  }, [puede, setClientes])
 
   const eliminarCliente = useCallback((id) => {
+    if (!puede('/clientes')) return null
     if (id === 'cf') return // CF no se elimina
     setClientes(prev => prev.map(c => c.id === id ? { ...c, activo: false } : c))
     db.remove('clientes', id)
-  }, [setClientes])
+  }, [puede, setClientes])
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const productosActivos    = productos.filter(p => p.activo)
@@ -215,4 +230,8 @@ export function useApp() {
   const ctx = useContext(AppContext)
   if (!ctx) throw new Error('useApp debe usarse dentro de <AppProvider>')
   return ctx
+}
+
+AppProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }

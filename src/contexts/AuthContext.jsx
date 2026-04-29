@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { useLocalStorage } from '../hooks/useLocalStorage'
+import PropTypes from 'prop-types'
 import { shortId } from '../utils/formatters'
 import { db } from '../services/db'
 import { sha256 } from '../services/googleAppsScript'
@@ -47,12 +47,25 @@ export function AuthProvider({ children }) {
   const [usuarios, setUsuarios] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ferreapp_usuarios') || 'null') || USUARIOS_DEFAULT } catch { return USUARIOS_DEFAULT }
   })
-  // Sesión es solo local — no va a la nube
-  const [sesion, setSesion] = useLocalStorage('ferreapp_sesion', null)
+  const [sesion, setSesion] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('ferreapp_sesion') || 'null') } catch { return null }
+  })
+
+  const persistSesion = useCallback((value) => {
+    setSesion(value)
+    if (value) sessionStorage.setItem('ferreapp_sesion', JSON.stringify(value))
+    else sessionStorage.removeItem('ferreapp_sesion')
+  }, [])
 
   useEffect(() => {
     db.forceRefresh('usuarios').then(data => { if (data.length) setUsuarios(data) })
   }, [])
+
+  useEffect(() => {
+    if (!sesion) return
+    const usuarioActivo = usuarios.find(u => u.id === sesion.id && u.activo)
+    if (!usuarioActivo) persistSesion(null)
+  }, [usuarios, sesion, persistSesion])
 
   const login = useCallback(async (email, password) => {
     const hash = await sha256(password)
@@ -63,16 +76,17 @@ export function AuthProvider({ children }) {
       auditar({ accion: 'login_fallido', entidad: 'usuarios', descripcion: `Intento de login fallido: ${email}` })
       return { ok: false, error: 'Credenciales incorrectas' }
     }
-    const { password_hash: _, ...sesionData } = usuario
-    setSesion(sesionData)
+    const sesionData = { ...usuario }
+    delete sesionData.password_hash
+    persistSesion(sesionData)
     auditar({ accion: 'login', entidad: 'usuarios', entidad_id: usuario.id, descripcion: `${usuario.nombre} inició sesión`, sesion: sesionData })
     return { ok: true }
-  }, [usuarios, setSesion])
+  }, [usuarios, persistSesion])
 
   const logout = useCallback(() => {
     if (sesion) auditar({ accion: 'logout', entidad: 'usuarios', entidad_id: sesion.id, descripcion: `${sesion.nombre} cerró sesión`, sesion })
-    setSesion(null)
-  }, [sesion, setSesion])
+    persistSesion(null)
+  }, [sesion, persistSesion])
 
   const tieneAcceso = useCallback((ruta) => {
     if (!sesion || !ruta) return false
@@ -131,4 +145,8 @@ export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth debe usarse dentro de <AuthProvider>')
   return ctx
+}
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }

@@ -153,7 +153,8 @@ export default function Ventas() {
         open={!!confirm}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
-          cancelarVenta(confirm.id)
+          const resultado = cancelarVenta(confirm.id)
+          if (resultado === null) return
           revertirVentaEnCaja(confirm.metodo_pago, confirm.total)
           if (confirm.metodo_pago === 'credito') cancelarCuenta(confirm.id)
           auditar({ accion: 'venta_cancelada', entidad: 'ventas', entidad_id: confirm.id, descripcion: `Venta cancelada: ${confirm.numero_venta} — ${formatCurrency(confirm.total)}`, sesion })

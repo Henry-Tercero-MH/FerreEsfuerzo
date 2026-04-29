@@ -5,7 +5,8 @@
  */
 
 export default async function handler(req, res) {
-  const GAS_URL = process.env.VITE_APPS_SCRIPT_URL
+  const GAS_URL = globalThis?.process?.env?.VITE_APPS_SCRIPT_URL || ''
+  const GAS_SECRET = globalThis?.process?.env?.API_SECRET || ''
 
   if (!GAS_URL) {
     return res.status(500).json({ ok: false, error: 'VITE_APPS_SCRIPT_URL no configurada' })
@@ -22,18 +23,18 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const secret = req.query.secret || ''
-      const url = secret ? `${GAS_URL}?secret=${encodeURIComponent(secret)}` : GAS_URL
+      const url = GAS_SECRET ? `${GAS_URL}?secret=${encodeURIComponent(GAS_SECRET)}` : GAS_URL
       const response = await fetch(url)
       const data = await response.json()
       return res.status(200).json(data)
     }
 
     if (req.method === 'POST') {
+      const body = GAS_SECRET ? { ...req.body, secret: GAS_SECRET } : req.body
       const response = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body),
+        body: JSON.stringify(body),
       })
       const data = await response.json()
       return res.status(200).json(data)

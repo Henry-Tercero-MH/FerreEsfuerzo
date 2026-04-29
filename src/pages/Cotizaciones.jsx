@@ -65,7 +65,7 @@ export default function Cotizaciones() {
     setStockError('')
 
     if (tipo === 'pedido') {
-      crearVenta({
+      const venta = crearVenta({
         cliente_id: cot.cliente_id,
         cliente_nombre: cot.cliente_nombre,
         items: cot.items || [],
@@ -80,10 +80,11 @@ export default function Cotizaciones() {
         notas_despacho: `Generado desde cotización ${cot.numero_cotizacion}`,
         cotizacion_id: cot.id,
       })
+      if (!venta) { setConfirm(null); return }
       cambiarEstado(cot.id, 'PEDIDO')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'PEDIDO' }))
     } else if (tipo === 'venta') {
-      crearVenta({
+      const venta = crearVenta({
         cliente_id: cot.cliente_id,
         cliente_nombre: cot.cliente_nombre,
         items: cot.items || [],
@@ -95,6 +96,7 @@ export default function Cotizaciones() {
         notas: cot.notas || '',
         cotizacion_id: cot.id,
       })
+      if (!venta) { setConfirm(null); return }
       cambiarEstado(cot.id, 'CONVERTIDA')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CONVERTIDA' }))
     } else if (tipo === 'cancelar') {

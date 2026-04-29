@@ -103,7 +103,23 @@ export default function Ajustes() {
   const handleExportarJSON = () => {
     const data = Object.keys(localStorage)
       .filter(k => k.startsWith('ferreapp_'))
-      .reduce((acc, k) => { try { acc[k.replace('ferreapp_', '')] = JSON.parse(localStorage.getItem(k)) } catch { acc[k.replace('ferreapp_', '')] = null }; return acc }, {})
+      .reduce((acc, k) => {
+        const key = k.replace('ferreapp_', '')
+        if (key === 'sesion') return acc
+        try {
+          const value = JSON.parse(localStorage.getItem(k))
+          acc[key] = key === 'usuarios' && Array.isArray(value)
+            ? value.map(usuario => {
+                const copia = { ...usuario }
+                delete copia.password_hash
+                return copia
+              })
+            : value
+        } catch {
+          acc[key] = null
+        }
+        return acc
+      }, {})
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')

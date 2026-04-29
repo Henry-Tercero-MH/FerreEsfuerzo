@@ -95,6 +95,7 @@ export default function NuevaCotizacion() {
   const handleCrearCliente = () => {
     if (!nuevoCliente.nombre.trim()) { setErrCliente('El nombre es requerido'); return }
     const nuevo = agregarCliente({ ...nuevoCliente, tipo: 'natural', activo: true })
+    if (!nuevo) { setErrCliente('No autorizado para crear clientes'); return }
     setClienteId(nuevo.id)
     setModalCliente(false)
     setNuevoCliente({ nombre: '', telefono: '', nit: '' })
@@ -119,6 +120,7 @@ export default function NuevaCotizacion() {
       notas,
       fecha_vencimiento: fechaVencimiento || null,
     })
+    if (!cot) { setLoading(false); return }
     auditar({ accion: 'cotizacion_creada', entidad: 'cotizaciones', entidad_id: cot?.id, descripcion: `Cotización ${cot?.numero_cotizacion} — ${formatCurrency(total)}`, detalle: { total, items: items.length, cliente_id: clienteId }, sesion })
     setLoading(false)
     setExito(cot)
