@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Autenticación', () => {
   test('AUTH-01: Login válido — debe permitir acceso al dashboard', async ({ page }) => {
+    const email = process.env.ADMIN_EMAIL || 'admin@ferreapp.com'
+    const password = process.env.ADMIN_PASSWORD || 'Admin123.'
+
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     const emailInputs = page.locator('input[type="email"]')
     const hasInputs = await emailInputs.count() > 0
@@ -11,8 +14,8 @@ test.describe('Autenticación', () => {
       expect(true).toBe(true)
       return
     }
-    await emailInputs.first().fill('admin@ferreteria.com')
-    await page.locator('input[type="password"]').first().fill('admin')
+    await emailInputs.first().fill(email)
+    await page.locator('input[type="password"]').first().fill(password)
     const buttons = page.locator('button[type="submit"], button')
     if (await buttons.count() > 0) {
       await buttons.first().click()
