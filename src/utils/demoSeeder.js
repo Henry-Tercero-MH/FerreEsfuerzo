@@ -4,7 +4,11 @@ import { CATEGORIAS, METODOS_PAGO, UNIDADES_SEED, TIPOS_CLIENTE } from './consta
 const pad = (n, len = 3) => String(n).padStart(len, '0')
 const isoDays = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
 const dateOnly = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-const runId = () => Date.now().toString(36).toUpperCase()
+const runId = () => {
+  const t = Date.now().toString(36).toUpperCase()
+  const r = Math.random().toString(36).substring(2, 6).toUpperCase()
+  return `${t}${r}`
+}
 const mkRef = (prefix, run, index) => `${prefix}-${run}-${pad(index, 4)}`
 
 const tipoClienteValues = TIPOS_CLIENTE.map(t => t.value)
