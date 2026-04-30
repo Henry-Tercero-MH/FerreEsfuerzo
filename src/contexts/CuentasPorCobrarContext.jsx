@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { shortId, generateNumeroSecuencial } from '../utils/formatters'
+import { validateForeignKey, isValidMoneda } from '../utils/validators'
 import { db } from '../services/db'
 import { useAuth } from './AuthContext'
 
@@ -36,6 +37,20 @@ export function CuentasPorCobrarProvider({ children }) {
 
   const crearCuenta = useCallback(async (data) => {
     if (!puede()) return null
+    
+    // Validar FK: cliente debe existir
+    if (data.cliente_id) {
+      const clientes = db.getAll('clientes')
+      if (!validateForeignKey(data.cliente_id, clientes)) {
+        throw new Error(`Cliente ID ${data.cliente_id} no existe`)
+      }
+    }
+    
+    // Validar moneda
+    if (data.monto_original && !isValidMoneda(data.monto_original)) {
+      throw new Error(`Monto inválido: ${data.monto_original}`)
+    }
+    
     const nums = cuentas.map(c => parseInt(c.numero_documento?.replace('CXC-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
@@ -65,6 +80,11 @@ export function CuentasPorCobrarProvider({ children }) {
     if (!puede()) return null
     const cuenta = cuentas.find(c => c.id === cuentaId)
     if (!cuenta) return
+    
+    // Validar moneda del abono
+    if (data.monto && !isValidMoneda(data.monto)) {
+      throw new Error(`Monto de abono inválido: ${data.monto}`)
+    }
 
     const nuevoAbono = {
       ...data,

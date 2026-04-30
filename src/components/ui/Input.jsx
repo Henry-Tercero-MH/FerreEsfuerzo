@@ -4,6 +4,7 @@ export default function Input({ label, error, className = '', ...props }) {
       {label && <label className="label">{label}</label>}
       <input
         className={`${error ? 'input-error' : 'input'} ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
         {...props}
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
@@ -17,6 +18,7 @@ export function Select({ label, error, children, className = '', ...props }) {
       {label && <label className="label">{label}</label>}
       <select
         className={`${error ? 'input-error' : 'input'} ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
         {...props}
       >
         {children}
@@ -33,6 +35,7 @@ export function Textarea({ label, error, className = '', ...props }) {
       <textarea
         rows={3}
         className={`${error ? 'input-error' : 'input'} resize-none ${className}`}
+        aria-invalid={error ? 'true' : 'false'}
         {...props}
       />
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}

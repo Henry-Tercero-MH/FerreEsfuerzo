@@ -11,12 +11,15 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import ClienteSelector from '../components/shared/ClienteSelector'
+import { useToast } from '../hooks/useToast'
+import Toast from '../components/ui/Toast'
 
 export default function NuevaCotizacion() {
   const { productos, clientes, agregarCliente } = useApp()
   const { crearCotizacion } = useCotizaciones()
   const { sesion } = useAuth()
   const navigate = useNavigate()
+  const { toasts, toast, remove } = useToast()
 
   const [busqueda, setBusqueda] = useState('')
   const [items, setItems] = useState([])
@@ -103,27 +106,36 @@ export default function NuevaCotizacion() {
   }
 
   const handleConfirmar = async () => {
-    if (items.length === 0) return
-    if (!clienteId) return
-    if (Number(descuentoGlobal) < 0) return
+    if (items.length === 0) { toast('Agrega al menos un producto', 'error'); return }
+    if (!clienteId) { toast('Selecciona un cliente', 'error'); return }
+    if (Number(descuentoGlobal) < 0) { toast('El descuento no puede ser negativo', 'error'); return }
     const hoy = new Date().toISOString().split('T')[0]
-    if (fechaVencimiento && fechaVencimiento < hoy) return
+    if (fechaVencimiento && fechaVencimiento < hoy) { toast('La fecha de vencimiento no puede estar en el pasado', 'error'); return }
+    
     setLoading(true)
-    const cot = await crearCotizacion({
-      items,
-      cliente_id: clienteId,
-      cliente_nombre: clienteNombre,
-      subtotal,
-      descuento,
-      impuesto,
-      total,
-      notas,
-      fecha_vencimiento: fechaVencimiento || null,
-    })
-    if (!cot) { setLoading(false); return }
-    auditar({ accion: 'cotizacion_creada', entidad: 'cotizaciones', entidad_id: cot?.id, descripcion: `Cotización ${cot?.numero_cotizacion} — ${formatCurrency(total)}`, detalle: { total, items: items.length, cliente_id: clienteId }, sesion })
-    setLoading(false)
-    setExito(cot)
+    try {
+      const cot = await crearCotizacion({
+        items,
+        cliente_id: clienteId,
+        cliente_nombre: clienteNombre,
+        subtotal,
+        descuento,
+        impuesto,
+        total,
+        notas,
+        fecha_vencimiento: fechaVencimiento || null,
+      })
+      if (!cot) { toast('No autorizado para crear cotizaciones', 'error'); return }
+      auditar({ accion: 'cotizacion_creada', entidad: 'cotizaciones', entidad_id: cot?.id, descripcion: `Cotización ${cot?.numero_cotizacion} — ${formatCurrency(total)}`, detalle: { total, items: items.length, cliente_id: clienteId }, sesion })
+      toast(`Cotización ${cot?.numero_cotizacion} creada exitosamente`, 'success')
+      setExito(cot)
+    } catch (err) {
+      const mensaje = err.message || 'Error al crear cotización'
+      toast(mensaje, 'error')
+      console.error('[CotizacionError]', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (exito) {
@@ -345,6 +357,15 @@ export default function NuevaCotizacion() {
           />
         </div>
       </Modal>
+
+        {/* Toasts de notificación */}
+        <div className="fixed bottom-4 right-4 space-y-2 z-50">
+          {toasts.map(t => (
+            <Toast key={t.id} variant={t.variant} onClose={() => remove(t.id)}>
+              {t.message}
+            </Toast>
+          ))}
+        </div>
     </div>
   )
 }

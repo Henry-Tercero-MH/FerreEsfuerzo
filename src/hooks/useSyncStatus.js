@@ -18,10 +18,14 @@ export function useSyncStatus() {
   }))
 
   const refresh = useCallback(() => {
+    const queue = getQueue()
+    const errors = queue.filter(i => i.error)
     setState({
       online: _online,
-      pendingCount: getQueue().length,
+      pendingCount: queue.length,
       syncing: _syncing,
+      errorCount: errors.length,
+      errorList: errors,
     })
   }, [])
 
@@ -43,6 +47,8 @@ export function useSyncStatus() {
     online: state.online,
     pendingCount: state.pendingCount,
     syncing: state.syncing,
+    errorCount: state.errorCount || 0,
+    getErrorList: () => state.errorList || [],
     syncNow: syncPending,
   }
 }

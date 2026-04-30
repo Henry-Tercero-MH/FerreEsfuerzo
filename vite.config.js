@@ -31,6 +31,26 @@ export default defineConfig({
         target: 'https://script.google.com',
         changeOrigin: true,
         rewrite: () => '/macros/s/AKfycbz4rcbu9rio411b1yNv7YGxklbNDXoKKCWs64S2ZoVYp6EmYI2-F9ZxY0nZgD26Pumqzg/exec',
+        configure(proxy) {
+          proxy.on('proxyRes', (proxyRes, req) => {
+            const origin = req.headers.origin || ''
+            const allowedOrigins = new Set([
+              'http://localhost:5173',
+              'http://127.0.0.1:5173',
+              'http://localhost:4173',
+              'http://127.0.0.1:4173',
+            ])
+
+            if (origin && allowedOrigins.has(origin)) {
+              proxyRes.headers['access-control-allow-origin'] = origin
+              proxyRes.headers['vary'] = 'Origin'
+            } else {
+              delete proxyRes.headers['access-control-allow-origin']
+            }
+
+            delete proxyRes.headers['access-control-allow-credentials']
+          })
+        },
       },
     },
   },

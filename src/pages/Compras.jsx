@@ -4,6 +4,7 @@ import { Plus, Package, FileText, CheckCircle } from 'lucide-react'
 import { useCompras } from '../contexts/ComprasContext'
 import { useProveedores } from '../contexts/ProveedoresContext'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import { validateCompra } from '../utils/validators'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +14,7 @@ import Modal from '../components/ui/Modal'
 import SearchBar from '../components/shared/SearchBar'
 import Badge from '../components/ui/Badge'
 import Input, { Select } from '../components/ui/Input'
+import Toast from '../components/ui/Toast'
 
 const FORM_VACÍO = {
   proveedor_id: '',
@@ -31,6 +33,7 @@ export default function Compras() {
   const { proveedores } = useProveedores()
   const navigate = useNavigate()
   const { sesion } = useAuth()
+  const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [modal, setModal] = useState({ open: false })
   const [form, setForm] = useState(FORM_VACÍO)
@@ -75,25 +78,42 @@ export default function Compras() {
 
   const handleGuardar = async () => {
     const errs = validateCompra(form, compras)
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (Object.keys(errs).length) {
+      setErrors(errs)
+      // enfocar primer campo con error para feedback inmediato
+      const first = Object.keys(errs)[0]
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${first}"]`)
+        if (el && el.focus) el.focus()
+      }, 0)
+      return
+    }
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
 
-    const proveedor = proveedores.find(p => p.id === form.proveedor_id)
-    const compra = await crearCompra({
-      ...form,
-      proveedor_nombre: proveedor?.nombre || 'Desconocido',
-      subtotal: Number(form.subtotal) || 0,
-      descuento: Number(form.descuento) || 0,
-      impuesto: Number(form.impuesto) || 0,
-      total: Number(form.total) || 0,
-    })
-    if (compra === null) { setLoading(false); alert('No autorizado para crear compras'); return }
+    try {
+      const proveedor = proveedores.find(p => p.id === form.proveedor_id)
+      const compra = await crearCompra({
+        ...form,
+        proveedor_nombre: proveedor?.nombre || 'Desconocido',
+        subtotal: Number(form.subtotal) || 0,
+        descuento: Number(form.descuento) || 0,
+        impuesto: Number(form.impuesto) || 0,
+        total: Number(form.total) || 0,
+      })
+      if (compra === null) { setLoading(false); toast('No autorizado para crear compras', 'error'); return }
 
-    auditar({ accion: 'compra_registrada', entidad: 'compras', entidad_id: compra?.id, descripcion: `Compra ${form.numero_documento} — ${proveedor?.nombre} — Q${form.total}`, detalle: { numero: form.numero_documento, proveedor: proveedor?.nombre, total: form.total }, sesion })
-    setLoading(false)
-    cerrar()
+      auditar({ accion: 'compra_registrada', entidad: 'compras', entidad_id: compra?.id, descripcion: `Compra ${form.numero_documento} — ${proveedor?.nombre} — Q${form.total}`, detalle: { numero: form.numero_documento, proveedor: proveedor?.nombre, total: form.total }, sesion })
+      toast(`Compra ${form.numero_documento} creada exitosamente`, 'success')
+      cerrar()
+    } catch (err) {
+      const mensaje = err.message || 'Error al crear compra'
+      toast(mensaje, 'error')
+      console.error('[ComprasError]', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const estadoBadge = (estado) => {
@@ -299,6 +319,15 @@ export default function Compras() {
           </div>
         </div>
       </Modal>
+
+        {/* Toasts de notificación */}
+        <div className="fixed bottom-4 right-4 space-y-2 z-50">
+          {toasts.map(t => (
+            <Toast key={t.id} variant={t.variant} onClose={() => remove(t.id)}>
+              {t.message}
+            </Toast>
+          ))}
+        </div>
     </div>
   )
 }

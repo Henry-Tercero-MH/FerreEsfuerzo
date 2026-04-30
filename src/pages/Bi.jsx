@@ -67,7 +67,7 @@ export default function Bi() {
   const productosTop = useMemo(() => {
     const acum = {}
     ventasFiltradas.forEach(v => {
-      ;(v.items || []).forEach(item => {
+      (v.items || []).forEach(item => {
         if (!acum[item.producto_id]) acum[item.producto_id] = { nombre: item.nombre, cantidad: 0, total: 0 }
         acum[item.producto_id].cantidad += Number(item.cantidad) || 0
         acum[item.producto_id].total    += Number(item.subtotal) || 0

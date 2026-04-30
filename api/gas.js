@@ -7,18 +7,38 @@
 export default async function handler(req, res) {
   const GAS_URL = globalThis?.process?.env?.VITE_APPS_SCRIPT_URL || ''
   const GAS_SECRET = globalThis?.process?.env?.API_SECRET || ''
+  const CORS_ALLOWED_ORIGINS = globalThis?.process?.env?.CORS_ALLOWED_ORIGINS || ''
 
   if (!GAS_URL) {
     return res.status(500).json({ ok: false, error: 'VITE_APPS_SCRIPT_URL no configurada' })
   }
 
-  // Headers CORS para el frontend
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin || ''
+  const defaultOrigins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:4173',
+    'http://127.0.0.1:4173',
+  ]
+  const allowedOrigins = new Set(
+    CORS_ALLOWED_ORIGINS
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .concat(defaultOrigins)
+  )
+
+  // CORS restrictivo: solo refleja el origen si está permitido.
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Max-Age', '600')
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end()
+    return res.status(204).end()
   }
 
   try {

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
 import { shortId, generateNumeroSecuencial } from '../utils/formatters'
+import { validateForeignKey, isValidMoneda } from '../utils/validators'
 import { db } from '../services/db'
 import { useAuth } from './AuthContext'
 
@@ -35,6 +36,20 @@ export function ComprasProvider({ children }) {
 
   const crearCompra = useCallback(async (data) => {
     if (!puede()) return null
+    
+    // Validar FK: proveedor debe existir
+    if (data.proveedor_id) {
+      const proveedores = db.getAll('proveedores')
+      if (!validateForeignKey(data.proveedor_id, proveedores)) {
+        throw new Error(`Proveedor ID ${data.proveedor_id} no existe`)
+      }
+    }
+    
+    // Validar moneda
+    if (data.subtotal && !isValidMoneda(data.subtotal)) {
+      throw new Error(`Subtotal inválido: ${data.subtotal}`)
+    }
+    
     const nums = compras.map(c => parseInt(String(c.numero_documento || '').replace('COM-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,

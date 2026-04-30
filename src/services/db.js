@@ -77,6 +77,30 @@ function enqueue(action, entity, data, recordId = null) {
   _notify()
 }
 
+/**
+ * Valida restricciones de integridad referencial (FK).
+ * Ejemplo: { cliente_id: 'clientes', proveedor_id: 'proveedores' }
+ */
+function validateConstraints(entity, record, constraints) {
+  const errors = {}
+  
+  Object.entries(constraints).forEach(([fieldName, referencedEntity]) => {
+    const fkValue = record[fieldName]
+    
+    // Permitir valores nulos si el FK es opcional
+    if (!fkValue) return
+    
+    const referencedList = lsGet(referencedEntity)
+    const exists = referencedList.some(item => item.id === fkValue)
+    
+    if (!exists) {
+      errors[fieldName] = `${referencedEntity} ID ${fkValue} no existe`
+    }
+  })
+  
+  return errors
+}
+
 // ── Operaciones CRUD ──────────────────────────────────────────
 
 /**
@@ -118,8 +142,17 @@ async function forceRefresh(entity) {
   return lsGet(entity)
 }
 
-async function insert(entity, data) {
+async function insert(entity, data, validations = {}) {
   const record = { ...data, id: data.id || shortId() }
+
+  // Validación de constraints (si se proporciona)
+  if (Object.keys(validations).length > 0) {
+    const errors = validateConstraints(entity, record, validations)
+    if (Object.keys(errors).length > 0) {
+      const msg = Object.entries(errors).map(([k, v]) => `${k}: ${v}`).join('; ')
+      throw new Error(`Validación fallida: ${msg}`)
+    }
+  }
 
   // 1. Cache local primero (UI instantánea)
   const list = lsGet(entity)
@@ -206,12 +239,16 @@ export async function syncPending() {
   _notify()
 
   const sorted = [...queue].sort((a, b) => a.timestamp - b.timestamp)
+  const MAX_REINTENTOS = 3
+  const DELAY_REINTENTO = 1000
 
   for (const item of sorted) {
+    const intentoActual = (item.reintentos || 0) + 1
+    
     try {
       if (item.action === 'insert') {
         await gasInsert(item.entity, item.data)
-        // Sincronizar items relacionados, igual que el path online en insert()
+        // Sincronizar items relacionados
         if (item.entity === 'ventas' && item.data.items?.length) {
           await Promise.all(item.data.items.map(i =>
             gasInsert('ventaItems', { ...i, venta_id: item.data.id })
@@ -233,10 +270,30 @@ export async function syncPending() {
         await gasRemove(item.entity, item.recordId)
       }
 
+      // Éxito: remover de cola
       const current = getQueue()
       saveQueue(current.filter(q => q.id !== item.id))
-    } catch {
-      break // si falla, reintenta la próxima vez
+    } catch (err) {
+      // Reintentar con backoff exponencial
+      if (intentoActual < MAX_REINTENTOS) {
+        item.reintentos = intentoActual
+        const current = getQueue()
+        const updated = current.map(q => q.id === item.id ? item : q)
+        saveQueue(updated)
+        
+        // Esperar antes de reintento
+        await new Promise(resolve => 
+          setTimeout(resolve, DELAY_REINTENTO * Math.pow(2, intentoActual - 1))
+        )
+      } else {
+        // Max reintentos alcanzado
+        console.error(`[SyncFailed] ${item.entity} ID ${item.recordId || item.data?.id}: ${err.message}`)
+        const current = getQueue()
+        const updated = current.map(q => 
+          q.id === item.id ? { ...q, error: err.message, fechaError: new Date().toISOString() } : q
+        )
+        saveQueue(updated)
+      }
     }
   }
 
@@ -273,4 +330,5 @@ export const db = {
   update,
   remove,
   refreshAll,
+  validateConstraints,
 }

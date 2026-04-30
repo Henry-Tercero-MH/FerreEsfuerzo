@@ -36,7 +36,7 @@ export default function Contabilidad() {
   const { empresa } = useEmpresa()
   const tableRef = useRef(null)
 
-  const hoy = new Date()
+  const hoy = useMemo(() => new Date(), [])
   const [mes, setMes]   = useState(hoy.getMonth())      // 0-11
   const [anio, setAnio] = useState(hoy.getFullYear())
 
@@ -49,7 +49,7 @@ export default function Contabilidad() {
     const arr = []
     for (let y = ultimo; y >= primero; y--) arr.push(y)
     return arr
-  }, [ventas])
+  }, [ventas, hoy])
 
   // Ventas del período seleccionado (excluye canceladas)
   const ventasPeriodo = useMemo(() =>

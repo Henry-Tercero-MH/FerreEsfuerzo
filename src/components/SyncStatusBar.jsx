@@ -9,10 +9,14 @@
  *   🔴 Sin conexión (trabajando localmente)
  */
 
+import { useState } from 'react'
 import { useSyncStatus } from '../hooks/useSyncStatus'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
 
 export default function SyncStatusBar() {
-  const { online, pendingCount, syncing, syncNow } = useSyncStatus()
+  const { online, pendingCount, syncing, syncNow, errorCount, getErrorList } = useSyncStatus()
+  const [open, setOpen] = useState(false)
 
   // Determinar estado visual
   let dotColor, message
@@ -54,6 +58,48 @@ export default function SyncStatusBar() {
         >
           Sincronizar
         </button>
+      )}
+
+      {/* Mostrar errores de sync (reintentos agotados) */}
+      {errorCount > 0 && (
+        <>
+          <button
+            onClick={() => setOpen(true)}
+            className="ml-2 px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700 border border-red-300"
+            title="Ver errores de sincronización"
+          >
+            {errorCount} {errorCount === 1 ? 'error' : 'errores'}
+          </button>
+
+          <Modal
+            open={open}
+            onClose={() => setOpen(false)}
+            title={`Errores de sincronización (${errorCount})`}
+            size="md"
+            footer={(
+              <>
+                <Button variant="secondary" onClick={() => setOpen(false)}>Cerrar</Button>
+                <Button variant="primary" onClick={() => { syncNow(); setOpen(false) }}>Reintentar</Button>
+              </>
+            )}
+          >
+            <div className="space-y-3">
+              {getErrorList().length === 0 ? (
+                <p className="text-sm text-gray-600">No hay detalles disponibles.</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {getErrorList().map((it, idx) => (
+                    <li key={idx} className="py-2">
+                      <div className="text-sm font-medium text-gray-900">{it.entity} {it.recordId || it.data?.id || ''}</div>
+                      <div className="text-xs text-gray-500">{it.error}</div>
+                      {it.fechaError && <div className="text-xs text-gray-400">{it.fechaError}</div>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Modal>
+        </>
       )}
 
       {/* Spinner mientras sincroniza */}

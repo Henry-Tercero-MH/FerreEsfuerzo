@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { shortId, generateNumeroSecuencial } from '../utils/formatters'
+import { validateForeignKey, isValidMoneda } from '../utils/validators'
 import { db } from '../services/db'
 
 export const CotizacionesContext = createContext(null)
@@ -30,6 +31,19 @@ export function CotizacionesProvider({ children }) {
   }, [])
 
   const crearCotizacion = useCallback(async (data) => {
+    // Validar FK: cliente debe existir
+    if (data.cliente_id) {
+      const clientes = db.getAll('clientes')
+      if (!validateForeignKey(data.cliente_id, clientes)) {
+        throw new Error(`Cliente ID ${data.cliente_id} no existe`)
+      }
+    }
+    
+    // Validar moneda
+    if (data.subtotal && !isValidMoneda(data.subtotal)) {
+      throw new Error(`Subtotal inválido: ${data.subtotal}`)
+    }
+    
     const nums = cotizaciones.map(c => parseInt(c.numero_cotizacion?.replace('COT-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,

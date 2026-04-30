@@ -10,7 +10,7 @@ import { StatCard } from '../components/ui/Card'
 import {
   TrendingUp, Package, ShoppingCart, Users, FileText,
   AlertCircle, ArrowDownCircle, Truck, Printer,
-  LayoutDashboard, ClipboardList, Boxes, CreditCard, Receipt
+  LayoutDashboard, Boxes, CreditCard, Receipt
 } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import Badge from '../components/ui/Badge'
@@ -61,7 +61,7 @@ function agruparPorDia(ventas, anio, mes) {
 function topProductos(ventas) {
   const mapa = {}
   ventas.filter(v => v.estado === 'completada').forEach(v => {
-    ;(v.items || []).forEach(item => {
+    (v.items || []).forEach(item => {
       const nombre = item.nombre || item.producto_nombre || 'Sin nombre'
       if (!mapa[nombre]) mapa[nombre] = { nombre, cantidad: 0, total: 0 }
       mapa[nombre].cantidad += Number(item.cantidad) || 0
@@ -141,7 +141,7 @@ const TABS = [
 export default function Reportes() {
   const { ventas, productos, clientes, productosStockBajo } = useApp()
   const { cotizaciones } = useCotizaciones()
-  const { cuentas, totalPorCobrar, cuentasVencidas, abonos } = useCuentasPorCobrar()
+  const { cuentas, totalPorCobrar } = useCuentasPorCobrar()
   const { compras } = useCompras()
   const { proveedores } = useProveedores()
 

@@ -12,6 +12,7 @@ import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
 import { Select } from '../components/ui/Input'
 import ClienteSelector from '../components/shared/ClienteSelector'
+import { useToast } from '../hooks/useToast'
 
 export default function NuevaVenta() {
   const { productos, clientes, crearVenta } = useApp()
@@ -20,6 +21,7 @@ export default function NuevaVenta() {
   const { registrarVentaEnCaja, cajaAbierta } = useCaja()
   const { sesion } = useAuth()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
   const [busqueda, setBusqueda] = useState('')
   const [scanError, setScanError] = useState(false)
@@ -120,46 +122,63 @@ export default function NuevaVenta() {
   const esCredito = metodoPago === 'credito'
 
   const handleConfirmar = async () => {
-    if (items.length === 0) return
-    if (esPedido && clienteId === 'cf') return
-    if (esPedido && !direccionEntrega.trim()) return
-    if (esCredito && clienteId === 'cf') return
-    if (Number(descuentoGlobal) < 0) return
-    if (esCredito && (!diasCredito || Number(diasCredito) < 1)) return
+    if (items.length === 0) { toast('Agrega al menos un producto', 'error'); return }
+    if (esPedido && clienteId === 'cf') { toast('Selecciona un cliente para pedidos', 'error'); return }
+    if (esPedido && !direccionEntrega.trim()) { toast('Ingresa dirección de entrega para pedidos', 'error'); return }
+    if (esCredito && clienteId === 'cf') { toast('El consumidor final no puede comprar a crédito', 'error'); return }
+    if (Number(descuentoGlobal) < 0) { toast('El descuento no puede ser negativo', 'error'); return }
+    if (esCredito && (!diasCredito || Number(diasCredito) < 1)) { toast('Ingresa días de crédito válidos', 'error'); return }
+    
     setLoading(true)
-    await new Promise(r => setTimeout(r, 400))
-    const venta = crearVenta({
-      items, cliente_id: clienteId, metodo_pago: metodoPago,
-      subtotal, descuento, impuesto, total, notas,
-      es_pedido: esPedido,
-      direccion_entrega: esPedido ? direccionEntrega.trim() : '',
-      usuario_id: sesion?.id || '',
-      usuario_nombre: sesion?.nombre || '',
-    })
-    if (!venta) { setLoading(false); return }
-    registrarVentaEnCaja(metodoPago, total)
-    auditar({
-      accion: esPedido ? 'pedido_creado' : 'venta_creada',
-      entidad: 'ventas', entidad_id: venta.id,
-      descripcion: `${esPedido ? 'Pedido' : 'Venta'} ${venta.numero_venta} — ${formatCurrency(total)} — ${metodoPago}`,
-      detalle: { numero: venta.numero_venta, total, items: items.length, cliente_id: clienteId, metodo_pago: metodoPago },
-      sesion,
-    })
-    if (esCredito) {
-      const fechaVenc = new Date()
-      fechaVenc.setDate(fechaVenc.getDate() + Number(diasCredito))
-      const clienteNombre = clientes.find(c => c.id === clienteId)?.nombre || ''
-      await crearCuenta({
-        numero_documento: venta.numero_venta,
-        cliente_id: clienteId,
-        cliente_nombre: clienteNombre,
-        monto_original: total,
-        fecha_vencimiento: fechaVenc.toISOString().split('T')[0],
-        referencia_venta: venta.id,
+    try {
+      await new Promise(r => setTimeout(r, 400))
+      const venta = crearVenta({
+        items, cliente_id: clienteId, metodo_pago: metodoPago,
+        subtotal, descuento, impuesto, total, notas,
+        es_pedido: esPedido,
+        direccion_entrega: esPedido ? direccionEntrega.trim() : '',
+        usuario_id: sesion?.id || '',
+        usuario_nombre: sesion?.nombre || '',
       })
+      if (!venta) { toast('No autorizado para crear ventas', 'error'); return }
+      
+      registrarVentaEnCaja(metodoPago, total)
+      auditar({
+        accion: esPedido ? 'pedido_creado' : 'venta_creada',
+        entidad: 'ventas', entidad_id: venta.id,
+        descripcion: `${esPedido ? 'Pedido' : 'Venta'} ${venta.numero_venta} — ${formatCurrency(total)} — ${metodoPago}`,
+        detalle: { numero: venta.numero_venta, total, items: items.length, cliente_id: clienteId, metodo_pago: metodoPago },
+        sesion,
+      })
+      
+      if (esCredito) {
+        try {
+          const fechaVenc = new Date()
+          fechaVenc.setDate(fechaVenc.getDate() + Number(diasCredito))
+          const clienteNombre = clientes.find(c => c.id === clienteId)?.nombre || ''
+          await crearCuenta({
+            numero_documento: venta.numero_venta,
+            cliente_id: clienteId,
+            cliente_nombre: clienteNombre,
+            monto_original: total,
+            fecha_vencimiento: fechaVenc.toISOString().split('T')[0],
+            referencia_venta: venta.id,
+          })
+        } catch (errCuenta) {
+          console.error('[CuentaPorCobrarError]', errCuenta)
+          toast(`${esPedido ? 'Pedido' : 'Venta'} creado pero error al registrar crédito: ${errCuenta.message}`, 'warning')
+        }
+      }
+      
+      toast(`${esPedido ? 'Pedido' : 'Venta'} ${venta.numero_venta} creado exitosamente`, 'success')
+      setExito(venta)
+    } catch (err) {
+      const mensaje = err.message || `Error al crear ${esPedido ? 'pedido' : 'venta'}`
+      toast(mensaje, 'error')
+      console.error('[NuevaVentaError]', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-    setExito(venta)
   }
 
   if (exito) {

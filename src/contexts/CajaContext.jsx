@@ -92,7 +92,7 @@ export function CajaProvider({ children }) {
     }
     const id = setInterval(tick, POLLING_MS)
     return () => clearInterval(id)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])  
 
   const abrirCaja = useCallback(async (data) => {
     if (!puede()) return null
@@ -115,7 +115,7 @@ export function CajaProvider({ children }) {
     setAperturas(prev => [nueva, ...prev])
     await db.insert('cajaAperturas', nueva)
     return nueva
-  }, [])
+  }, [puede])
 
   const cerrarCaja = useCallback(async (id, data) => {
     if (!puede()) return null
@@ -127,7 +127,7 @@ export function CajaProvider({ children }) {
     }
     setAperturas(prev => prev.map(a => a.id === id ? { ...a, ...cambio } : a))
     await db.update('cajaAperturas', id, cambio)
-  }, [])
+  }, [puede])
 
   const registrarMovimiento = useCallback(async (data) => {
     if (!puede()) return null

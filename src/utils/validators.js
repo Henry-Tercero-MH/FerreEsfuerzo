@@ -144,3 +144,43 @@ export const validateEmpresa = (data) => {
 
   return errors
 }
+
+// ── Validadores adicionales (seguridad y FK) ────────────────────
+export const isValidRangoFechas = (inicio, fin) => {
+  if (!inicio || !fin) return true
+  return new Date(inicio) <= new Date(fin)
+}
+
+export const isValidMoneda = (val, max = 9999999.99) => {
+  const n = Number(val)
+  return !isNaN(n) && n > 0 && n <= max
+}
+
+export const isValidDescuento = (descuento, subtotal, maxPct = 0.30) => {
+  const desc = Number(descuento) || 0
+  const sub = Number(subtotal) || 0
+  if (desc < 0) return false
+  if (desc > sub) return false
+  if (sub > 0 && desc / sub > maxPct) return false
+  return true
+}
+
+export const validateForeignKey = (value, collection, fieldName = 'id') => {
+  if (!value) return true
+  if (!Array.isArray(collection)) return true
+  return collection.some(item => item[fieldName] === value)
+}
+
+export const validateVentaTotales = (venta) => {
+  const errors = {}
+  if (!venta.items || !Array.isArray(venta.items)) return errors
+  
+  const calculado = venta.items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0)
+  const difMargen = 0.01
+  
+  if (Math.abs(calculado - (Number(venta.subtotal) || 0)) > difMargen) {
+    errors.subtotal = `Inconsistencia: items suman ${calculado}, pero subtotal es ${venta.subtotal}`
+  }
+  
+  return errors
+}

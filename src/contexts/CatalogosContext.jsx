@@ -70,7 +70,7 @@ export function CatalogosProvider({ children }) {
         setCatalogos(remoto)
         lsSet(remoto)
       }
-    }).catch(() => {})
+    }).catch(() => { /* ignore: si el Sheet no está disponible no rompemos la carga */ })
   }, [])
 
   // Sincroniza todo el catálogo al Sheet (sobreescribe filas por tipo)
@@ -88,7 +88,7 @@ export function CatalogosProvider({ children }) {
     ]
     try {
       await sincronizarCatalogos(filas)
-    } catch {}
+    } catch (err) { /* ignore sync errors */ }
   }, [])
 
   // ── Categorías ────────────────────────────────────────────────────────────
