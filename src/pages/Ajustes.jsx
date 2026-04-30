@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Download, Wifi, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, Download, Wifi, RefreshCw, Database } from 'lucide-react'
 import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
 import { testConexion } from '../services/googleAppsScript.js'
 import { auditar } from '../services/auditoria'
 import { db } from '../services/db.js'
+import { seedDemoData } from '../utils/demoSeeder'
 import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -28,6 +29,9 @@ export default function Ajustes() {
   const [alerta, setAlerta]  = useState(null)
   const [testLoading, setTestLoading]     = useState(false)
   const [refreshLoading, setRefreshLoading] = useState(false)
+  const [massiveLoading, setMassiveLoading] = useState(false)
+  const [massiveQty, setMassiveQty] = useState(20)
+  const [massiveConfirm, setMassiveConfirm] = useState(false)
 
   const mostrarAlerta = (type, message) => {
     setAlerta({ type, message })
@@ -130,6 +134,42 @@ export default function Ajustes() {
     mostrarAlerta('success', 'Backup JSON descargado')
   }
 
+  const handleCargaMasiva = async () => {
+    const cantidad = Number(massiveQty)
+    setMassiveConfirm(false)
+    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 200) {
+      mostrarAlerta('error', 'La cantidad debe estar entre 1 y 200')
+      return
+    }
+
+    setMassiveLoading(true)
+
+    try {
+      const resumen = await seedDemoData({
+        qty: cantidad,
+        usuario: {
+          id: sesion?.id ?? 'usr-admin',
+          nombre: sesion?.nombre ?? 'Administrador',
+        },
+      })
+
+      auditar({
+        accion: 'carga_masiva',
+        entidad: 'sistema',
+        descripcion: `Carga masiva ejecutada con ${cantidad} registros por módulo`,
+        detalle: resumen,
+        sesion,
+      })
+
+      mostrarAlerta('success', `Carga masiva completada: ${cantidad} registros por módulo`)
+      window.setTimeout(() => window.location.reload(), 1200)
+    } catch (e) {
+      mostrarAlerta('error', `No se pudo completar la carga masiva: ${e.message}`)
+    } finally {
+      setMassiveLoading(false)
+    }
+  }
+
   const rolesColor = { admin: 'orange', vendedor: 'blue', bodeguero: 'green', cotizador: 'purple' }
 
   return (
@@ -199,6 +239,46 @@ export default function Ajustes() {
         </p>
       </div>
 
+      {/* Carga masiva */}
+      <div className="card border-primary-100 bg-primary-50/40">
+        <div className="mb-4 flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white">
+            <Database size={18} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Carga masiva de datos demo</h2>
+            <p className="text-sm text-gray-500">
+              Genera datos de prueba para productos, clientes, proveedores, compras, cotizaciones, ventas, caja y cuentas por cobrar.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[160px_1fr] sm:items-end">
+          <Input
+            label="Registros por módulo"
+            type="number"
+            min="1"
+            max="200"
+            value={massiveQty}
+            onChange={(e) => setMassiveQty(e.target.value)}
+            helperText="Recomendado: 20 para pruebas rápidas."
+          />
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="primary"
+              icon={Database}
+              loading={massiveLoading}
+              onClick={() => setMassiveConfirm(true)}
+            >
+              Cargar datos masivos
+            </Button>
+            <span className="self-center text-xs text-gray-500">
+              Esta acción inserta y sincroniza información real de prueba. Úsala solo para QA.
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Info del sistema */}
       <div className="card">
         <h2 className="mb-3 text-base font-semibold text-gray-900">Información del sistema</h2>
@@ -229,6 +309,14 @@ export default function Ajustes() {
         title="¿Desactivar usuario?"
         message={`Se desactivará al usuario "${confirm?.nombre}". No podrá iniciar sesión.`}
         confirmText="Desactivar"
+      />
+      <ConfirmModal
+        open={massiveConfirm}
+        onClose={() => setMassiveConfirm(false)}
+        onConfirm={handleCargaMasiva}
+        title="¿Cargar datos masivos?"
+        message={`Se crearán ${massiveQty} registros por módulo y se sincronizarán con Google Sheets. Esta acción puede tardar varios minutos.`}
+        confirmText="Cargar ahora"
       />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 

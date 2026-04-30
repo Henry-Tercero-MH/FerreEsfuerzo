@@ -1,4 +1,4 @@
-export default function Input({ label, error, className = '', ...props }) {
+export default function Input({ label, error, helperText, className = '', ...props }) {
   return (
     <div className="w-full">
       {label && <label className="label">{label}</label>}
@@ -7,6 +7,7 @@ export default function Input({ label, error, className = '', ...props }) {
         aria-invalid={error ? 'true' : 'false'}
         {...props}
       />
+      {helperText && !error && <p className="mt-1 text-xs text-gray-400">{helperText}</p>}
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   )
