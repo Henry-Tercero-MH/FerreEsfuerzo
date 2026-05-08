@@ -6,8 +6,9 @@
  */
 
 // Siempre usamos el proxy /api/gas — en dev lo maneja Vite, en prod Vercel
-const GAS_URL   = import.meta.env.VITE_APPS_SCRIPT_URL || ''
-const PROXY_URL = '/api/gas'
+const GAS_URL    = import.meta.env.VITE_APPS_SCRIPT_URL || ''
+const GAS_SECRET = import.meta.env.VITE_GAS_SECRET || ''
+const PROXY_URL  = '/api/gas'
 
 // ── Utilidad de hash ──────────────────────────────────────────
 
@@ -29,10 +30,13 @@ export async function sha256(texto) {
  */
 async function post(action, payload = {}) {
   if (!GAS_URL) throw new Error('VITE_APPS_SCRIPT_URL no está configurada')
+  const body = GAS_SECRET
+    ? { action, secret: GAS_SECRET, ...payload }
+    : { action, ...payload }
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...payload }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`)
   return res.json()
