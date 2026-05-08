@@ -8,8 +8,80 @@ const ADMIN_SESSION = {
   activo: true,
 }
 
+const SEED_DATA = {
+  productos: [
+    {
+      id: 'p-seed-001',
+      codigo: 'PROD-0001',
+      nombre: 'Producto Semilla 1',
+      categoria: 'Herramientas Manuales',
+      descripcion: 'Producto para pruebas',
+      precio_compra: 20.00,
+      precio_venta: 27.00,
+      stock: 50,
+      stock_minimo: 5,
+      unidad: 'unidad',
+      ubicacion: { pasillo: '1', estante: '1', bandeja: '1' },
+      activo: true,
+      creado_en: new Date().toISOString(),
+    },
+    {
+      id: 'p-seed-002',
+      codigo: 'PROD-0002',
+      nombre: 'Producto Semilla 2',
+      categoria: 'Plomería',
+      descripcion: 'Producto para pruebas 2',
+      precio_compra: 30.00,
+      precio_venta: 40.50,
+      stock: 30,
+      stock_minimo: 3,
+      unidad: 'par',
+      ubicacion: { pasillo: '2', estante: '1', bandeja: '2' },
+      activo: true,
+      creado_en: new Date().toISOString(),
+    },
+  ],
+  clientes: [
+    {
+      id: 'cf',
+      nombre: 'Consumidor Final',
+      telefono: '',
+      email: '',
+      nit: 'CF',
+      direccion: '',
+      tipo: 'natural',
+      activo: true,
+      creado_en: new Date().toISOString(),
+    },
+    {
+      id: 'c-seed-001',
+      nombre: 'Cliente Semilla 1',
+      telefono: '5555-0001',
+      email: 'cliente1@correo.com',
+      nit: 'NIT-3000',
+      direccion: 'Zona 1, Calle 1',
+      tipo: 'natural',
+      activo: true,
+      creado_en: new Date().toISOString(),
+    },
+  ],
+  proveedores: [
+    {
+      id: 'pr-seed-001',
+      nombre: 'Proveedor Semilla 1',
+      nit: 'PRV-7000',
+      telefono: '4444-0001',
+      correo: 'proveedor1@correo.com',
+      direccion: 'Bodega 1',
+      activo: true,
+      creado_en: new Date().toISOString(),
+      actualizado_en: new Date().toISOString(),
+    },
+  ],
+}
+
 async function loginAsAdmin(page) {
-  await page.context().addInitScript((session) => {
+  await page.context().addInitScript(({ session, seed }) => {
     try {
       sessionStorage.setItem('ferreapp_sesion', JSON.stringify(session))
       localStorage.setItem('ferreapp_usuarios', JSON.stringify([
@@ -23,10 +95,13 @@ async function loginAsAdmin(page) {
           creado_en: new Date().toISOString(),
         },
       ]))
+      localStorage.setItem('ferreapp_productos', JSON.stringify(seed.productos))
+      localStorage.setItem('ferreapp_clientes', JSON.stringify(seed.clientes))
+      localStorage.setItem('ferreapp_proveedores', JSON.stringify(seed.proveedores))
     } catch (e) {
       // ignore
     }
-  }, ADMIN_SESSION)
+  }, { session: ADMIN_SESSION, seed: SEED_DATA })
 }
 
 async function openModalAndExpectValidation(page, buttonName, fieldLabel, value) {
