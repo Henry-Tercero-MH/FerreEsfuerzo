@@ -21,7 +21,7 @@ const SEED_DATA = {
       stock: 50,
       stock_minimo: 5,
       unidad: 'unidad',
-      ubicacion: { pasillo: '1', estante: '1', bandeja: '1' },
+      ubicacion: 'P1-E1-B1',
       activo: true,
       creado_en: new Date().toISOString(),
     },
@@ -36,7 +36,7 @@ const SEED_DATA = {
       stock: 30,
       stock_minimo: 3,
       unidad: 'par',
-      ubicacion: { pasillo: '2', estante: '1', bandeja: '2' },
+      ubicacion: 'P2-E1-B2',
       activo: true,
       creado_en: new Date().toISOString(),
     },
@@ -82,46 +82,36 @@ const SEED_DATA = {
 
 async function loginAsAdmin(page) {
   await page.context().addInitScript(({ session, seed }) => {
-    try {
-      sessionStorage.setItem('ferreapp_sesion', JSON.stringify(session))
-      localStorage.setItem('ferreapp_usuarios', JSON.stringify([
-        {
-          id: 'usr-admin',
-          nombre: 'Administrador',
-          email: 'admin@ferreapp.com',
-          password_hash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-          rol: 'admin',
-          activo: true,
-          creado_en: new Date().toISOString(),
-        },
-      ]))
-      localStorage.setItem('ferreapp_productos', JSON.stringify(seed.productos))
-      localStorage.setItem('ferreapp_clientes', JSON.stringify(seed.clientes))
-      localStorage.setItem('ferreapp_proveedores', JSON.stringify(seed.proveedores))
-    } catch (e) {
-      // ignore
+    // Mock fetch so /api/gas calls resolve immediately without hitting the network
+    const _origFetch = window.fetch
+    window.fetch = (url, ...args) => {
+      if (typeof url === 'string' && url.includes('/api/gas')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ ok: false, error: 'test-mock' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        ))
+      }
+      return _origFetch(url, ...args)
     }
+
+    sessionStorage.setItem('ferreapp_sesion', JSON.stringify(session))
+    localStorage.setItem('ferreapp_usuarios', JSON.stringify([
+      {
+        id: 'usr-admin',
+        nombre: 'Administrador',
+        email: 'admin@ferreapp.com',
+        password_hash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        rol: 'admin',
+        activo: true,
+        creado_en: new Date().toISOString(),
+      },
+    ]))
+    localStorage.setItem('ferreapp_productos', JSON.stringify(seed.productos))
+    localStorage.setItem('ferreapp_clientes', JSON.stringify(seed.clientes))
+    localStorage.setItem('ferreapp_proveedores', JSON.stringify(seed.proveedores))
   }, { session: ADMIN_SESSION, seed: SEED_DATA })
 }
 
-async function openModalAndExpectValidation(page, buttonName, fieldLabel, value) {
-  await page.getByRole('button', { name: buttonName }).click()
-  const inputNameMap = {
-    'Código': 'codigo',
-    'Nombre *': 'nombre',
-    'NIT': 'nit',
-    'NIT *': 'nit',
-    'Teléfono': 'telefono',
-    'Email': 'email',
-    'Correo electrónico': 'correo',
-    'Nombre comercial *': 'nombre',
-  }
-  const input = page.locator(`[name="${inputNameMap[fieldLabel] || fieldLabel}"]`)
-  await expect(input).toBeVisible()
-  await input.fill(value)
-  await page.getByRole('button', { name: /Crear|Guardar cambios/i }).click()
-  await page.waitForTimeout(1500)
-}
 
 test.describe('Conflictos en producción', () => {
   test('PROD-CONFLICT-01: Producto duplicado no debe guardarse', async ({ page }) => {
