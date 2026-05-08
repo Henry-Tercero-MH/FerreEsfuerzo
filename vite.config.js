@@ -1,11 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
-
-// ELECTRON=true  → base './'  (rutas relativas, necesario para cargar desde archivo)
-// Sin ELECTRON   → base '/'   (rutas absolutas, correcto para Vercel / web)
-const isElectron = process.env.ELECTRON === 'true'
 
 // Plugin que inyecta el timestamp de build en sw.js para forzar detección de nueva versión
 function injectSwVersion() {
@@ -21,7 +17,18 @@ function injectSwVersion() {
   }
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // ELECTRON=true  → base './'  (rutas relativas, necesario para cargar desde archivo)
+  // Sin ELECTRON   → base '/'   (rutas absolutas, correcto para Vercel / web)
+  const isElectron = process.env.ELECTRON === 'true'
+
+  // Leer .env para el proxy — así vite.config y el frontend usan siempre la misma URL
+  const env = loadEnv(mode, process.cwd(), '')
+  const gasUrl = env.VITE_APPS_SCRIPT_URL || ''
+  let gasProxyPath = ''
+  try { gasProxyPath = gasUrl ? new URL(gasUrl).pathname : '' } catch { /* sin URL */ }
+
+  return {
   plugins: [react(), injectSwVersion()],
   base: isElectron ? './' : '/',
   server: {
@@ -30,7 +37,7 @@ export default defineConfig({
       '/api/gas': {
         target: 'https://script.google.com',
         changeOrigin: true,
-        rewrite: () => '/macros/s/AKfycbz4rcbu9rio411b1yNv7YGxklbNDXoKKCWs64S2ZoVYp6EmYI2-F9ZxY0nZgD26Pumqzg/exec',
+        rewrite: () => gasProxyPath,
         configure(proxy) {
           proxy.on('proxyRes', (proxyRes, req) => {
             const origin = req.headers.origin || ''
@@ -67,4 +74,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

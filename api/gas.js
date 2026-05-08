@@ -6,7 +6,7 @@
 
 export default async function handler(req, res) {
   const GAS_URL = globalThis?.process?.env?.VITE_APPS_SCRIPT_URL || ''
-  const GAS_SECRET = globalThis?.process?.env?.API_SECRET || ''
+  const GAS_SECRET = globalThis?.process?.env?.VITE_GAS_SECRET || globalThis?.process?.env?.API_SECRET || ''
   const CORS_ALLOWED_ORIGINS = globalThis?.process?.env?.CORS_ALLOWED_ORIGINS || ''
 
   if (!GAS_URL) {
