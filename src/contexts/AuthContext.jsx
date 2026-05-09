@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import PropTypes from 'prop-types'
 import { shortId } from '../utils/formatters'
 import { db } from '../services/db'
-import { sha256 } from '../services/googleAppsScript'
+import { sha256, gasGetConfig, gasSaveConfig } from '../services/googleAppsScript'
 import { auditar } from '../services/auditoria'
 
 export const AuthContext = createContext(null)
@@ -93,9 +93,27 @@ export function AuthProvider({ children }) {
   const [rbac, setRbac] = useState(cargarRbac)
   const [sincronizando, setSincronizando] = useState(true)
 
+  // Carga RBAC desde el Sheet al iniciar
+  useEffect(() => {
+    gasGetConfig().then(res => {
+      if (res?.ok && res.data?.rbac) {
+        try {
+          const rbacSheet = typeof res.data.rbac === 'string'
+            ? JSON.parse(res.data.rbac)
+            : res.data.rbac
+          if (rbacSheet && typeof rbacSheet === 'object') {
+            setRbac(rbacSheet)
+            guardarRbac(rbacSheet)
+          }
+        } catch (e) { /* ignorar error de parse */ }
+      }
+    }).catch(() => {})
+  }, [])
+
   const actualizarRbac = useCallback((nuevoRbac) => {
     setRbac(nuevoRbac)
     guardarRbac(nuevoRbac)
+    gasSaveConfig({ rbac: JSON.stringify(nuevoRbac) }).catch(() => {})
   }, [])
 
   const persistSesion = useCallback((value) => {
