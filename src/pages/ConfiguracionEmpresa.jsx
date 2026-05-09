@@ -1,17 +1,33 @@
 import { useState } from 'react'
-import { Building2, Save, AlertCircle } from 'lucide-react'
+import { Building2, Save, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useEmpresa } from '../contexts/EmpresaContext'
 import { useAuth } from '../contexts/AuthContext'
+import { MODULOS, ROLES_DEFAULT } from '../contexts/AuthContext'
 import { validateEmpresa } from '../utils/validators'
 import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
 import Input, { Select } from '../components/ui/Input'
 import Alert from '../components/ui/Alert'
 
+const ROLES_CONFIGURABLES = [
+  { key: 'vendedor',  label: 'Vendedor' },
+  { key: 'bodeguero', label: 'Bodeguero' },
+  { key: 'cotizador', label: 'Cotizador' },
+]
+
 export default function ConfiguracionEmpresa() {
   const { empresa, actualizarEmpresa } = useEmpresa()
-  const { sesion } = useAuth()
+  const { sesion, rbac, actualizarRbac } = useAuth()
   const [form, setForm] = useState({ ...empresa })
+  // RBAC local — copia editable hasta que se guarda
+  const [rbacForm, setRbacForm] = useState(() => {
+    const base = {}
+    ROLES_CONFIGURABLES.forEach(({ key }) => {
+      base[key] = rbac[key] || ROLES_DEFAULT[key] || []
+    })
+    return base
+  })
+  const [rbacAlerta, setRbacAlerta] = useState(null)
   // Sync form cuando empresa se carga desde el Sheet (valores undefined → string vacío)
   const formNormalizado = Object.fromEntries(
     Object.entries(form).map(([k, v]) => [k, v ?? ''])
@@ -267,6 +283,85 @@ export default function ConfiguracionEmpresa() {
             onChange={handleChange}
             placeholder="/ruta/al/logo.png"
           />
+        </div>
+      </div>
+
+      {/* Permisos por Rol (RBAC) */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-1">
+          <ShieldCheck size={20} className="text-primary-600" />
+          <h2 className="text-base font-semibold text-gray-900">Permisos por rol</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">Define a qué módulos puede acceder cada rol. El administrador siempre tiene acceso completo.</p>
+
+        {rbacAlerta && <Alert type={rbacAlerta.type} message={rbacAlerta.message} onClose={() => setRbacAlerta(null)} />}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 pr-4 font-semibold text-gray-700 w-48">Módulo</th>
+                {ROLES_CONFIGURABLES.map(r => (
+                  <th key={r.key} className="text-center py-2 px-3 font-semibold text-gray-700 w-28">{r.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {MODULOS.map(mod => (
+                <tr key={mod.ruta} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-2 pr-4 text-gray-700">{mod.label}</td>
+                  {ROLES_CONFIGURABLES.map(rol => {
+                    const tiene = rbacForm[rol.key]?.includes(mod.ruta)
+                    return (
+                      <td key={rol.key} className="text-center py-2 px-3">
+                        <input
+                          type="checkbox"
+                          checked={!!tiene}
+                          onChange={() => {
+                            setRbacForm(prev => {
+                              const rutas = prev[rol.key] || []
+                              return {
+                                ...prev,
+                                [rol.key]: tiene
+                                  ? rutas.filter(r => r !== mod.ruta)
+                                  : [...rutas, mod.ruta],
+                              }
+                            })
+                          }}
+                          className="w-4 h-4 accent-primary-600 cursor-pointer"
+                        />
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => {
+              const reset = {}
+              ROLES_CONFIGURABLES.forEach(({ key }) => { reset[key] = ROLES_DEFAULT[key] || [] })
+              setRbacForm(reset)
+            }}
+            className="text-sm text-gray-400 hover:text-gray-600 underline"
+          >
+            Restaurar valores por defecto
+          </button>
+          <Button
+            variant="primary"
+            icon={ShieldCheck}
+            onClick={() => {
+              actualizarRbac(rbacForm)
+              auditar({ accion: 'rbac_actualizado', entidad: 'sistema', descripcion: 'Permisos por rol actualizados', sesion })
+              setRbacAlerta({ type: 'success', message: 'Permisos guardados correctamente' })
+              setTimeout(() => setRbacAlerta(null), 3000)
+            }}
+          >
+            Guardar permisos
+          </Button>
         </div>
       </div>
 

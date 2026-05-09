@@ -10,11 +10,13 @@ import { StatCard } from '../components/ui/Card'
 import {
   TrendingUp, Package, ShoppingCart, Users, FileText,
   AlertCircle, ArrowDownCircle, Truck, Printer,
-  LayoutDashboard, Boxes, CreditCard, Receipt
+  LayoutDashboard, Boxes, CreditCard, Receipt, MapPin, ClipboardList
 } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import Badge from '../components/ui/Badge'
 import Pagination from '../components/ui/Pagination'
+import Modal from '../components/ui/Modal'
+import Button from '../components/ui/Button'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -128,18 +130,19 @@ ${htmlTabla}
 // ── TABS ──────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'resumen',    label: 'Resumen',          icon: LayoutDashboard },
-  { id: 'ventas',     label: 'Ventas',            icon: ShoppingCart },
-  { id: 'inventario', label: 'Inventario',        icon: Boxes },
-  { id: 'cobrar',     label: 'Cuentas x Cobrar',  icon: CreditCard },
-  { id: 'compras',    label: 'Compras',           icon: Receipt },
-  { id: 'cotizaciones', label: 'Cotizaciones',    icon: FileText },
+  { id: 'resumen',      label: 'Resumen',          icon: LayoutDashboard },
+  { id: 'ventas',       label: 'Ventas',            icon: ShoppingCart },
+  { id: 'pedidos',      label: 'Pedidos',           icon: MapPin },
+  { id: 'inventario',   label: 'Inventario',        icon: Boxes },
+  { id: 'cobrar',       label: 'Cuentas x Cobrar',  icon: CreditCard },
+  { id: 'compras',      label: 'Compras',           icon: Receipt },
+  { id: 'cotizaciones', label: 'Cotizaciones',      icon: FileText },
 ]
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function Reportes() {
-  const { ventas, productos, clientes, productosStockBajo } = useApp()
+  const { ventas, productos, clientes, productosStockBajo, crearVenta } = useApp()
   const { cotizaciones } = useCotizaciones()
   const { cuentas, totalPorCobrar } = useCuentasPorCobrar()
   const { compras } = useCompras()
@@ -151,11 +154,83 @@ export default function Reportes() {
   const [mesFiltro, setMesFiltro] = useState(mesActual)
 
   // Paginación por tab
-  const [pags, setPags] = useState({ ventas: 1, inventario: 1, cobrar: 1, compras: 1, cotizaciones: 1 })
-  const [porPag, setPorPag] = useState({ ventas: 25, inventario: 25, cobrar: 25, compras: 25, cotizaciones: 25 })
+  const [pags, setPags] = useState({ ventas: 1, pedidos: 1, inventario: 1, cobrar: 1, compras: 1, cotizaciones: 1 })
+  const [porPag, setPorPag] = useState({ ventas: 25, pedidos: 25, inventario: 25, cobrar: 25, compras: 25, cotizaciones: 25 })
   const setPagina  = useCallback((t, p) => setPags(prev => ({ ...prev, [t]: p })), [])
   const setPorPagina = useCallback((t, n) => setPorPag(prev => ({ ...prev, [t]: n })), [])
   const paginar = (lista, t) => lista.slice((pags[t] - 1) * porPag[t], pags[t] * porPag[t])
+
+  // ── Modal generar pedido ──────────────────────────────────────────────────
+  const [modalPedido, setModalPedido] = useState(false)
+  const [seleccionados, setSeleccionados] = useState({}) // { [productoId]: cantidad }
+  const [filtroPedido, setFiltroPedido] = useState('bajo') // 'bajo' | 'todos'
+  const [loadingPedido, setLoadingPedido] = useState(false)
+  const [pedidoExito, setPedidoExito] = useState(null)
+
+  const abrirModalPedido = () => {
+    const inicial = {}
+    productosStockBajo.forEach(p => { inicial[p.id] = 1 })
+    setSeleccionados(inicial)
+    setFiltroPedido('bajo')
+    setPedidoExito(null)
+    setModalPedido(true)
+  }
+
+  const productosParaPedido = useMemo(() => {
+    const lista = filtroPedido === 'bajo' ? productosStockBajo : productos.filter(p => p.activo !== false)
+    return lista
+  }, [filtroPedido, productosStockBajo, productos])
+
+  const toggleProducto = (p) => {
+    setSeleccionados(prev => {
+      if (prev[p.id] !== undefined) {
+        const copia = { ...prev }
+        delete copia[p.id]
+        return copia
+      }
+      return { ...prev, [p.id]: 1 }
+    })
+  }
+
+  const setCantidad = (id, val) => {
+    const n = Math.max(1, parseInt(val) || 1)
+    setSeleccionados(prev => ({ ...prev, [id]: n }))
+  }
+
+  const generarPedido = async () => {
+    const idsSeleccionados = Object.keys(seleccionados)
+    if (!idsSeleccionados.length) return
+    setLoadingPedido(true)
+    const items = idsSeleccionados.map(id => {
+      const prod = productos.find(p => p.id === id)
+      const cantidad = seleccionados[id]
+      return {
+        producto_id: prod.id,
+        nombre: prod.nombre,
+        codigo: prod.codigo || '',
+        precio_unitario: prod.precio_venta,
+        cantidad,
+        subtotal: prod.precio_venta * cantidad,
+      }
+    })
+    const subtotal = items.reduce((a, i) => a + i.subtotal, 0)
+    const resultado = crearVenta({
+      items,
+      subtotal,
+      descuento: 0,
+      total: subtotal,
+      metodo_pago: 'credito',
+      es_pedido: true,
+      cliente_nombre: '',
+      notas: 'Pedido generado desde Reportes — reposición de inventario',
+    })
+    await new Promise(r => setTimeout(r, 300))
+    setLoadingPedido(false)
+    if (resultado) {
+      setPedidoExito(resultado.numero_venta)
+      setSeleccionados({})
+    }
+  }
 
   const mesesDisponibles = useMemo(() => generarMeses(ventas), [ventas])
   const [anio, mes] = mesFiltro.split('-').map(Number)
@@ -182,6 +257,10 @@ export default function Reportes() {
   const cotizacionesFiltradas = useMemo(() =>
     cotizaciones.filter(c => fechaLocal(c.fecha).startsWith(mesFiltro))
   , [cotizaciones, mesFiltro])
+
+  const pedidosFiltrados = useMemo(() =>
+    ventas.filter(v => v.es_pedido && fechaLocal(v.fecha).startsWith(mesFiltro))
+  , [ventas, mesFiltro])
 
   const topClientes = useMemo(() => {
     const mapa = {}
@@ -330,6 +409,35 @@ export default function Reportes() {
         </tr></tfoot>
       </table>`
     imprimir('Reporte de Compras', mesLabel, html)
+  }
+
+  const imprimirPedidos = () => {
+    const estadosLabel = { pendiente: 'Pendiente', en_preparacion: 'En preparación', listo: 'Listo', entregado: 'Entregado' }
+    const badgesColor = { pendiente: 'badge-yellow', en_preparacion: 'badge-blue', listo: 'badge-gray', entregado: 'badge-green' }
+    const filas = pedidosFiltrados.map(v => `
+      <tr>
+        <td>${formatDate(v.fecha)}</td>
+        <td style="font-family:monospace;font-size:11px">${v.numero_venta}</td>
+        <td>${v.cliente_nombre || 'Sin cliente'}</td>
+        <td>${v.direccion_entrega || '—'}</td>
+        <td class="text-right">${(v.items || []).length}</td>
+        <td class="text-right">${formatCurrency(v.total)}</td>
+        <td class="text-center"><span class="badge ${badgesColor[v.estado_despacho] || 'badge-gray'}">${estadosLabel[v.estado_despacho] || v.estado_despacho || '—'}</span></td>
+      </tr>`).join('')
+    const total = pedidosFiltrados.reduce((a, v) => a + (Number(v.total) || 0), 0)
+    const html = `
+      <table>
+        <thead><tr>
+          <th>Fecha</th><th>N° Pedido</th><th>Cliente</th><th>Dirección</th>
+          <th class="text-right">Items</th><th class="text-right">Total</th><th class="text-center">Estado</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr class="total-row">
+          <td colspan="5">Total (${pedidosFiltrados.length} pedidos)</td>
+          <td class="text-right">${formatCurrency(total)}</td><td></td>
+        </tr></tfoot>
+      </table>`
+    imprimir('Reporte de Pedidos', mesLabel, html)
   }
 
   const imprimirCotizaciones = () => {
@@ -541,14 +649,75 @@ export default function Reportes() {
         </div>
       )}
 
+      {/* ── TAB: Pedidos ── */}
+      {tab === 'pedidos' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500">{pedidosFiltrados.length} pedidos en {mesLabel} &mdash; Total: <span className="font-semibold text-gray-900">{formatCurrency(pedidosFiltrados.reduce((a, v) => a + (Number(v.total) || 0), 0))}</span></p>
+            <button onClick={imprimirPedidos} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">
+              <Printer size={14} /> Imprimir reporte
+            </button>
+          </div>
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>N° Pedido</th><th>Cliente</th><th>Dirección</th>
+                  <th className="text-right">Items</th><th className="text-right">Total</th><th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedidosFiltrados.length === 0
+                  ? <tr><td colSpan={7} className="py-10 text-center text-gray-400">Sin pedidos en este mes</td></tr>
+                  : paginar(pedidosFiltrados, 'pedidos').map(v => {
+                      const estadosLabel = { pendiente: 'Pendiente', en_preparacion: 'En preparación', listo: 'Listo', entregado: 'Entregado' }
+                      const variantMap = { pendiente: 'yellow', en_preparacion: 'blue', listo: 'purple', entregado: 'green' }
+                      const est = v.estado_despacho || 'pendiente'
+                      return (
+                        <tr key={v.id}>
+                          <td className="text-sm text-gray-500">{formatDate(v.fecha)}</td>
+                          <td className="font-mono text-xs">{v.numero_venta}</td>
+                          <td className="font-medium">{v.cliente_nombre || '—'}</td>
+                          <td className="text-sm text-gray-500 max-w-xs truncate">{v.direccion_entrega || '—'}</td>
+                          <td className="text-right text-sm text-gray-500">{(v.items || []).length}</td>
+                          <td className="text-right font-semibold">{formatCurrency(v.total)}</td>
+                          <td><Badge variant={variantMap[est] || 'gray'}>{estadosLabel[est] || est}</Badge></td>
+                        </tr>
+                      )
+                    })
+                }
+              </tbody>
+              {pedidosFiltrados.length > 0 && (
+                <tfoot>
+                  <tr className="bg-gray-50 font-bold">
+                    <td colSpan={5} className="px-4 py-2 text-sm">Total ({pedidosFiltrados.length} pedidos)</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(pedidosFiltrados.reduce((a, v) => a + (Number(v.total) || 0), 0))}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+          <Pagination total={pedidosFiltrados.length} pagina={pags.pedidos} porPagina={porPag.pedidos}
+            onCambiar={p => setPagina('pedidos', p)} onCambiarPorPagina={n => setPorPagina('pedidos', n)} />
+        </div>
+      )}
+
       {/* ── TAB: Inventario ── */}
       {tab === 'inventario' && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-sm text-gray-500">{productos.length} productos &mdash; <span className="text-red-500">{productosStockBajo.length} con stock bajo</span></p>
-            <button onClick={imprimirInventario} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">
-              <Printer size={14} /> Imprimir reporte
-            </button>
+            <div className="flex items-center gap-2">
+              {productosStockBajo.length > 0 && (
+                <button onClick={abrirModalPedido} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600">
+                  <ClipboardList size={14} /> Generar pedido
+                </button>
+              )}
+              <button onClick={imprimirInventario} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700">
+                <Printer size={14} /> Imprimir reporte
+              </button>
+            </div>
           </div>
           <div className="table-wrapper">
             <table className="table">
@@ -748,6 +917,117 @@ export default function Reportes() {
             onCambiar={p => setPagina('cotizaciones', p)} onCambiarPorPagina={n => setPorPagina('cotizaciones', n)} />
         </div>
       )}
+
+      {/* ── Modal: Generar pedido desde inventario ── */}
+      <Modal
+        open={modalPedido}
+        onClose={() => setModalPedido(false)}
+        title="Generar pedido de reposición"
+        size="lg"
+      >
+        {pedidoExito ? (
+          <div className="py-8 text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+              <ClipboardList size={28} className="text-green-600" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900">¡Pedido creado!</p>
+            <p className="text-sm text-gray-500">Se generó el pedido <span className="font-mono font-bold text-primary-600">{pedidoExito}</span></p>
+            <p className="text-xs text-gray-400">Puedes verlo en el módulo de Pedidos para actualizar su estado de despacho.</p>
+            <div className="pt-2 flex justify-center gap-3">
+              <Button variant="secondary" onClick={() => { setPedidoExito(null) }}>Generar otro</Button>
+              <Button variant="primary" onClick={() => setModalPedido(false)}>Cerrar</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Filtro */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFiltroPedido('bajo')}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${filtroPedido === 'bajo' ? 'bg-amber-100 text-amber-700' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                Stock bajo ({productosStockBajo.length})
+              </button>
+              <button
+                onClick={() => setFiltroPedido('todos')}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${filtroPedido === 'todos' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 hover:bg-gray-100'}`}
+              >
+                Todos los productos
+              </button>
+            </div>
+
+            {/* Lista */}
+            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+              {productosParaPedido.length === 0
+                ? <p className="py-8 text-center text-sm text-gray-400">Sin productos</p>
+                : productosParaPedido.map(p => {
+                    const seleccionado = seleccionados[p.id] !== undefined
+                    const esBajo = p.stock <= p.stock_minimo
+                    return (
+                      <div
+                        key={p.id}
+                        className={`flex items-center gap-3 px-4 py-2.5 transition-colors cursor-pointer ${seleccionado ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
+                        onClick={() => toggleProducto(p)}
+                      >
+                        <input
+                          type="checkbox"
+                          readOnly
+                          checked={seleccionado}
+                          className="h-4 w-4 accent-primary-600 flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{p.nombre}</p>
+                          <p className="text-xs text-gray-400">{p.codigo || '—'} &bull; Stock: <span className={esBajo ? 'text-red-500 font-semibold' : ''}>{p.stock}</span> / mín {p.stock_minimo}</p>
+                        </div>
+                        <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(p.precio_venta)}</span>
+                        {seleccionado && (
+                          <input
+                            type="number"
+                            min={1}
+                            value={seleccionados[p.id]}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => setCantidad(p.id, e.target.value)}
+                            className="w-16 input text-center text-sm py-1 px-1 flex-shrink-0"
+                          />
+                        )}
+                      </div>
+                    )
+                  })
+              }
+            </div>
+
+            {/* Resumen */}
+            {Object.keys(seleccionados).length > 0 && (
+              <div className="bg-gray-50 rounded-lg px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-600">
+                  {Object.keys(seleccionados).length} producto(s) seleccionado(s)
+                </span>
+                <span className="font-semibold text-gray-900">
+                  Total estimado: {formatCurrency(
+                    Object.entries(seleccionados).reduce((acc, [id, cant]) => {
+                      const prod = productos.find(p => p.id === id)
+                      return acc + (prod ? prod.precio_venta * cant : 0)
+                    }, 0)
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-1">
+              <Button variant="secondary" onClick={() => setModalPedido(false)}>Cancelar</Button>
+              <Button
+                variant="primary"
+                icon={ClipboardList}
+                loading={loadingPedido}
+                disabled={Object.keys(seleccionados).length === 0}
+                onClick={generarPedido}
+              >
+                Crear pedido
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
     </div>
   )

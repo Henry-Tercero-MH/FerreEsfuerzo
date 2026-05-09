@@ -49,20 +49,24 @@ export default function Caja() {
       return
     }
     setErrCierre('')
-    setLoading(true)
+    setLoadingCierre(true)
     await new Promise(r => setTimeout(r, 300))
     const montoEsperado = (Number(cajaAbierta.monto_apertura) || 0) + (Number(cajaAbierta.total_ventas_efectivo) || 0) + (Number(cajaAbierta.total_ingresos) || 0) - (Number(cajaAbierta.total_egresos) || 0)
     const montoReal = Number(formCierre.monto_real) || 0
-    const res = await cerrarCaja(cajaAbierta.id, {
-      monto_real: montoReal,
-      notas_cierre: formCierre.notas,
-      monto_esperado: montoEsperado,
-    })
-    if (res === null) { setLoading(false); setErrCierre('No autorizado'); return }
-    auditar({ accion: 'caja_cerrada', entidad: 'cajaAperturas', entidad_id: cajaAbierta.id, descripcion: `Caja cerrada — Esperado: ${formatCurrency(montoEsperado)} / Real: ${formatCurrency(montoReal)} / Diferencia: ${formatCurrency(montoReal - montoEsperado)}`, detalle: { monto_esperado: montoEsperado, monto_real: montoReal, diferencia: montoReal - montoEsperado }, sesion })
-    setLoading(false)
-    setModalCierre(false)
-    setFormCierre({ monto_real: '', notas: '' })
+    try {
+      await cerrarCaja(cajaAbierta.id, {
+        monto_real: montoReal,
+        notas_cierre: formCierre.notas,
+        monto_esperado: montoEsperado,
+      })
+      auditar({ accion: 'caja_cerrada', entidad: 'cajaAperturas', entidad_id: cajaAbierta.id, descripcion: `Caja cerrada — Esperado: ${formatCurrency(montoEsperado)} / Real: ${formatCurrency(montoReal)} / Diferencia: ${formatCurrency(montoReal - montoEsperado)}`, detalle: { monto_esperado: montoEsperado, monto_real: montoReal, diferencia: montoReal - montoEsperado }, sesion })
+      setModalCierre(false)
+      setFormCierre({ monto_real: '', notas: '' })
+    } catch (err) {
+      setErrCierre('Error al cerrar caja: ' + (err?.message || 'Intenta de nuevo'))
+    } finally {
+      setLoadingCierre(false)
+    }
   }
 
   const handleMovimiento = async () => {
@@ -392,7 +396,7 @@ ${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p><
             <Button variant="secondary" onClick={() => setModalCierre(false)}>
               Cancelar
             </Button>
-            <Button variant="danger" loading={loading} onClick={handleCerrarCaja}>
+            <Button variant="danger" loading={loadingCierre} onClick={handleCerrarCaja}>
               Cerrar caja
             </Button>
           </>
@@ -503,25 +507,23 @@ ${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p><
                         </tr>
                       </thead>
                       <tbody>
-                        {ventasDetalle.map(v => (
-                          <>
-                            <tr key={v.id} className="border-t border-gray-50">
-                              <td className="px-3 py-2 font-mono text-xs text-gray-500">{v.numero_venta}</td>
-                              <td className="px-3 py-2 text-gray-700">{v.cliente_nombre || 'Consumidor Final'}</td>
-                              <td className="px-3 py-2 text-xs text-gray-500">{v.usuario_nombre || '—'}</td>
-                              <td className="px-3 py-2 text-gray-500 capitalize">{v.metodo_pago}</td>
-                              <td className="px-3 py-2 text-right font-semibold text-gray-900">{formatCurrency(v.total)}</td>
+                        {ventasDetalle.flatMap(v => [
+                          <tr key={v.id} className="border-t border-gray-50">
+                            <td className="px-3 py-2 font-mono text-xs text-gray-500">{v.numero_venta}</td>
+                            <td className="px-3 py-2 text-gray-700">{v.cliente_nombre || 'Consumidor Final'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500">{v.usuario_nombre || '—'}</td>
+                            <td className="px-3 py-2 text-gray-500 capitalize">{v.metodo_pago}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-gray-900">{formatCurrency(v.total)}</td>
+                          </tr>,
+                          ...(v.items || []).map((item, i) => (
+                            <tr key={`${v.id}-${i}`} className="bg-gray-50/60">
+                              <td className="px-3 py-1"></td>
+                              <td className="px-3 py-1 text-xs text-gray-400 pl-6">↳ {item.nombre}</td>
+                              <td className="px-3 py-1 text-xs text-gray-400" colSpan={2}>{item.cantidad} × {formatCurrency(item.precio_unitario)}</td>
+                              <td className="px-3 py-1 text-right text-xs text-gray-400">{formatCurrency(item.subtotal)}</td>
                             </tr>
-                            {(v.items || []).map((item, i) => (
-                              <tr key={`${v.id}-${i}`} className="bg-gray-50/60">
-                                <td className="px-3 py-1"></td>
-                                <td className="px-3 py-1 text-xs text-gray-400 pl-6">↳ {item.nombre}</td>
-                                <td className="px-3 py-1 text-xs text-gray-400" colSpan={2}>{item.cantidad} × {formatCurrency(item.precio_unitario)}</td>
-                                <td className="px-3 py-1 text-right text-xs text-gray-400">{formatCurrency(item.subtotal)}</td>
-                              </tr>
-                            ))}
-                          </>
-                        ))}
+                          )),
+                        ])}
                       </tbody>
                       <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                         <tr>

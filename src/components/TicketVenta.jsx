@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/formatters'
 // Se envía como texto en el HTML — el driver de Windows lo pasa al puerto
 const CASH_DRAWER_CMD = '\x1B\x70\x00\x19\xFA'
 
-function buildTicketHTML(venta, cliente, empresa) {
+function buildTicketHTML(venta, cliente, empresa, abrirCajon = true) {
   const fecha = new Date(venta.fecha)
   const fechaStr = fecha.toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const horaStr  = fecha.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
@@ -15,7 +15,7 @@ function buildTicketHTML(venta, cliente, empresa) {
 
   const linea = '--------------------------------'
 
-  const metodosLabel = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', credito: 'Crédito' }
+  const metodosLabel = { efectivo: 'Efectivo', transferencia: 'Transferencia', credito: 'Crédito' }
 
   return `<!DOCTYPE html>
 <html>
@@ -56,8 +56,7 @@ function buildTicketHTML(venta, cliente, empresa) {
   </style>
 </head>
 <body>
-  <!-- Apertura de cajón: caracteres ESC/p invisibles al imprimir -->
-  <span style="display:none">${CASH_DRAWER_CMD}</span>
+  ${abrirCajon ? `<!-- Apertura de cajón --><span style="display:none">${CASH_DRAWER_CMD}</span>` : ''}
 
   <div class="center bold xl">${empresa.nombre_comercial || 'FERRETERÍA'}</div>
   ${empresa.razon_social ? `<div class="center">${empresa.razon_social}</div>` : ''}
@@ -94,10 +93,13 @@ function buildTicketHTML(venta, cliente, empresa) {
 
   <div class="row" style="font-weight:500"><span>Subtotal</span><span>${formatCurrency(venta.subtotal)}</span></div>
   ${venta.descuento > 0 ? `<div class="row" style="font-weight:500"><span>Descuento</span><span>-${formatCurrency(venta.descuento)}</span></div>` : ''}
-  <div class="row" style="font-weight:500"><span>IVA (12%)</span><span>${formatCurrency(venta.impuesto)}</span></div>
   <div class="sep"></div>
   <div class="total-row lg"><span>TOTAL</span><span>${formatCurrency(venta.total)}</span></div>
   <div class="row" style="margin-top:3px;font-weight:600"><span>Forma de pago:</span><span>${metodosLabel[venta.metodo_pago] || venta.metodo_pago}</span></div>
+  ${venta.pago_recibido > 0 ? `
+  <div class="row" style="font-weight:500"><span>Pago recibido:</span><span>${formatCurrency(venta.pago_recibido)}</span></div>
+  <div class="row bold" style="font-size:13px"><span>CAMBIO:</span><span>${formatCurrency(venta.cambio || 0)}</span></div>
+  ` : ''}
 
   <div class="sep-dash"></div>
 
@@ -115,8 +117,8 @@ function buildTicketHTML(venta, cliente, empresa) {
 </html>`
 }
 
-export function imprimirTicket(venta, cliente, empresa) {
-  const html = buildTicketHTML(venta, cliente, empresa)
+export function imprimirTicket(venta, cliente, empresa, abrirCajon = true) {
+  const html = buildTicketHTML(venta, cliente, empresa, abrirCajon)
   const win  = window.open('', '_blank', 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
   if (!win) {
     alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.')

@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Plus, Eye, XCircle, ShoppingCart, Lock, Filter } from 'lucide-react'
+import { Plus, Eye, XCircle, ShoppingCart, Lock, Filter, Printer } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useCaja } from '../contexts/CajaContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
+import { useEmpresa } from '../contexts/EmpresaContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
 import { auditar } from '../services/auditoria'
@@ -16,12 +17,14 @@ import Modal from '../components/ui/Modal'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import ToastContainer from '../components/ui/Toast'
 import SearchBar from '../components/shared/SearchBar'
+import { imprimirTicket } from '../components/TicketVenta'
 
 export default function Ventas() {
   const { ventas, cancelarVenta, clientes } = useApp()
   const { sesion } = useAuth()
   const { revertirVentaEnCaja, aperturas } = useCaja()
   const { cancelarCuenta } = useCuentasPorCobrar()
+  const { empresa } = useEmpresa()
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -42,12 +45,16 @@ export default function Ventas() {
     return [...mapa.entries()].map(([id, nombre]) => ({ id, nombre }))
   }, [ventas])
 
-  const ventasFiltradas = useMemo(() => ventas.filter(v => {
-    // Rol no-admin: solo ve sus propias ventas
-    if (!esAdmin && v.usuario_id !== sesion?.id) return false
-    const coincide    = !termino || v.numero_venta.includes(termino.toUpperCase())
-    const porEstado   = !filtroEstado || v.estado === filtroEstado
-    const porUsuario  = !filtroUsuario || v.usuario_id === filtroUsuario
+  // Coincide por ID o por nombre como fallback (cuando Sheets devuelve usuario_id vacío)
+  const esMiVenta = (v) =>
+    (sesion?.id && v.usuario_id && v.usuario_id === sesion.id) ||
+    (sesion?.nombre && v.usuario_nombre && v.usuario_nombre === sesion.nombre)
+
+  const ventasFiltradas = useMemo(() => [...ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).filter(v => {
+    if (!esAdmin && !esMiVenta(v)) return false
+    const coincide   = !termino || v.numero_venta.includes(termino.toUpperCase())
+    const porEstado  = !filtroEstado || v.estado === filtroEstado
+    const porUsuario = !filtroUsuario || v.usuario_id === filtroUsuario
     return coincide && porEstado && porUsuario
   }), [ventas, termino, filtroEstado, filtroUsuario, esAdmin, sesion])
 
@@ -177,9 +184,18 @@ export default function Ventas() {
             <div className="space-y-1 text-sm text-right">
               <p className="text-gray-500">Subtotal: <span className="font-medium text-gray-800">{formatCurrency(ventaDetalle.subtotal)}</span></p>
               {ventaDetalle.descuento > 0 && <p className="text-red-500">Descuento: <span>-{formatCurrency(ventaDetalle.descuento)}</span></p>}
-              <p className="text-gray-500">IVA (12%): <span className="font-medium text-gray-800">{formatCurrency(ventaDetalle.impuesto)}</span></p>
               <p className="text-lg font-bold text-gray-900">Total: {formatCurrency(ventaDetalle.total)}</p>
             </div>
+            {esAdmin && (
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={() => imprimirTicket(ventaDetalle, clientes.find(c => c.id === ventaDetalle.cliente_id) || null, empresa, false)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+                >
+                  <Printer size={14} /> Reimprimir ticket
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

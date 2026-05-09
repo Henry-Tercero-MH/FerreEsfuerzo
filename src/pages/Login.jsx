@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import Button from '../components/ui/Button'
-import Alert from '../components/ui/Alert'
 
 export default function Login() {
-  const { login } = useAuth()
+  const { login, sincronizando } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname ?? '/'
@@ -28,7 +26,7 @@ export default function Login() {
       return
     }
     setLoading(true)
-    await new Promise(r => setTimeout(r, 400)) // UX: pequeña pausa
+    await new Promise(r => setTimeout(r, 400))
     const result = await login(form.email, form.password)
     setLoading(false)
     if (!result.ok) {
@@ -39,93 +37,97 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Fondo decorativo animado */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary-500/10 animate-pulse-soft" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-primary-400/10 animate-pulse-soft" style={{animationDelay: '1s'}} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-primary-600/10 animate-pulse-soft" style={{animationDelay: '0.5s'}} />
-      </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex min-h-[480px]">
 
-      <div className="relative w-full max-w-md animate-fade-in">
-        {/* Card */}
-        <div className="rounded-2xl bg-primary-50 p-8 shadow-2xl">
-          {/* Logo */}
-          <div className="mb-8 flex flex-col items-center gap-3 text-center">
-              <img
-                src="/icons/logo-esfuerzo.png"
-                alt="Logo Ferretería El Esfuerzo"
-                className="h-32 w-32 rounded-full object-cover shadow-lg hover:scale-110 transition-transform duration-300"
-              />
-            <div>
-              <h1 className="text-2xl font-bold text-primary-700">FERRETERÍA EL ESFUERZO</h1>
-              <p className="text-sm text-gray-500">Sistema de Gestión para Ferreterías</p>
-            </div>
-          </div>
+        {/* Panel izquierdo — formulario */}
+        <div className="flex-1 bg-[#3d5a80] flex flex-col justify-between p-10">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-8 tracking-wide">LOGIN</h1>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <Alert type="error" message={error} onClose={() => setError('')} />
+              <div className="mb-4 rounded-lg bg-red-500/20 border border-red-400/40 px-4 py-2.5 text-sm text-red-200">
+                {error}
+              </div>
             )}
 
-            {/* Email */}
-            <div>
-              <label className="label">Correo electrónico</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-blue-100 mb-1.5">
+                  Correo electrónico
+                </label>
                 <input
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
                   placeholder="usuario@elesfuerzo.com"
-                  className="input pl-9"
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40 text-sm"
                   autoComplete="email"
                   autoFocus
                 />
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label className="label">Contraseña</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="input pl-9 pr-10"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-blue-100 mb-1.5">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 pr-10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40 text-sm"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              loading={loading}
-              className="w-full btn-lg mt-2"
-            >
-              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-            </Button>
-          </form>
+              {sincronizando && (
+                <p className="text-xs text-blue-200 animate-pulse">
+                  Conectando con el servidor...
+                </p>
+              )}
 
+              <button
+                type="submit"
+                disabled={loading || sincronizando}
+                className="w-full rounded-lg bg-white py-2.5 text-sm font-semibold text-[#3d5a80] hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+              >
+                {sincronizando ? 'Cargando...' : loading ? 'Iniciando sesión...' : 'Ingresar'}
+              </button>
+            </form>
+          </div>
+
+          <p className="text-xs text-white/30 mt-8">
+            © 2025 Ferretería El Esfuerzo
+          </p>
         </div>
 
-        <p className="mt-4 text-center text-xs text-white/50">
-          FERRETERÍA EL ESFUERZO v1.0 — Guatemala
-        </p>
+        {/* Panel derecho — logo y bienvenida */}
+        <div className="hidden sm:flex flex-1 bg-white flex-col items-center justify-center p-10 gap-6">
+          <img
+            src="/logoFerreApp.png"
+            alt="Logo Ferretería El Esfuerzo"
+            className="h-40 w-40 rounded-full object-cover shadow-lg"
+          />
+          <div className="text-center">
+            <h2 className="text-4xl font-extrabold text-gray-800 leading-tight">Bienvenido.</h2>
+            <p className="text-gray-400 text-base mt-1">Ferretería El Esfuerzo</p>
+          </div>
+        </div>
+
       </div>
     </div>
   )

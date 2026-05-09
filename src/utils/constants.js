@@ -23,7 +23,6 @@ export const CATEGORIAS = [
 
 export const METODOS_PAGO = [
   { value: 'efectivo',      label: 'Efectivo' },
-  { value: 'tarjeta',      label: 'Tarjeta' },
   { value: 'transferencia', label: 'Transferencia' },
   { value: 'credito',      label: 'Crédito' },
 ]
@@ -59,7 +58,7 @@ export const ESTADOS_DESPACHO = {
   entregado:       { label: 'Entregado',       badge: 'badge-green',  next: null },
 }
 
-export const IMPUESTO_DEFAULT = 0.12 // 12% IVA
+export const IMPUESTO_DEFAULT = 0 // Sin IVA
 export const MONEDA = 'Q'            // Quetzal guatemalteco
 
 export const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || ''

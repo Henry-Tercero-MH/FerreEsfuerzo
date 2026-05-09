@@ -7,25 +7,50 @@ import { auditar } from '../services/auditoria'
 
 export const AuthContext = createContext(null)
 
+// Módulos configurables por rol (admin siempre tiene todo, no es editable)
+export const MODULOS = [
+  { ruta: '/ventas',             label: 'Historial de ventas' },
+  { ruta: '/ventas/nueva',       label: 'Nueva venta / Caja POS' },
+  { ruta: '/productos',          label: 'Productos' },
+  { ruta: '/inventario',         label: 'Inventario' },
+  { ruta: '/clientes',           label: 'Clientes' },
+  { ruta: '/proveedores',        label: 'Proveedores' },
+  { ruta: '/compras',            label: 'Compras' },
+  { ruta: '/cotizaciones',       label: 'Cotizaciones' },
+  { ruta: '/cotizaciones/nueva', label: 'Nueva cotización' },
+  { ruta: '/pedidos',            label: 'Pedidos' },
+  { ruta: '/cuentas-por-cobrar', label: 'Cuentas por cobrar' },
+  { ruta: '/caja',               label: 'Caja (apertura/cierre)' },
+  { ruta: '/reportes',           label: 'Reportes' },
+  { ruta: '/catalogos',          label: 'Catálogos' },
+  { ruta: '/contabilidad',       label: 'Contabilidad' },
+  { ruta: '/bi',                 label: 'Business Intelligence' },
+]
+
+// Permisos por defecto para cada rol (se usan si no hay RBAC guardado)
+export const ROLES_DEFAULT = {
+  vendedor:  ['/', '/ventas', '/ventas/nueva', '/clientes', '/cotizaciones', '/cotizaciones/nueva'],
+  bodeguero: ['/', '/productos', '/inventario', '/pedidos'],
+  cotizador: ['/', '/cotizaciones', '/cotizaciones/nueva', '/clientes', '/productos'],
+}
+
+// Rutas fijas de admin (no configurables)
+const RUTAS_ADMIN = ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/contabilidad', '/ajustes', '/pedidos', '/catalogos', '/compras', '/proveedores', '/cotizaciones', '/cotizaciones/nueva', '/cuentas-por-cobrar', '/caja', '/configuracion', '/auditoria', '/bi']
+
 // Roles y sus permisos de navegación
 export const ROLES = {
-  admin: {
-    label: 'Administrador',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/productos', '/inventario', '/clientes', '/reportes', '/contabilidad', '/ajustes', '/pedidos', '/catalogos', '/compras', '/proveedores', '/cotizaciones', '/cuentas-por-cobrar', '/caja', '/configuracion', '/auditoria', '/bi'],
-  },
-  vendedor: {
-    label: 'Vendedor',
-    rutas: ['/', '/ventas', '/ventas/nueva', '/clientes', '/cotizaciones', '/cotizaciones/nueva'],
-  },
-  bodeguero: {
-    label: 'Bodeguero',
-    rutas: ['/', '/productos', '/inventario', '/pedidos'],
-  },
-  // Rol para tablet: solo puede crear y ver cotizaciones y consultar clientes/productos
-  cotizador: {
-    label: 'Cotizador',
-    rutas: ['/', '/cotizaciones', '/cotizaciones/nueva', '/clientes', '/productos'],
-  },
+  admin:     { label: 'Administrador', rutas: RUTAS_ADMIN },
+  vendedor:  { label: 'Vendedor',      rutas: ROLES_DEFAULT.vendedor },
+  bodeguero: { label: 'Bodeguero',     rutas: ROLES_DEFAULT.bodeguero },
+  cotizador: { label: 'Cotizador',     rutas: ROLES_DEFAULT.cotizador },
+}
+
+function cargarRbac() {
+  try { return JSON.parse(localStorage.getItem('ferreapp_rbac') || 'null') || {} } catch { return {} }
+}
+
+export function guardarRbac(rbac) {
+  localStorage.setItem('ferreapp_rbac', JSON.stringify(rbac))
 }
 
 // Google Sheets devuelve booleanos como strings "TRUE"/"FALSE"
@@ -65,6 +90,13 @@ export function AuthProvider({ children }) {
   const [sesion, setSesion] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('ferreapp_sesion') || 'null') } catch { return null }
   })
+  const [rbac, setRbac] = useState(cargarRbac)
+  const [sincronizando, setSincronizando] = useState(true)
+
+  const actualizarRbac = useCallback((nuevoRbac) => {
+    setRbac(nuevoRbac)
+    guardarRbac(nuevoRbac)
+  }, [])
 
   const persistSesion = useCallback((value) => {
     setSesion(value)
@@ -73,20 +105,21 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
+    setSincronizando(true)
     db.forceRefresh('usuarios').then(data => {
-      if (!data.length) return
-      const normalizados = data.map(normalizeUsuario)
-      // Si el sheet no tiene el admin default, lo conservamos para no perder acceso
-      const tieneAdmin = normalizados.some(u => u.id === 'usr-admin')
-      setUsuarios(tieneAdmin ? normalizados : [...USUARIOS_DEFAULT, ...normalizados])
-    })
+      if (data.length) {
+        const normalizados = data.map(normalizeUsuario)
+        const tieneAdmin = normalizados.some(u => u.id === 'usr-admin')
+        setUsuarios(tieneAdmin ? normalizados : [...USUARIOS_DEFAULT, ...normalizados])
+      }
+    }).catch(() => {}).finally(() => setSincronizando(false))
   }, [])
 
   useEffect(() => {
-    if (!sesion) return
+    if (!sesion || sincronizando) return
     const usuarioActivo = usuarios.find(u => u.id === sesion.id && isActivo(u))
     if (!usuarioActivo) persistSesion(null)
-  }, [usuarios, sesion, persistSesion])
+  }, [usuarios, sesion, sincronizando, persistSesion])
 
   const login = useCallback(async (email, password) => {
     const hash = await sha256(password)
@@ -111,10 +144,11 @@ export function AuthProvider({ children }) {
 
   const tieneAcceso = useCallback((ruta) => {
     if (!sesion || !ruta) return false
-    const rol = ROLES[sesion.rol]
-    if (!rol) return false
-    return rol.rutas.some(r => ruta === r || ruta.startsWith(r + '/'))
-  }, [sesion])
+    if (sesion.rol === 'admin') return true
+    // Usar RBAC personalizado si existe para este rol, si no el default
+    const rutasRol = rbac[sesion.rol] || ROLES_DEFAULT[sesion.rol] || []
+    return ['/', ...rutasRol].some(r => ruta === r || ruta.startsWith(r + '/'))
+  }, [sesion, rbac])
 
   const agregarUsuario = useCallback(async (data) => {
     if (usuarios.find(u => u.email.toLowerCase() === data.email.toLowerCase())) {
@@ -156,6 +190,9 @@ export function AuthProvider({ children }) {
       editarUsuario,
       eliminarUsuario,
       estaAutenticado: !!sesion,
+      sincronizando,
+      rbac,
+      actualizarRbac,
     }}>
       {children}
     </AuthContext.Provider>

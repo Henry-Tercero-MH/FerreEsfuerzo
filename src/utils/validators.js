@@ -39,9 +39,11 @@ export const validateProducto = (data, productos = [], modoEditar = false) => {
   }
 
   // Código duplicado
-  if (data.codigo?.trim()) {
+  const codigoStr = String(data.codigo ?? '').trim()
+  if (codigoStr) {
+    const codigoNorm = codigoStr.toLowerCase()
     const duplicado = productos.find(p =>
-      p.codigo?.toLowerCase() === data.codigo.trim().toLowerCase() &&
+      String(p.codigo ?? '').toLowerCase() === codigoNorm &&
       (!modoEditar || p.id !== data.id)
     )
     if (duplicado) errors.codigo = 'Ya existe un producto con este código'

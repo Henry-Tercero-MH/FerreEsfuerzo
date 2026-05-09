@@ -70,7 +70,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
           {/* Logo + nombre — oculto cuando colapsado en PC */}
           <div className={`flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden transition-all duration-300 ${collapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'opacity-100'}`}>
             <img
-              src="/icons/logo-esfuerzo.png"
+              src="/logoFerreApp.png"
               alt="Logo"
               className="h-9 w-9 flex-shrink-0 rounded-full object-cover shadow"
             />

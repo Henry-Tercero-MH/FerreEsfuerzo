@@ -145,8 +145,18 @@ function insertRecord(entity, data) {
   const ss      = SpreadsheetApp.getActiveSpreadsheet()
   const headers = _headers()[entity] || Object.keys(data)
   const hoja    = _getOrCreateSheet(ss, sheetName, headers)
-  const mapFn   = _mappers()[entity]
 
+  // Evitar duplicados: si ya existe una fila con el mismo id, no insertar
+  if (data.id) {
+    const valores = hoja.getDataRange().getValues()
+    for (let i = 1; i < valores.length; i++) {
+      if (String(valores[i][0]) === String(data.id)) {
+        return { ok: true, id: data.id, duplicado: true }
+      }
+    }
+  }
+
+  const mapFn = _mappers()[entity]
   if (mapFn) {
     hoja.appendRow(mapFn(data))
   } else {
@@ -326,7 +336,7 @@ function _headers() {
     productos:         ['id','codigo','nombre','categoria','precio_compra','precio_venta','stock','stock_minimo','unidad','ubicacion','activo','creado_en'],
     clientes:          ['id','nombre','telefono','email','direccion','nit','tipo','activo','creado_en'],
     proveedores:       ['id','nit','nombre','nombre_contacto','telefono','correo','direccion','dias_credito','porcentaje_descuento','activo','creado_en'],
-    ventas:            ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas','usuario_id','usuario_nombre'],
+    ventas:            ['id','numero_venta','cliente_id','cliente_nombre','fecha','subtotal','descuento','impuesto','total','metodo_pago','estado','notas','usuario_id','usuario_nombre','pago_recibido','cambio'],
     ventaItems:        ['venta_id','producto_id','nombre','cantidad','precio_unitario','subtotal'],
     pedidos:           ['id','numero_venta','cliente_id','cliente_nombre','fecha','total','estado_despacho','direccion_entrega','notas','metodo_pago'],
     compras:           ['id','numero_documento','proveedor_id','proveedor_nombre','fecha_documento','fecha_recepcion','subtotal','descuento','impuesto','total','estado'],
@@ -351,7 +361,7 @@ function _mappers() {
     productos:       p => [p.id,p.codigo,p.nombre,p.categoria,p.precio_compra,p.precio_venta,p.stock,p.stock_minimo,p.unidad,p.ubicacion||'',p.activo,p.creado_en],
     clientes:        c => [c.id,c.nombre,c.telefono,c.email,c.direccion,c.nit,c.tipo,c.activo,c.creado_en],
     proveedores:     p => [p.id,p.nit,p.nombre,p.nombre_contacto,p.telefono,p.correo,p.direccion,p.dias_credito,p.porcentaje_descuento,p.activo,p.creado_en],
-    ventas:          v => [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre||'',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas||'',v.usuario_id||'',v.usuario_nombre||''],
+    ventas:          v => [v.id,v.numero_venta,v.cliente_id,v.cliente_nombre||'',v.fecha,v.subtotal,v.descuento,v.impuesto,v.total,v.metodo_pago,v.estado,v.notas||'',v.usuario_id||'',v.usuario_nombre||'',v.pago_recibido||0,v.cambio||0],
     ventaItems:      i => [i.venta_id,i.producto_id,i.nombre,i.cantidad,i.precio_unitario,i.subtotal],
     pedidos:         p => [p.id,p.numero_venta,p.cliente_id,p.cliente_nombre||'',p.fecha,p.total,p.estado_despacho||'pendiente',p.direccion_entrega||'',p.notas||'',p.metodo_pago||''],
     compras:         c => [c.id,c.numero_documento,c.proveedor_id,c.proveedor_nombre||'',c.fecha_documento,c.fecha_recepcion,c.subtotal,c.descuento,c.impuesto,c.total,c.estado],

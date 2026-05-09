@@ -126,7 +126,7 @@ function DashboardVendedor({ sesion, datos }) {
               {misVentasHoy.slice(0, 6).map((venta, i) => {
                 const estado = ESTADOS_VENTA[venta.estado]
                 return (
-                  <div key={venta.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
+                  <div key={venta.id ?? i} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
                     <div>
                       <p className="text-sm font-medium text-gray-900">{venta.numero_venta}</p>
                       <p className="text-xs text-gray-400">{formatDateTime(venta.fecha)}</p>

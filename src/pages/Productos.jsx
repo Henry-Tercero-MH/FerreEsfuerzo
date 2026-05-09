@@ -62,6 +62,7 @@ export default function Productos() {
 
   const productosFiltrados = useMemo(() => {
     return productos.filter(p => {
+      if (p.activo === false) return false
       const coincideBusqueda = !termino ||
         p.nombre.toLowerCase().includes(termino.toLowerCase()) ||
         p.codigo?.toLowerCase().includes(termino.toLowerCase())
@@ -86,8 +87,11 @@ export default function Productos() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }))
+    const updated = { ...form, [name]: value }
+    setForm(updated)
+    // Revalidar el campo que cambió para feedback inmediato
+    const errs = validateProducto(updated, productos, modal.modo === 'editar')
+    setErrors(prev => ({ ...prev, [name]: errs[name] || '' }))
   }
 
   const handleGuardar = async () => {
@@ -206,15 +210,15 @@ export default function Productos() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Nombre *" name="nombre" value={form.nombre} onChange={handleChange} error={errors.nombre} placeholder="Ej: Martillo 16oz" className="sm:col-span-2" />
-          <Input label="Código" name="codigo" value={form.codigo} onChange={handleChange} placeholder="Auto-generado" />
+          <Input label="Código" name="codigo" value={form.codigo} onChange={handleChange} error={errors.codigo} placeholder="Auto-generado" />
           <Select label="Categoría *" name="categoria" value={form.categoria} onChange={handleChange} error={errors.categoria}>
             <option value="">Seleccionar...</option>
             {categorias.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
-          <Input label="Precio compra (Q)" name="precio_compra" type="number" value={form.precio_compra} onChange={handleChange} placeholder="0.00" />
-          <Input label="Precio venta (Q) *" name="precio_venta" type="number" value={form.precio_venta} onChange={handleChange} error={errors.precio_venta} placeholder="0.00" />
-          <Input label="Stock actual" name="stock" type="number" value={form.stock} onChange={handleChange} error={errors.stock} />
-          <Input label="Stock mínimo" name="stock_minimo" type="number" value={form.stock_minimo} onChange={handleChange} />
+          <Input label="Precio compra (Q)" name="precio_compra" type="number" min="0" value={form.precio_compra} onChange={handleChange} error={errors.precio_compra} placeholder="0.00" />
+          <Input label="Precio venta (Q) *" name="precio_venta" type="number" min="0" value={form.precio_venta} onChange={handleChange} error={errors.precio_venta} placeholder="0.00" />
+          <Input label="Stock actual" name="stock" type="number" min="0" value={form.stock} onChange={handleChange} error={errors.stock} />
+          <Input label="Stock mínimo" name="stock_minimo" type="number" min="0" value={form.stock_minimo} onChange={handleChange} error={errors.stock_minimo} />
           <Select label="Unidad" name="unidad" value={form.unidad} onChange={handleChange}>
             {unidades.map(u => <option key={u} value={u}>{u}</option>)}
           </Select>

@@ -97,8 +97,8 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
 
     const compraSubtotal = num(producto.precio_compra * cantidad)
     const compraDescuento = num((i % 2) * 3)
-    const compraImpuesto = num((compraSubtotal - compraDescuento) * 0.12)
-    const compraTotal = num(compraSubtotal - compraDescuento + compraImpuesto)
+    const compraImpuesto = 0
+    const compraTotal = num(compraSubtotal - compraDescuento)
 
     compras.push({
       id: `com-${run}-${pad(i + 1)}`,
@@ -128,8 +128,8 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
 
     const cotSubtotal = num(producto.precio_venta * cantidad)
     const cotDesc = num((i % 2) * 4)
-    const cotImp = num((cotSubtotal - cotDesc) * 0.12)
-    const cotTotal = num(cotSubtotal - cotDesc + cotImp)
+    const cotImp = 0
+    const cotTotal = num(cotSubtotal - cotDesc)
 
     cotizaciones.push({
       id: `cot-${run}-${pad(i + 1)}`,
@@ -160,8 +160,8 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
     const esPedido = i % 2 === 0
     const ventaSubtotal = num(producto.precio_venta * cantidad)
     const ventaDescuento = num((i % 3) * 5)
-    const ventaImpuesto = num((ventaSubtotal - ventaDescuento) * 0.12)
-    const ventaTotal = num(ventaSubtotal - ventaDescuento + ventaImpuesto)
+    const ventaImpuesto = 0
+    const ventaTotal = num(ventaSubtotal - ventaDescuento)
     const ventaId = `vta-${run}-${pad(i + 1)}`
     const numeroVenta = mkRef('VTA', run, i + 1)
 

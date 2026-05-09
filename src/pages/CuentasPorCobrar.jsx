@@ -4,6 +4,7 @@ import IconQ from '../components/ui/IconQ'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useEmpresa } from '../contexts/EmpresaContext'
 import { auditar } from '../services/auditoria'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
@@ -20,10 +21,13 @@ export default function CuentasPorCobrar() {
   const { cuentas, cuentasVencidas, totalPorCobrar, registrarAbono, abonos, crearCuenta } = useCuentasPorCobrar()
   const { clientes } = useApp()
   const { sesion } = useAuth()
+  const esAdmin = sesion?.rol === 'admin'
+  const { empresa } = useEmpresa()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [modalAbono, setModalAbono] = useState({ open: false, cuenta: null })
   const [formAbono, setFormAbono] = useState({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '' })
+  const [errAbono, setErrAbono] = useState('')
   const [loading, setLoading] = useState(false)
   const [modalNueva, setModalNueva] = useState(false)
   const [formNueva, setFormNueva] = useState({ cliente_id: '', monto_original: '', fecha_vencimiento: '', notas: '' })
@@ -44,6 +48,7 @@ export default function CuentasPorCobrar() {
   const abrirModalAbono = (cuenta) => {
     setModalAbono({ open: true, cuenta })
     setFormAbono({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '' })
+    setErrAbono('')
   }
 
   const cerrarModalAbono = () => {
@@ -52,13 +57,15 @@ export default function CuentasPorCobrar() {
 
   const handleRegistrarAbono = async () => {
     if (!modalAbono.cuenta) return
-    if (!formAbono.monto || Number(formAbono.monto) <= 0) return
+    if (!formAbono.monto || Number(formAbono.monto) <= 0) { setErrAbono('Ingresa un monto válido'); return }
 
     const montoAbono = Number(formAbono.monto)
-    if (montoAbono > modalAbono.cuenta.saldo) {
-      alert('El monto no puede ser mayor al saldo pendiente')
+    if (montoAbono > modalAbono.cuenta.saldo) { setErrAbono('El monto no puede ser mayor al saldo pendiente'); return }
+    if (formAbono.metodo_pago === 'transferencia' && !formAbono.referencia.trim()) {
+      setErrAbono('El número de comprobante es obligatorio para transferencias')
       return
     }
+    setErrAbono('')
 
     setLoading(true)
     await new Promise(r => setTimeout(r, 300))
@@ -78,7 +85,7 @@ export default function CuentasPorCobrar() {
 
     setLoading(false)
     cerrarModalAbono()
-    imprimirTicketAbono({ cuenta: cuentaSnapshot, ...abonoData, fecha: new Date().toISOString(), saldoAnterior })
+    if (esAdmin) imprimirTicketAbono({ cuenta: cuentaSnapshot, ...abonoData, fecha: new Date().toISOString(), saldoAnterior })
   }
 
   const estadoBadge = (estado) => {
@@ -104,58 +111,103 @@ export default function CuentasPorCobrar() {
   const imprimirTicketAbono = ({ cuenta, monto, metodo_pago, referencia, notas, fecha, saldoAnterior }) => {
     const saldoNuevo = saldoAnterior - monto
     const esCancelacion = saldoNuevo <= 0
-    const metodosLabel = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia', cheque: 'Cheque' }
-    const ventana = window.open('', '_blank', 'width=380,height=600')
+    const metodosLabel = { efectivo: 'Efectivo', transferencia: 'Transferencia', credito: 'Crédito' }
+    const nombreEmpresa = empresa?.nombre_comercial || 'Ferretería El Esfuerzo'
+    const fechaObj = new Date(fecha || new Date())
+    const fechaStr = fechaObj.toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const horaStr  = fechaObj.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
+    const ventana = window.open('', '_blank', 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
+    if (!ventana) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.'); return }
     ventana.document.write(`<!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
   <meta charset="UTF-8"/>
-  <title>Ticket de Abono</title>
+  <title>Comprobante ${cuenta.numero_documento}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Courier New', monospace; font-size: 12px; color: #111; width: 320px; margin: 0 auto; padding: 16px 8px; }
-    .center { text-align: center; }
-    .empresa { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
-    .subtitulo { font-size: 11px; color: #555; margin-bottom: 2px; }
-    .divider { border: none; border-top: 1px dashed #aaa; margin: 8px 0; }
-    .tipo-badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 3px 12px; border: 2px solid #111; border-radius: 4px; margin: 6px 0; letter-spacing: 0.08em; }
-    .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; }
-    .row .label { color: #555; }
-    .row .val { font-weight: 600; }
-    .monto-abono { text-align: center; font-size: 22px; font-weight: 700; margin: 10px 0 4px; }
-    .saldo-nuevo { text-align: center; font-size: 13px; color: ${esCancelacion ? '#16a34a' : '#d97706'}; font-weight: 700; margin-bottom: 4px; }
-    .notas { font-size: 11px; color: #555; font-style: italic; text-align: center; margin-top: 4px; }
-    .footer { font-size: 10px; color: #888; text-align: center; margin-top: 10px; }
-    @media print { body { width: 100%; padding: 8px; } }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      width: 72mm;
+      padding: 4px 4px;
+      color: #000000;
+      background: #ffffff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .center   { text-align: center; }
+    .bold     { font-weight: 700; }
+    .xl       { font-size: 15px; font-weight: 700; }
+    .lg       { font-size: 14px; font-weight: 700; }
+    .sep      { border-top: 1px solid #000000; margin: 5px 0; }
+    .sep-dash { border-top: 1px dashed #000000; margin: 4px 0; }
+    .row      { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 16px; margin: 6px 0 2px; }
+    .saldo-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; }
+    .badge    { display: block; text-align: center; font-size: 13px; font-weight: 700; border: 2px solid #000; border-radius: 3px; padding: 3px 0; margin: 6px 0; letter-spacing: 0.1em; }
+    .cancelado { border-color: #000; color: #000; }
+    .abono     { border-color: #000; color: #000; }
+    .saldo-ok  { color: #000; }
+    .saldo-pend{ color: #000; }
+    @media print {
+      @page { margin: 0; size: 80mm auto; }
+      body { width: 80mm; }
+    }
   </style>
 </head>
 <body>
-  <div class="center">
-    <p class="empresa">Ferretería El Esfuerzo</p>
-    <p class="subtitulo">Comprobante de ${esCancelacion ? 'Cancelación' : 'Abono'}</p>
-    <div class="tipo-badge">${esCancelacion ? '✓ CANCELADO' : 'ABONO'}</div>
+  <div class="center bold xl">${nombreEmpresa}</div>
+  ${empresa?.razon_social ? `<div class="center">${empresa.razon_social}</div>` : ''}
+  <div class="center">NIT: ${empresa?.nit || 'CF'}</div>
+  ${empresa?.telefono ? `<div class="center">Tel: ${empresa.telefono}</div>` : ''}
+
+  <div class="sep-dash"></div>
+
+  <div class="center" style="font-size:11px;font-weight:600">COMPROBANTE DE ${esCancelacion ? 'CANCELACIÓN' : 'ABONO'}</div>
+  <div class="badge ${esCancelacion ? 'cancelado' : 'abono'}">${esCancelacion ? '✓ CUENTA CANCELADA' : 'ABONO A CRÉDITO'}</div>
+
+  <div class="row"><span style="font-weight:600">Documento:</span><span>${cuenta.numero_documento}</span></div>
+  <div class="row"><span style="font-weight:600">Fecha:</span><span>${fechaStr} ${horaStr}</span></div>
+  <div class="row"><span style="font-weight:600">Cliente:</span><span>${cuenta.cliente_nombre}</span></div>
+  <div class="row"><span style="font-weight:600">Forma de pago:</span><span>${metodosLabel[metodo_pago] || metodo_pago}</span></div>
+  ${referencia ? `<div class="row"><span style="font-weight:600">Referencia:</span><span>${referencia}</span></div>` : ''}
+
+  <div class="sep-dash"></div>
+
+  <div class="row" style="font-weight:500"><span>Deuda original</span><span>${formatCurrency(cuenta.monto_original)}</span></div>
+  <div class="row" style="font-weight:500"><span>Ya pagado</span><span>${formatCurrency(cuenta.monto_pagado)}</span></div>
+  <div class="row" style="font-weight:500"><span>Saldo anterior</span><span>${formatCurrency(saldoAnterior)}</span></div>
+
+  <div class="sep"></div>
+
+  <div class="center" style="font-size:11px;margin-bottom:2px">Monto abonado</div>
+  <div class="total-row"><span>ABONO</span><span>${formatCurrency(monto)}</span></div>
+  <div class="sep"></div>
+  <div class="saldo-row ${esCancelacion ? 'saldo-ok' : 'saldo-pend'}">
+    <span>${esCancelacion ? 'Saldo pendiente' : 'Saldo restante'}</span>
+    <span>${esCancelacion ? formatCurrency(0) : formatCurrency(saldoNuevo)}</span>
   </div>
-  <hr class="divider"/>
-  <div class="row"><span class="label">Fecha:</span><span class="val">${formatDate(fecha || new Date().toISOString())}</span></div>
-  <div class="row"><span class="label">Documento:</span><span class="val">${cuenta.numero_documento}</span></div>
-  <div class="row"><span class="label">Cliente:</span><span class="val">${cuenta.cliente_nombre}</span></div>
-  <div class="row"><span class="label">Método pago:</span><span class="val">${metodosLabel[metodo_pago] || metodo_pago}</span></div>
-  ${referencia ? `<div class="row"><span class="label">Referencia:</span><span class="val">${referencia}</span></div>` : ''}
-  <hr class="divider"/>
-  <div class="row"><span class="label">Deuda original:</span><span class="val">${formatCurrency(cuenta.monto_original)}</span></div>
-  <div class="row"><span class="label">Pagado anterior:</span><span class="val">${formatCurrency(cuenta.monto_pagado)}</span></div>
-  <div class="row"><span class="label">Saldo anterior:</span><span class="val">${formatCurrency(saldoAnterior)}</span></div>
-  <hr class="divider"/>
-  <p class="monto-abono">${formatCurrency(monto)}</p>
-  <p class="saldo-nuevo">${esCancelacion ? '¡Cuenta CANCELADA!' : `Saldo restante: ${formatCurrency(saldoNuevo)}`}</p>
-  ${notas ? `<p class="notas">"${notas}"</p>` : ''}
-  <hr class="divider"/>
-  <p class="footer">Generado el ${formatDate(new Date().toISOString())}<br/>Ferretería El Esfuerzo &mdash; Gracias por su pago</p>
+
+  ${notas ? `<div class="sep-dash"></div><div class="center" style="font-size:11px;font-style:italic">"${notas}"</div>` : ''}
+
+  <div class="sep-dash"></div>
+
+  <div class="center bold" style="margin-top:6px">${empresa?.pie_factura || 'Gracias por su pago'}</div>
+  <div class="center" style="font-size:10px;color:#555;margin-top:4px">Cajero: ${sesion?.nombre || '—'}</div>
+
+  <div style="margin-top:16px"></div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+      setTimeout(function(){ window.close(); }, 800);
+    };
+  </script>
 </body>
 </html>`)
     ventana.document.close()
     ventana.focus()
-    setTimeout(() => { ventana.print() }, 400)
   }
 
   const handleCrearCuenta = async () => {
@@ -278,7 +330,7 @@ export default function CuentasPorCobrar() {
                     </td>
                     <td>
                       <div className="flex gap-1 justify-end items-center">
-                        {abonosCuenta.length > 0 && (
+                        {esAdmin && abonosCuenta.length > 0 && (
                           <button
                             onClick={() => {
                               const ultimo = abonosCuenta[abonosCuenta.length - 1]
@@ -380,7 +432,12 @@ export default function CuentasPorCobrar() {
             <Button variant="secondary" onClick={cerrarModalAbono}>
               Cancelar
             </Button>
-            <Button variant="success" loading={loading} onClick={handleRegistrarAbono}>
+            <Button
+              variant="success"
+              loading={loading}
+              disabled={formAbono.metodo_pago === 'transferencia' && !formAbono.referencia.trim()}
+              onClick={handleRegistrarAbono}
+            >
               Registrar abono
             </Button>
           </>
@@ -420,21 +477,23 @@ export default function CuentasPorCobrar() {
                       <span>{formatDate(a.fecha)}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-green-600">{formatCurrency(a.monto)}</span>
-                        <button
-                          onClick={() => imprimirTicketAbono({
-                            cuenta: modalAbono.cuenta,
-                            monto: a.monto,
-                            metodo_pago: a.metodo_pago,
-                            referencia: a.referencia,
-                            notas: a.notas,
-                            fecha: a.fecha,
-                            saldoAnterior: modalAbono.cuenta.saldo + a.monto,
-                          })}
-                          className="text-gray-400 hover:text-blue-600"
-                          title="Reimprimir ticket"
-                        >
-                          <Printer size={12} />
-                        </button>
+                        {esAdmin && (
+                          <button
+                            onClick={() => imprimirTicketAbono({
+                              cuenta: modalAbono.cuenta,
+                              monto: a.monto,
+                              metodo_pago: a.metodo_pago,
+                              referencia: a.referencia,
+                              notas: a.notas,
+                              fecha: a.fecha,
+                              saldoAnterior: modalAbono.cuenta.saldo + a.monto,
+                            })}
+                            className="text-gray-400 hover:text-blue-600"
+                            title="Reimprimir ticket"
+                          >
+                            <Printer size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -456,7 +515,7 @@ export default function CuentasPorCobrar() {
             <Select
               label="Método de pago"
               value={formAbono.metodo_pago}
-              onChange={e => setFormAbono(p => ({ ...p, metodo_pago: e.target.value }))}
+              onChange={e => setFormAbono(p => ({ ...p, metodo_pago: e.target.value, referencia: '' }))}
             >
               {METODOS_PAGO.map(m => (
                 <option key={m.value} value={m.value}>
@@ -466,11 +525,14 @@ export default function CuentasPorCobrar() {
             </Select>
 
             <Input
-              label="Referencia"
+              label={formAbono.metodo_pago === 'transferencia' ? 'N° comprobante de transferencia *' : 'Referencia'}
               value={formAbono.referencia}
-              onChange={e => setFormAbono(p => ({ ...p, referencia: e.target.value }))}
-              placeholder="N° de recibo, cheque, etc."
+              onChange={e => { setErrAbono(''); setFormAbono(p => ({ ...p, referencia: e.target.value })) }}
+              placeholder={formAbono.metodo_pago === 'transferencia' ? 'Obligatorio para transferencia' : 'N° de recibo, etc.'}
             />
+            {formAbono.metodo_pago === 'transferencia' && !formAbono.referencia.trim() && (
+              <p className="text-xs text-orange-500 -mt-2">⚠ Requerido para transferencia</p>
+            )}
 
             <div>
               <label className="label">Notas</label>
@@ -482,6 +544,7 @@ export default function CuentasPorCobrar() {
                 placeholder="Observaciones..."
               />
             </div>
+            {errAbono && <p className="text-xs text-red-500 font-medium">{errAbono}</p>}
           </div>
         )}
       </Modal>

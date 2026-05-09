@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { MapPin, ChevronRight, Printer, Package } from 'lucide-react'
+import { MapPin, ChevronRight, Printer, Package, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
 import { auditar } from '../services/auditoria'
@@ -65,6 +66,9 @@ export default function Pedidos() {
           <h1 className="page-title">Pedidos</h1>
           <p className="page-subtitle">{conteo.todos} pedidos · {conteo.pendiente} pendientes</p>
         </div>
+        <Link to="/ventas/nueva?pedido=1">
+          <Button variant="primary" icon={Plus}>Nuevo pedido</Button>
+        </Link>
       </div>
 
       {/* Tabs */}

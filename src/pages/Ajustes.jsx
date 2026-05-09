@@ -33,6 +33,7 @@ export default function Ajustes() {
   const [massiveQty, setMassiveQty] = useState(20)
   const [massiveConfirm, setMassiveConfirm] = useState(false)
 
+
   const mostrarAlerta = (type, message) => {
     setAlerta({ type, message })
     setTimeout(() => setAlerta(null), 4000)

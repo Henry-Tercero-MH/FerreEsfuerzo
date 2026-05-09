@@ -1,19 +1,87 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode } from 'lucide-react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode, Printer } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useCaja } from '../contexts/CajaContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useEmpresa } from '../contexts/EmpresaContext'
 import { auditar } from '../services/auditoria'
 import { formatCurrency } from '../utils/formatters'
-import { IMPUESTO_DEFAULT } from '../utils/constants'
 import Button from '../components/ui/Button'
-import { Select } from '../components/ui/Input'
 import ClienteSelector from '../components/shared/ClienteSelector'
 import { useToast } from '../hooks/useToast'
-import TicketVenta from '../components/TicketVenta'
+import { imprimirTicket } from '../components/TicketVenta'
+
+function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
+  const { empresa } = useEmpresa()
+  const [cuenta, setCuenta] = useState(8)
+
+  useEffect(() => {
+    if (exito.es_pedido) return
+    const t = setInterval(() => setCuenta(c => c - 1), 1000)
+    return () => clearInterval(t)
+  }, [exito.es_pedido])
+
+  useEffect(() => {
+    if (cuenta <= 0) onNuevaVenta()
+  }, [cuenta, onNuevaVenta])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'F12') { e.preventDefault(); imprimirTicket(exito, clienteExito, empresa) }
+      if (e.key === 'F1')  { e.preventDefault(); onNuevaVenta() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [exito, clienteExito, empresa, onNuevaVenta])
+
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-in">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+        <CheckCircle size={40} className="text-green-600" />
+      </div>
+      <h2 className="text-2xl font-bold text-gray-900">
+        {exito.es_pedido ? '¡Pedido registrado!' : '¡Venta registrada!'}
+      </h2>
+      <p className="text-gray-500">{exito.numero_venta} — Total: {formatCurrency(exito.total)}</p>
+      {exito.pago_recibido > 0 && (
+        <div className="flex items-center gap-3 rounded-xl bg-green-50 border border-green-200 px-6 py-3">
+          <div className="text-center">
+            <p className="text-xs text-green-600 font-medium">Recibido</p>
+            <p className="text-lg font-bold text-green-700">{formatCurrency(exito.pago_recibido)}</p>
+          </div>
+          <div className="text-2xl text-green-400">→</div>
+          <div className="text-center">
+            <p className="text-xs text-green-600 font-medium">Cambio</p>
+            <p className="text-2xl font-bold text-green-700">{formatCurrency(exito.cambio || 0)}</p>
+          </div>
+        </div>
+      )}
+      {exito.es_pedido && (
+        <p className="text-sm text-primary-600 flex items-center gap-1">
+          <MapPin size={14} /> {exito.direccion_entrega}
+        </p>
+      )}
+      {!exito.es_pedido && (
+        <p className="text-xs text-gray-400">Nueva venta en {cuenta}s...</p>
+      )}
+      <div className="flex flex-wrap gap-3 mt-2 justify-center">
+        <button
+          onClick={() => imprimirTicket(exito, clienteExito, empresa)}
+          className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+        >
+          <Printer size={14} /> Imprimir ticket
+        </button>
+        <Button variant="secondary" onClick={onNuevaVenta}>Nueva venta</Button>
+        <Button variant="primary" onClick={onVerHistorial}>
+          {exito.es_pedido ? 'Ver pedidos' : 'Ver ventas'}
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 export default function NuevaVenta() {
   const { productos, clientes, crearVenta } = useApp()
@@ -22,6 +90,7 @@ export default function NuevaVenta() {
   const { registrarVentaEnCaja, cajaAbierta } = useCaja()
   const { sesion } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { toast } = useToast()
 
   const [busqueda, setBusqueda] = useState('')
@@ -32,9 +101,11 @@ export default function NuevaVenta() {
   const [metodoPago, setMetodoPago] = useState('efectivo')
   const [descuentoGlobal, setDescuentoGlobal] = useState(0)
   const [notas, setNotas] = useState('')
-  const [esPedido, setEsPedido] = useState(false)
+  const [esPedido, setEsPedido] = useState(() => searchParams.get('pedido') === '1')
   const [direccionEntrega, setDireccionEntrega] = useState('')
   const [diasCredito, setDiasCredito] = useState(30)
+  const [comprobante, setComprobante] = useState('')
+  const [pagoRecibido, setPagoRecibido] = useState('')
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(null)
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
@@ -122,11 +193,16 @@ export default function NuevaVenta() {
     if (tipoDescuento === 'fijo') return Math.min(Math.max(Number(descuentoGlobal) || 0, 0), subtotal)
     return 0
   })()
-  const baseImponible = subtotal - descuento
-  const impuesto = baseImponible * IMPUESTO_DEFAULT
-  const total = baseImponible + impuesto
+  const impuesto = 0
+  const total = subtotal - descuento
 
   const esCredito = metodoPago === 'credito'
+  const confirmarDeshabilitado = !cajaAbierta || items.length === 0
+    || (esPedido && (clienteId === 'cf' || !direccionEntrega.trim()))
+    || (esCredito && clienteId === 'cf')
+    || (metodoPago === 'transferencia' && !comprobante.trim())
+  const pagoNum = parseFloat(pagoRecibido) || 0
+  const cambio  = metodoPago === 'efectivo' && pagoNum >= total ? pagoNum - total : 0
 
   const categorias = [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort()
 
@@ -147,19 +223,27 @@ export default function NuevaVenta() {
     if (esPedido && clienteId === 'cf') { toast('Selecciona un cliente para pedidos', 'error'); return }
     if (esPedido && !direccionEntrega.trim()) { toast('Ingresa dirección de entrega para pedidos', 'error'); return }
     if (esCredito && clienteId === 'cf') { toast('El consumidor final no puede comprar a crédito', 'error'); return }
+    if (metodoPago === 'transferencia' && !comprobante.trim()) { toast('Ingresa el número de comprobante de transferencia', 'error'); return }
     if (Number(descuentoGlobal) < 0) { toast('El descuento no puede ser negativo', 'error'); return }
     if (esCredito && (!diasCredito || Number(diasCredito) < 1)) { toast('Ingresa días de crédito válidos', 'error'); return }
     
     setLoading(true)
     try {
       await new Promise(r => setTimeout(r, 400))
+      const notasFinales = metodoPago === 'transferencia' && comprobante.trim()
+        ? `Comprobante: ${comprobante.trim()}${notas.trim() ? ` | ${notas.trim()}` : ''}`
+        : notas
       const venta = crearVenta({
         items, cliente_id: clienteId, metodo_pago: metodoPago,
-        subtotal, descuento, impuesto, total, notas,
+        subtotal, descuento, impuesto, total, notas: notasFinales,
         es_pedido: esPedido,
         direccion_entrega: esPedido ? direccionEntrega.trim() : '',
         usuario_id: sesion?.id || '',
         usuario_nombre: sesion?.nombre || '',
+        ...(metodoPago === 'efectivo' && pagoNum > 0 && {
+          pago_recibido: pagoNum,
+          cambio: Math.max(0, pagoNum - total),
+        }),
       })
       if (!venta) { toast('No autorizado para crear ventas', 'error'); return }
       
@@ -202,33 +286,61 @@ export default function NuevaVenta() {
     }
   }
 
+  const resetVenta = useCallback(() => {
+    setItems([])
+    setEsPedido(false)
+    setDireccionEntrega('')
+    setClienteId('cf')
+    setMetodoPago('efectivo')
+    setDescuentoGlobal(0)
+    setTipoDescuento('ninguno')
+    setNotas('')
+    setComprobante('')
+    setPagoRecibido('')
+    setExito(null)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [])
+
+  // ── Atajos de teclado ────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      // No activar si el foco está en un input/textarea/select (excepto F2)
+      const enInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+
+      if (e.key === 'F1') {
+        e.preventDefault()
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }
+
+      if (e.key === 'F2') {
+        e.preventDefault()
+        if (!loading && !confirmarDeshabilitado) handleConfirmar()
+      }
+
+      if (e.key === 'F3') {
+        e.preventDefault()
+        if (items.length > 0) setItems([])
+      }
+
+      if (e.key === 'Escape' && !enInput) {
+        setBusqueda('')
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [loading, items, confirmarDeshabilitado, handleConfirmar])
+
   if (exito) {
     const clienteExito = clientes.find(c => c.id === exito.cliente_id) || null
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-in">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle size={40} className="text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          {exito.es_pedido ? '¡Pedido registrado!' : '¡Venta registrada!'}
-        </h2>
-        <p className="text-gray-500">{exito.numero_venta} — Total: {formatCurrency(exito.total)}</p>
-        {exito.es_pedido && (
-          <p className="text-sm text-primary-600 flex items-center gap-1">
-            <MapPin size={14} /> {exito.direccion_entrega}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-3 mt-2 justify-center">
-          <TicketVenta venta={exito} cliente={clienteExito} />
-          <Button variant="secondary" onClick={() => { setItems([]); setEsPedido(false); setDireccionEntrega(''); setExito(null) }}>
-            Nueva venta
-          </Button>
-          {exito.es_pedido
-            ? <Button variant="primary" onClick={() => navigate('/pedidos')}>Ver pedidos</Button>
-            : <Button variant="primary" onClick={() => navigate('/ventas')}>Ver ventas</Button>
-          }
-        </div>
-      </div>
+      <ExitoVenta
+        exito={exito}
+        clienteExito={clienteExito}
+        onNuevaVenta={resetVenta}
+        onVerHistorial={() => navigate(exito.es_pedido ? '/pedidos' : '/ventas')}
+      />
     )
   }
 
@@ -260,6 +372,11 @@ export default function NuevaVenta() {
           </select>
           <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
             <Barcode size={13} /> Escáner listo
+          </span>
+          <span className="hidden lg:flex items-center gap-2 text-xs text-gray-400 shrink-0 border-l border-gray-200 pl-3 ml-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F1</kbd> Buscar
+            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F2</kbd> Cobrar
+            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F3</kbd> Limpiar
           </span>
         </div>
         {!cajaAbierta && (
@@ -383,13 +500,37 @@ export default function NuevaVenta() {
 
           {/* Totales */}
           <div className="px-3 py-1.5 border-t border-gray-100 space-y-0.5 text-xs">
-            <div className="flex justify-between text-gray-500"><span>Bruto</span><span>{formatCurrency(subtotal)}</span></div>
+            <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
             {descuento > 0 && <div className="flex justify-between text-red-500"><span>Descuento</span><span>-{formatCurrency(descuento)}</span></div>}
-            <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>{formatCurrency(subtotal - descuento)}</span></div>
             <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200 mt-1">
               <span>Total</span><span>{formatCurrency(total)}</span>
             </div>
           </div>
+
+          {/* Pago en efectivo / cambio */}
+          {metodoPago === 'efectivo' && (
+            <div className="px-2 py-1.5 border-t border-gray-100 space-y-1">
+              <p className="text-xs font-semibold text-gray-600">Pago recibido</p>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={pagoRecibido}
+                onChange={e => setPagoRecibido(e.target.value)}
+                placeholder={`Mín. ${formatCurrency(total)}`}
+                className={`input text-xs py-1 font-semibold ${pagoNum > 0 && pagoNum < total ? 'border-red-400 focus:border-red-500' : pagoNum >= total ? 'border-green-400' : ''}`}
+              />
+              {pagoNum > 0 && pagoNum < total && (
+                <p className="text-xs text-red-500">⚠ Pago insuficiente — faltan {formatCurrency(total - pagoNum)}</p>
+              )}
+              {pagoNum >= total && (
+                <div className="flex justify-between items-center rounded-lg bg-green-50 border border-green-200 px-2 py-1.5">
+                  <span className="text-xs font-semibold text-green-700">Cambio</span>
+                  <span className="text-sm font-bold text-green-700">{formatCurrency(cambio)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Cliente */}
           <div className="px-2 py-1.5 border-t border-gray-100">
@@ -402,12 +543,24 @@ export default function NuevaVenta() {
             <p className="text-xs font-semibold text-gray-600 mb-1">Método de pago</p>
             <div className="flex gap-1 flex-wrap">
               {metodos_pago.map(m => (
-                <button key={m.value} onClick={() => setMetodoPago(m.value)}
+                <button key={m.value} onClick={() => { setMetodoPago(m.value); if (m.value !== 'transferencia') setComprobante('') }}
                   className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${metodoPago === m.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                   {m.label}
                 </button>
               ))}
             </div>
+            {metodoPago === 'transferencia' && (
+              <div className="mt-1">
+                <input
+                  type="text"
+                  value={comprobante}
+                  onChange={e => setComprobante(e.target.value)}
+                  placeholder="N° comprobante (obligatorio)"
+                  className={`input text-xs py-1 ${!comprobante.trim() ? 'border-orange-400 focus:border-orange-500' : 'border-green-400'}`}
+                />
+                {!comprobante.trim() && <p className="text-xs text-orange-500 mt-0.5">⚠ Requerido para transferencia</p>}
+              </div>
+            )}
             {esCredito && (
               <div className="mt-1 space-y-0.5">
                 <input type="number" min="1" value={diasCredito} onChange={e => setDiasCredito(e.target.value)}
@@ -455,7 +608,7 @@ export default function NuevaVenta() {
             <Button
               variant="success"
               className="w-full"
-              disabled={!cajaAbierta || items.length === 0 || (esPedido && (clienteId === 'cf' || !direccionEntrega.trim())) || (esCredito && clienteId === 'cf')}
+              disabled={confirmarDeshabilitado}
               loading={loading}
               onClick={handleConfirmar}
             >
