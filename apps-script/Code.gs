@@ -39,6 +39,7 @@ const HOJAS = {
   usuarios:          'Usuarios',
   catalogos:         'Catalogos',
   auditoria:         'Auditoria',
+  configuracion:     'Configuracion',
 }
 
 // ── Punto de entrada POST ──────────────────────────────────────
@@ -91,6 +92,12 @@ function doPost(e) {
       }
       case 'initSheets':
         result = inicializarHojas()
+        break
+      case 'getConfig':
+        result = getConfig()
+        break
+      case 'saveConfig':
+        result = saveConfig(body.data)
         break
       case 'reporte':
       case 'GET_RESUMEN':
@@ -295,6 +302,48 @@ function getResumen(periodo) {
   return { total, cantidad: filtrado.length, periodo: periodo || 'todos' }
 }
 
+// ── Configuración global (clave/valor) ───────────────────────
+
+function getConfig() {
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
+  const hoja = _getOrCreateSheet(ss, 'Configuracion', ['clave', 'valor', 'actualizado_en'])
+  const vals = hoja.getDataRange().getValues()
+  if (vals.length < 2) return { ok: true, data: {} }
+  const data = {}
+  for (let i = 1; i < vals.length; i++) {
+    const clave = String(vals[i][0])
+    if (clave) data[clave] = vals[i][1]
+  }
+  return { ok: true, data }
+}
+
+function saveConfig(data) {
+  if (!data) throw new Error('Sin datos')
+  const ss   = SpreadsheetApp.getActiveSpreadsheet()
+  const hoja = _getOrCreateSheet(ss, 'Configuracion', ['clave', 'valor', 'actualizado_en'])
+  const ahora = new Date().toISOString()
+
+  // Carga filas existentes para hacer upsert
+  const vals    = hoja.getDataRange().getValues()
+  const headers = vals[0] || []
+  const existing = {}  // clave → rowIndex (1-based, contando header)
+  for (let i = 1; i < vals.length; i++) {
+    existing[String(vals[i][0])] = i + 1
+  }
+
+  Object.entries(data).forEach(([clave, valor]) => {
+    const valorStr = typeof valor === 'object' ? JSON.stringify(valor) : String(valor)
+    if (existing[clave]) {
+      hoja.getRange(existing[clave], 2).setValue(valorStr)
+      hoja.getRange(existing[clave], 3).setValue(ahora)
+    } else {
+      hoja.appendRow([clave, valorStr, ahora])
+    }
+  })
+
+  return { ok: true, guardadas: Object.keys(data).length }
+}
+
 // ── Helpers internos ──────────────────────────────────────────
 
 /**
@@ -360,6 +409,7 @@ function _headers() {
     usuarios:          ['id','nombre','email','password_hash','rol','activo','creado_en'],
     catalogos:         ['tipo','codigo','valor','descripcion','orden'],
     auditoria:         ['id','fecha','usuario_id','usuario_nombre','usuario_rol','accion','entidad','entidad_id','descripcion','detalle'],
+    configuracion:     ['clave','valor','actualizado_en'],
   }
 }
 

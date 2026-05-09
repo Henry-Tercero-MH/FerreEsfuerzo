@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { ShoppingCart, Package, Users, TrendingUp, AlertTriangle, ArrowRight, ClipboardList, Tag } from 'lucide-react'
+import { ShoppingCart, Package, Users, TrendingUp, AlertTriangle, ArrowRight, ClipboardList, Tag, Wallet } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { StatCard } from '../components/ui/Card'
 import { formatCurrency, formatDateTime } from '../utils/formatters'
 import Badge from '../components/ui/Badge'
@@ -11,6 +12,7 @@ import { ESTADOS_VENTA } from '../utils/constants'
 // ── Admin: ve todo ─────────────────────────────────────────────
 function DashboardAdmin({ sesion, datos }) {
   const { totalVentasHoy, totalProductos, totalClientes, totalVentas, productosStockBajo, ultimasVentas } = datos
+  const { totalPorCobrar, cuentasVencidas } = useCuentasPorCobrar()
   return (
     <div className="space-y-6">
       <div>
@@ -18,11 +20,21 @@ function DashboardAdmin({ sesion, datos }) {
         <p className="page-subtitle">Resumen general del negocio</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Ventas de hoy" value={formatCurrency(totalVentasHoy)} icon={TrendingUp} iconBg="bg-green-100" iconColor="text-green-600" />
         <StatCard label="Total ventas" value={totalVentas.toLocaleString()} icon={ShoppingCart} iconBg="bg-blue-100" iconColor="text-blue-600" />
         <StatCard label="Productos activos" value={totalProductos.toLocaleString()} icon={Package} iconBg="bg-purple-100" iconColor="text-purple-600" />
         <StatCard label="Clientes" value={totalClientes.toLocaleString()} icon={Users} iconBg="bg-orange-100" iconColor="text-orange-600" />
+        <Link to="/cuentas-por-cobrar" className="block">
+          <StatCard
+            label="Cuentas por cobrar"
+            value={formatCurrency(totalPorCobrar)}
+            icon={Wallet}
+            iconBg={cuentasVencidas.length > 0 ? 'bg-red-100' : 'bg-teal-100'}
+            iconColor={cuentasVencidas.length > 0 ? 'text-red-600' : 'text-teal-600'}
+            sub={cuentasVencidas.length > 0 ? `${cuentasVencidas.length} vencida(s)` : undefined}
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

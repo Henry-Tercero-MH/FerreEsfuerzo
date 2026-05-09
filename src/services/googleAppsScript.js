@@ -138,3 +138,11 @@ export async function testConexion() {
   }
 }
 
+export async function gasGetConfig() {
+  try { return await post('getConfig', {}) } catch { return { ok: false, data: {} } }
+}
+
+export async function gasSaveConfig(data) {
+  try { return await post('saveConfig', { data }) } catch { return { ok: false } }
+}
+

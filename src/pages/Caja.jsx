@@ -118,25 +118,25 @@ export default function Caja() {
         <tr>
           <td>${m.tipo === 'INGRESO' ? 'Ingreso' : 'Egreso'}</td>
           <td>${m.concepto}</td>
-          <td style="text-align:right;color:${m.tipo === 'INGRESO' ? '#16a34a' : '#dc2626'}">${m.tipo === 'INGRESO' ? '+' : '-'}Q${Number(m.monto).toFixed(2)}</td>
+          <td style="text-align:right;font-weight:${m.tipo === 'EGRESO' ? '700' : 'normal'}">${m.tipo === 'INGRESO' ? '+' : '-'}Q${Number(m.monto).toFixed(2)}</td>
         </tr>`).join('')
-      : '<tr><td colspan="3" style="text-align:center;color:#9ca3af">Sin movimientos</td></tr>'
+      : '<tr><td colspan="3" style="text-align:center">Sin movimientos</td></tr>'
 
     const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
 <title>Cierre de Caja — ${formatDateTime(a.fecha_cierre)}</title>
 <style>
-  body { font-family: Arial, sans-serif; font-size: 13px; max-width: 700px; margin: 40px auto; color: #111; }
+  body { font-family: Arial, sans-serif; font-size: 13px; max-width: 700px; margin: 40px auto; color: #000; }
   h1 { font-size: 20px; margin-bottom: 4px; }
-  .sub { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+  .sub { color: #000; font-size: 12px; margin-bottom: 24px; }
   .section { margin-bottom: 20px; }
-  .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 10px; }
+  .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #000; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 10px; }
   .row { display: flex; justify-content: space-between; padding: 3px 0; }
-  .row.total { font-weight: 700; font-size: 15px; border-top: 2px solid #111; padding-top: 6px; margin-top: 4px; }
-  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  .row.total { font-weight: 700; font-size: 15px; border-top: 2px solid #000; padding-top: 6px; margin-top: 4px; }
+  .pos { color: #000; } .neg { color: #000; font-weight: 700; }
   table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; color: #6b7280; padding: 4px 6px; border-bottom: 1px solid #e5e7eb; }
-  td { padding: 5px 6px; border-bottom: 1px solid #f3f4f6; }
+  th { text-align: left; font-size: 11px; color: #000; padding: 4px 6px; border-bottom: 1px solid #000; }
+  td { padding: 5px 6px; border-bottom: 1px solid #ccc; }
   @media print { body { margin: 10px; } }
 </style></head><body>
 <h1>Arqueo de Caja</h1>
@@ -169,11 +169,11 @@ ${vtas.length ? `<div class="section">
     <tr>
       <td style="font-family:monospace;font-size:11px">${v.numero_venta}</td>
       <td>${v.cliente_nombre || 'Consumidor Final'}</td>
-      <td style="color:#6b7280">${v.usuario_nombre || '—'}</td>
+      <td>${v.usuario_nombre || '—'}</td>
       <td>${v.metodo_pago === 'efectivo' ? 'Efectivo' : v.metodo_pago === 'tarjeta' ? 'Tarjeta' : v.metodo_pago === 'credito' ? 'Crédito' : v.metodo_pago}</td>
       <td style="text-align:right;font-weight:600">Q${Number(v.total).toFixed(2)}</td>
     </tr>
-    ${(v.items || []).map(i => `<tr style="background:#f9fafb"><td></td><td style="color:#6b7280;font-size:11px;padding-left:16px">↳ ${i.nombre}</td><td></td><td style="color:#6b7280;font-size:11px">${i.cantidad} × Q${Number(i.precio_unitario).toFixed(2)}</td><td style="text-align:right;color:#6b7280;font-size:11px">Q${Number(i.subtotal).toFixed(2)}</td></tr>`).join('')}
+    ${(v.items || []).map(i => `<tr><td></td><td style="font-size:11px;padding-left:16px">↳ ${i.nombre}</td><td></td><td style="font-size:11px">${i.cantidad} × Q${Number(i.precio_unitario).toFixed(2)}</td><td style="text-align:right;font-size:11px">Q${Number(i.subtotal).toFixed(2)}</td></tr>`).join('')}
   `).join('')}</tbody>
   <tfoot><tr style="font-weight:700;border-top:2px solid #111"><td colspan="4">Total ventas</td><td style="text-align:right">Q${vtas.reduce((s, v) => s + Number(v.total), 0).toFixed(2)}</td></tr></tfoot>
   </table>
@@ -187,7 +187,7 @@ ${movs.length ? `<div class="section">
 
 ${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p></div>` : ''}
 
-<p style="margin-top:32px;font-size:11px;color:#9ca3af;text-align:center">Generado por FerreApp · ${new Date().toLocaleString('es-GT')}</p>
+<p style="margin-top:32px;font-size:11px;text-align:center">Generado por FerreApp · ${new Date().toLocaleString('es-GT')}</p>
 </body></html>`
 
     const w = window.open('', '_blank', 'width=800,height=700')

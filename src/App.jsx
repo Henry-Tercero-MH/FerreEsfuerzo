@@ -8,6 +8,7 @@ import { CotizacionesProvider } from './contexts/CotizacionesContext'
 import { CajaProvider } from './contexts/CajaContext'
 import { CuentasPorCobrarProvider } from './contexts/CuentasPorCobrarContext'
 import { EmpresaProvider } from './contexts/EmpresaContext'
+import { TemaProvider } from './contexts/TemaContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
@@ -36,6 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <TemaProvider>
         <EmpresaProvider>
           <CatalogosProvider>
           <AppProvider>
@@ -83,6 +85,7 @@ export default function App() {
           </AppProvider>
           </CatalogosProvider>
         </EmpresaProvider>
+        </TemaProvider>
       </AuthProvider>
     </BrowserRouter>
   )

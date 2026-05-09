@@ -215,7 +215,9 @@ export default function Productos() {
             <option value="">Seleccionar...</option>
             {categorias.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
-          <Input label="Precio compra (Q)" name="precio_compra" type="number" min="0" value={form.precio_compra} onChange={handleChange} error={errors.precio_compra} placeholder="0.00" />
+          {sesion?.rol === 'admin' && (
+            <Input label="Precio compra (Q)" name="precio_compra" type="number" min="0" value={form.precio_compra} onChange={handleChange} error={errors.precio_compra} placeholder="0.00" />
+          )}
           <Input label="Precio venta (Q) *" name="precio_venta" type="number" min="0" value={form.precio_venta} onChange={handleChange} error={errors.precio_venta} placeholder="0.00" />
           <Input label="Stock actual" name="stock" type="number" min="0" value={form.stock} onChange={handleChange} error={errors.stock} />
           <Input label="Stock mínimo" name="stock_minimo" type="number" min="0" value={form.stock_minimo} onChange={handleChange} error={errors.stock_minimo} />

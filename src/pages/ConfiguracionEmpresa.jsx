@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Building2, Save, AlertCircle, ShieldCheck } from 'lucide-react'
+import { Building2, Save, AlertCircle, ShieldCheck, Palette } from 'lucide-react'
 import { useEmpresa } from '../contexts/EmpresaContext'
 import { useAuth } from '../contexts/AuthContext'
 import { MODULOS, ROLES_DEFAULT } from '../contexts/AuthContext'
+import { useTema, PALETAS } from '../contexts/TemaContext'
 import { validateEmpresa } from '../utils/validators'
 import { auditar } from '../services/auditoria'
 import Button from '../components/ui/Button'
@@ -18,6 +19,7 @@ const ROLES_CONFIGURABLES = [
 export default function ConfiguracionEmpresa() {
   const { empresa, actualizarEmpresa } = useEmpresa()
   const { sesion, rbac, actualizarRbac } = useAuth()
+  const { paleta, cambiarPaleta } = useTema()
   const [form, setForm] = useState({ ...empresa })
   // RBAC local — copia editable hasta que se guarda
   const [rbacForm, setRbacForm] = useState(() => {
@@ -362,6 +364,37 @@ export default function ConfiguracionEmpresa() {
           >
             Guardar permisos
           </Button>
+        </div>
+      </div>
+
+      {/* Paleta de colores */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-1">
+          <Palette size={20} className="text-primary-600" />
+          <h2 className="text-base font-semibold text-gray-900">Paleta de colores</h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">El cambio se aplica inmediatamente y se guarda en la nube.</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {Object.entries(PALETAS).map(([id, info]) => (
+            <button
+              key={id}
+              onClick={() => cambiarPaleta(id)}
+              className={`flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all ${
+                paleta === id
+                  ? 'border-gray-900 shadow-md'
+                  : 'border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              <span
+                className="h-8 w-8 rounded-full shadow-inner"
+                style={{ background: info.preview }}
+              />
+              <span className="text-xs font-medium text-gray-700 text-center leading-tight">{info.label}</span>
+              {paleta === id && (
+                <span className="text-xs font-bold text-primary-600">Activa</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
