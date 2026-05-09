@@ -5,17 +5,17 @@
 @layer base {
   /* ── Paleta de colores (cambiar aquí para re-tematizar) ── */
   :root {
-    /* Primary — Azul corporativo marino */
-    --color-primary-50:  239 244 251;
-    --color-primary-100: 214 228 245;
-    --color-primary-200: 173 201 235;
-    --color-primary-300: 122 168 220;
-    --color-primary-400:  78 135 204;
-    --color-primary-500:  46  95 163;
-    --color-primary-600:  29  66 133;
-    --color-primary-700:  21  48 101;
-    --color-primary-800:  14  32  72;
-    --color-primary-900:   8  19  48;
+    /* Primary — Azul Navy */
+    --color-primary-50:  235 241 252;
+    --color-primary-100: 207 220 248;
+    --color-primary-200: 157 185 240;
+    --color-primary-300: 100 143 225;
+    --color-primary-400:  55 105 205;
+    --color-primary-500:  26  75 180;
+    --color-primary-600:  15  52 150;
+    --color-primary-700:   8  35 115;
+    --color-primary-800:   3  20  80;
+    --color-primary-900:   1  10  50;
 
     /* Secondary — Gris azulado neutro */
     --color-secondary-50:  248 250 252;
@@ -31,15 +31,15 @@
 
     /* Accent */
     --color-accent-orange: 249 115  22;
-    --color-accent-purple: 168  85 247;
+    --color-accent-purple: 124  58 237;
     --color-accent-pink:   236  72 153;
     --color-accent-teal:    20 184 166;
     --color-accent-lime:   132 204  22;
 
-    /* Brand — Azul marino profundo */
-    --color-brand:        26  58 107;
-    --color-brand-light: 173 201 235;
-    --color-brand-dark:    8  19  48;
+    /* Brand — Navy profundo */
+    --color-brand:         8  35 115;
+    --color-brand-light: 157 185 240;
+    --color-brand-dark:    1  10  50;
   }
 
   /* ── Ejemplo de tema alternativo ── */

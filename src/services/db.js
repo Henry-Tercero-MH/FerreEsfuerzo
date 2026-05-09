@@ -247,22 +247,26 @@ export async function syncPending() {
     
     try {
       if (item.action === 'insert') {
-        await gasInsert(item.entity, item.data)
-        // Sincronizar items relacionados
-        if (item.entity === 'ventas' && item.data.items?.length) {
-          await Promise.all(item.data.items.map(i =>
-            gasInsert('ventaItems', { ...i, venta_id: item.data.id })
-          ))
-        }
-        if (item.entity === 'cotizaciones' && item.data.items?.length) {
-          await Promise.all(item.data.items.map(i =>
-            gasInsert('cotizacionItems', { ...i, cotizacion_id: item.data.id })
-          ))
-        }
-        if (item.entity === 'compras' && item.data.items?.length) {
-          await Promise.all(item.data.items.map(i =>
-            gasInsert('compraItems', { ...i, compra_id: item.data.id })
-          ))
+        // Verificar si el registro ya fue sincronizado (evita duplicados al reintentar)
+        const res = await gasGetAll(item.entity)
+        const yaExiste = res.ok && Array.isArray(res.data) && res.data.some(r => String(r.id) === String(item.data.id))
+        if (!yaExiste) {
+          await gasInsert(item.entity, item.data)
+          if (item.entity === 'ventas' && item.data.items?.length) {
+            await Promise.all(item.data.items.map(i =>
+              gasInsert('ventaItems', { ...i, venta_id: item.data.id })
+            ))
+          }
+          if (item.entity === 'cotizaciones' && item.data.items?.length) {
+            await Promise.all(item.data.items.map(i =>
+              gasInsert('cotizacionItems', { ...i, cotizacion_id: item.data.id })
+            ))
+          }
+          if (item.entity === 'compras' && item.data.items?.length) {
+            await Promise.all(item.data.items.map(i =>
+              gasInsert('compraItems', { ...i, compra_id: item.data.id })
+            ))
+          }
         }
       } else if (item.action === 'update') {
         await gasUpdate(item.entity, item.recordId, item.data)

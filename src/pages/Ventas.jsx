@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Eye, XCircle, ShoppingCart, Lock, Filter, Printer } from 'lucide-react'
+import { Plus, Eye, XCircle, ShoppingCart, Lock, Printer } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,7 +29,7 @@ export default function Ventas() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroUsuario, setFiltroUsuario] = useState('')
-  const [mostrarFiltroUsuario, setMostrarFiltroUsuario] = useState(false)
+  const [filtroFecha, setFiltroFecha] = useState('')
   const [ventaDetalle, setVentaDetalle] = useState(null)
   const [confirm, setConfirm] = useState(null)
 
@@ -50,13 +50,29 @@ export default function Ventas() {
     (sesion?.id && v.usuario_id && v.usuario_id === sesion.id) ||
     (sesion?.nombre && v.usuario_nombre && v.usuario_nombre === sesion.nombre)
 
-  const ventasFiltradas = useMemo(() => [...ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).filter(v => {
-    if (!esAdmin && !esMiVenta(v)) return false
-    const coincide   = !termino || v.numero_venta.includes(termino.toUpperCase())
-    const porEstado  = !filtroEstado || v.estado === filtroEstado
-    const porUsuario = !filtroUsuario || v.usuario_id === filtroUsuario
-    return coincide && porEstado && porUsuario
-  }), [ventas, termino, filtroEstado, filtroUsuario, esAdmin, sesion])
+  const ventasFiltradas = useMemo(() => {
+    const ahora = new Date()
+    return [...ventas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).filter(v => {
+      if (!esAdmin && !esMiVenta(v)) return false
+      const coincide   = !termino || v.numero_venta.includes(termino.toUpperCase())
+      const porEstado  = !filtroEstado || v.estado === filtroEstado
+      const porUsuario = !filtroUsuario || v.usuario_id === filtroUsuario
+      let porFecha = true
+      if (filtroFecha) {
+        const fecha = new Date(v.fecha)
+        if (filtroFecha === 'hoy') {
+          porFecha = fecha.toDateString() === ahora.toDateString()
+        } else if (filtroFecha === 'semana') {
+          const inicio = new Date(ahora); inicio.setDate(ahora.getDate() - ahora.getDay())
+          inicio.setHours(0,0,0,0)
+          porFecha = fecha >= inicio
+        } else if (filtroFecha === 'mes') {
+          porFecha = fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear()
+        }
+      }
+      return coincide && porEstado && porUsuario && porFecha
+    })
+  }, [ventas, termino, filtroEstado, filtroUsuario, filtroFecha, esAdmin, sesion])
 
   const getClienteNombre = (id) => clientes.find(c => c.id === id)?.nombre ?? 'Consumidor Final'
   const getMetodoPago = (val) => METODOS_PAGO.find(m => m.value === val)?.label ?? val
@@ -80,31 +96,26 @@ export default function Ventas() {
             {!esAdmin && <span className="ml-1 text-primary-600 font-medium">— solo las tuyas</span>}
           </p>
         </div>
-        <div className="flex gap-2">
-          {esAdmin && (
-            <Button
-              variant={mostrarFiltroUsuario ? 'primary' : 'secondary'}
-              icon={Filter}
-              onClick={() => { setMostrarFiltroUsuario(v => !v); setFiltroUsuario('') }}
-            >
-              Filtrar por usuario
-            </Button>
-          )}
-          <Link to="/ventas/nueva">
-            <Button variant="primary" icon={Plus}>Nueva venta</Button>
-          </Link>
-        </div>
+        <Link to="/ventas/nueva">
+          <Button variant="primary" icon={Plus}>Nueva venta</Button>
+        </Link>
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar por número de venta..." className="flex-1" />
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="input sm:w-44">
+      <div className="flex flex-wrap gap-3">
+        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar por número de venta..." className="flex-1 min-w-48" />
+        <select value={filtroFecha} onChange={e => setFiltroFecha(e.target.value)} className="input sm:w-40">
+          <option value="">Todas las fechas</option>
+          <option value="hoy">Hoy</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
+        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="input sm:w-40">
           <option value="">Todos los estados</option>
           {Object.entries(ESTADOS_VENTA).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        {esAdmin && mostrarFiltroUsuario && (
-          <select value={filtroUsuario} onChange={e => setFiltroUsuario(e.target.value)} className="input sm:w-48">
+        {esAdmin && (
+          <select value={filtroUsuario} onChange={e => setFiltroUsuario(e.target.value)} className="input sm:w-44">
             <option value="">Todos los usuarios</option>
             {usuariosConVentas.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
           </select>
@@ -186,6 +197,13 @@ export default function Ventas() {
               {ventaDetalle.descuento > 0 && <p className="text-red-500">Descuento: <span>-{formatCurrency(ventaDetalle.descuento)}</span></p>}
               <p className="text-lg font-bold text-gray-900">Total: {formatCurrency(ventaDetalle.total)}</p>
             </div>
+            {Number(ventaDetalle.pago_recibido) > 0 && (
+              <div className="flex items-center justify-end gap-4 rounded-xl bg-green-50 border border-green-200 px-4 py-2.5 text-sm">
+                <span className="text-gray-500">Pago recibido: <span className="font-semibold text-gray-800">{formatCurrency(ventaDetalle.pago_recibido)}</span></span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-700 font-bold">Cambio: {formatCurrency(ventaDetalle.cambio || 0)}</span>
+              </div>
+            )}
             {esAdmin && (
               <div className="flex justify-end pt-1">
                 <button

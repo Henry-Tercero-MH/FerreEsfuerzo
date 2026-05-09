@@ -89,6 +89,9 @@ function doPost(e) {
         result = syncEntidad('ventaItems', items)
         break
       }
+      case 'initSheets':
+        result = inicializarHojas()
+        break
       case 'reporte':
       case 'GET_RESUMEN':
         result = getResumen(body.periodo || body.datos?.periodo)
@@ -108,6 +111,11 @@ function doGet(e) {
   const secretParam = e && e.parameter && e.parameter.secret
   if (SECRET && secretParam !== SECRET) {
     return json({ ok: false, error: 'No autorizado' })
+  }
+  // Si llega ?action=initSheets inicializa las hojas
+  if (e && e.parameter && e.parameter.action === 'initSheets') {
+    const result = inicializarHojas()
+    return json(result)
   }
   return json({ ok: true, message: 'FerreApp API activa', version: '2.0', timestamp: new Date().toISOString() })
 }
@@ -353,6 +361,19 @@ function _headers() {
     catalogos:         ['tipo','codigo','valor','descripcion','orden'],
     auditoria:         ['id','fecha','usuario_id','usuario_nombre','usuario_rol','accion','entidad','entidad_id','descripcion','detalle'],
   }
+}
+
+// ── Inicializar todas las hojas con sus encabezados ──────────
+function inicializarHojas() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+  const headers = _headers()
+  const creadas = []
+  Object.entries(HOJAS).forEach(([entity, nombre]) => {
+    const cols = headers[entity] || []
+    _getOrCreateSheet(ss, nombre, cols)
+    creadas.push(nombre)
+  })
+  return { ok: true, creadas, total: creadas.length }
 }
 
 // ── Mappers (objeto → fila de Sheet) ──────────────────────────

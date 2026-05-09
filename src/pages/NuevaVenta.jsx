@@ -17,25 +17,31 @@ import { imprimirTicket } from '../components/TicketVenta'
 function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
   const { empresa } = useEmpresa()
   const [cuenta, setCuenta] = useState(8)
+  const [pausado, setPausado] = useState(false)
 
   useEffect(() => {
-    if (exito.es_pedido) return
+    if (exito.es_pedido || pausado) return
     const t = setInterval(() => setCuenta(c => c - 1), 1000)
     return () => clearInterval(t)
-  }, [exito.es_pedido])
+  }, [exito.es_pedido, pausado])
 
   useEffect(() => {
-    if (cuenta <= 0) onNuevaVenta()
-  }, [cuenta, onNuevaVenta])
+    if (cuenta <= 0 && !pausado) onNuevaVenta()
+  }, [cuenta, pausado, onNuevaVenta])
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'F12') { e.preventDefault(); imprimirTicket(exito, clienteExito, empresa) }
+      if (e.key === 'F12') { e.preventDefault(); setPausado(true); imprimirTicket(exito, clienteExito, empresa) }
       if (e.key === 'F1')  { e.preventDefault(); onNuevaVenta() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [exito, clienteExito, empresa, onNuevaVenta])
+
+  const handleImprimir = () => {
+    setPausado(true)
+    imprimirTicket(exito, clienteExito, empresa)
+  }
 
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-in">
@@ -65,16 +71,18 @@ function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
         </p>
       )}
       {!exito.es_pedido && (
-        <p className="text-xs text-gray-400">Nueva venta en {cuenta}s...</p>
+        <p className="text-xs text-gray-400">
+          {pausado ? 'Listo para imprimir — presiona Nueva venta cuando quieras continuar' : `Nueva venta en ${cuenta}s...`}
+        </p>
       )}
       <div className="flex flex-wrap gap-3 mt-2 justify-center">
         <button
-          onClick={() => imprimirTicket(exito, clienteExito, empresa)}
+          onClick={handleImprimir}
           className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
         >
-          <Printer size={14} /> Imprimir ticket
+          <Printer size={14} /> Imprimir ticket <span className="text-gray-400 text-xs ml-1">F12</span>
         </button>
-        <Button variant="secondary" onClick={onNuevaVenta}>Nueva venta</Button>
+        <Button variant="secondary" onClick={onNuevaVenta}>Nueva venta <span className="text-gray-400 text-xs ml-1">F1</span></Button>
         <Button variant="primary" onClick={onVerHistorial}>
           {exito.es_pedido ? 'Ver pedidos' : 'Ver ventas'}
         </Button>
@@ -233,7 +241,7 @@ export default function NuevaVenta() {
       const notasFinales = metodoPago === 'transferencia' && comprobante.trim()
         ? `Comprobante: ${comprobante.trim()}${notas.trim() ? ` | ${notas.trim()}` : ''}`
         : notas
-      const venta = crearVenta({
+      const venta = await crearVenta({
         items, cliente_id: clienteId, metodo_pago: metodoPago,
         subtotal, descuento, impuesto, total, notas: notasFinales,
         es_pedido: esPedido,

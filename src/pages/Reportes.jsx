@@ -10,7 +10,8 @@ import { StatCard } from '../components/ui/Card'
 import {
   TrendingUp, Package, ShoppingCart, Users, FileText,
   AlertCircle, ArrowDownCircle, Truck, Printer,
-  LayoutDashboard, Boxes, CreditCard, Receipt, MapPin, ClipboardList
+  LayoutDashboard, Boxes, CreditCard, Receipt, MapPin, ClipboardList,
+  FileSpreadsheet, Download
 } from 'lucide-react'
 import IconQ from '../components/ui/IconQ'
 import Badge from '../components/ui/Badge'
@@ -134,6 +135,7 @@ const TABS = [
   { id: 'ventas',       label: 'Ventas',            icon: ShoppingCart },
   { id: 'pedidos',      label: 'Pedidos',           icon: MapPin },
   { id: 'inventario',   label: 'Inventario',        icon: Boxes },
+  { id: 'orden_compra', label: 'Orden de Compra',   icon: ClipboardList },
   { id: 'cobrar',       label: 'Cuentas x Cobrar',  icon: CreditCard },
   { id: 'compras',      label: 'Compras',           icon: Receipt },
   { id: 'cotizaciones', label: 'Cotizaciones',      icon: FileText },
@@ -159,6 +161,90 @@ export default function Reportes() {
   const setPagina  = useCallback((t, p) => setPags(prev => ({ ...prev, [t]: p })), [])
   const setPorPagina = useCallback((t, n) => setPorPag(prev => ({ ...prev, [t]: n })), [])
   const paginar = (lista, t) => lista.slice((pags[t] - 1) * porPag[t], pags[t] * porPag[t])
+
+  // ── Orden de compra ───────────────────────────────────────────────────────
+  const [umbralStock, setUmbralStock] = useState(5)
+  const [filtroOrden, setFiltroOrden] = useState('bajo') // 'bajo' | 'todos'
+
+  const productosOrden = useMemo(() => {
+    const umbral = Number(umbralStock) || 0
+    const lista = productos.filter(p => p.activo !== false)
+    if (filtroOrden === 'bajo') return lista.filter(p => Number(p.stock) <= umbral)
+    return lista
+  }, [productos, umbralStock, filtroOrden])
+
+  const exportarOrdenPDF = () => {
+    const umbral = Number(umbralStock) || 0
+    const filas = productosOrden.map(p => {
+      const diff = umbral - Number(p.stock)
+      const necesita = diff > 0 ? diff : 0
+      const estado = p.stock === 0
+        ? `<span class="badge badge-red">Sin stock</span>`
+        : `<span class="badge badge-yellow">Stock bajo</span>`
+      return `<tr>
+        <td>${p.codigo || '—'}</td>
+        <td>${p.nombre}</td>
+        <td>${p.categoria || '—'}</td>
+        <td class="text-right">${p.stock} ${p.unidad || ''}</td>
+        <td class="text-right">${p.stock_minimo}</td>
+        <td class="text-right"><strong>${necesita}</strong></td>
+        <td class="text-right">${formatCurrency(p.precio_compra || 0)}</td>
+        <td class="text-right">${formatCurrency((p.precio_compra || 0) * necesita)}</td>
+        <td class="text-center">${estado}</td>
+      </tr>`
+    }).join('')
+    const totalEstimado = productosOrden.reduce((acc, p) => {
+      const necesita = Math.max(0, umbral - Number(p.stock))
+      return acc + (p.precio_compra || 0) * necesita
+    }, 0)
+    const html = `
+      <table>
+        <thead><tr>
+          <th>Código</th><th>Producto</th><th>Categoría</th>
+          <th class="text-right">Stock actual</th><th class="text-right">Mín.</th>
+          <th class="text-right">A pedir</th>
+          <th class="text-right">P. Compra</th><th class="text-right">Total est.</th>
+          <th class="text-center">Estado</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr class="total-row">
+          <td colspan="7">Total estimado (${productosOrden.length} productos)</td>
+          <td class="text-right">${formatCurrency(totalEstimado)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table>`
+    imprimir('Orden de Compra — Reposición de Inventario', `Stock ≤ ${umbral}`, html)
+  }
+
+  const exportarOrdenExcel = () => {
+    const umbral = Number(umbralStock) || 0
+    const encabezado = ['Código', 'Producto', 'Categoría', 'Unidad', 'Stock actual', 'Stock mínimo', 'A pedir', 'P. Compra', 'Total estimado']
+    const filas = productosOrden.map(p => {
+      const necesita = Math.max(0, umbral - Number(p.stock))
+      return [
+        p.codigo || '',
+        p.nombre,
+        p.categoria || '',
+        p.unidad || '',
+        p.stock,
+        p.stock_minimo,
+        necesita,
+        p.precio_compra || 0,
+        (p.precio_compra || 0) * necesita,
+      ]
+    })
+    const todas = [encabezado, ...filas]
+    const csv = todas.map(row =>
+      row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+    ).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orden-compra-stock-${umbral}-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   // ── Modal generar pedido ──────────────────────────────────────────────────
   const [modalPedido, setModalPedido] = useState(false)
@@ -753,6 +839,146 @@ export default function Reportes() {
           </div>
           <Pagination total={productos.length} pagina={pags.inventario} porPagina={porPag.inventario}
             onCambiar={p => setPagina('inventario', p)} onCambiarPorPagina={n => setPorPagina('inventario', n)} />
+        </div>
+      )}
+
+      {/* ── TAB: Orden de Compra ── */}
+      {tab === 'orden_compra' && (
+        <div className="space-y-4">
+          {/* Controles */}
+          <div className="card">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="label">Stock mínimo a revisar</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={umbralStock}
+                    onChange={e => setUmbralStock(e.target.value)}
+                    className="input w-28 text-center font-semibold text-lg"
+                  />
+                  <span className="text-sm text-gray-500">unidades</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Muestra productos con stock ≤ este valor</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFiltroOrden('bajo')}
+                  className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filtroOrden === 'bajo' ? 'bg-red-100 text-red-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Solo bajo mínimo ({productosOrden.length})
+                </button>
+                <button
+                  onClick={() => setFiltroOrden('todos')}
+                  className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors ${filtroOrden === 'todos' ? 'bg-primary-100 text-primary-700' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  Todos los productos
+                </button>
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={exportarOrdenExcel}
+                  disabled={productosOrden.length === 0}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40"
+                >
+                  <FileSpreadsheet size={14} /> Exportar Excel
+                </button>
+                <button
+                  onClick={exportarOrdenPDF}
+                  disabled={productosOrden.length === 0}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40"
+                >
+                  <Printer size={14} /> Exportar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Resumen rápido */}
+          {productosOrden.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="card text-center py-3">
+                <p className="text-2xl font-bold text-red-600">{productosOrden.length}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Productos a reponer</p>
+              </div>
+              <div className="card text-center py-3">
+                <p className="text-2xl font-bold text-orange-600">
+                  {productosOrden.filter(p => p.stock === 0).length}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Sin stock</p>
+              </div>
+              <div className="card text-center py-3">
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(productosOrden.reduce((acc, p) => {
+                    const necesita = Math.max(0, Number(umbralStock) - Number(p.stock))
+                    return acc + (p.precio_compra || 0) * necesita
+                  }, 0))}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Inversión estimada</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tabla */}
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th>Categoría</th>
+                  <th className="text-right">Stock actual</th>
+                  <th className="text-right">Stock mín.</th>
+                  <th className="text-right">A pedir</th>
+                  <th className="text-right">P. Compra</th>
+                  <th className="text-right">Total est.</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productosOrden.length === 0
+                  ? <tr><td colSpan={9} className="py-12 text-center text-gray-400">
+                      <Package size={32} className="mx-auto mb-2 opacity-30" />
+                      No hay productos con stock ≤ {umbralStock}
+                    </td></tr>
+                  : productosOrden.map(p => {
+                      const necesita = Math.max(0, Number(umbralStock) - Number(p.stock))
+                      const { label, variant } = p.stock === 0
+                        ? { label: 'Sin stock', variant: 'red' }
+                        : { label: 'Stock bajo', variant: 'yellow' }
+                      return (
+                        <tr key={p.id} className={p.stock === 0 ? 'bg-red-50/50' : ''}>
+                          <td className="font-mono text-xs text-gray-500">{p.codigo || '—'}</td>
+                          <td className="font-medium">{p.nombre}</td>
+                          <td><Badge variant="gray">{p.categoria || '—'}</Badge></td>
+                          <td className="text-right font-semibold text-red-600">{p.stock} <span className="text-xs text-gray-400 font-normal">{p.unidad}</span></td>
+                          <td className="text-right text-gray-500">{p.stock_minimo}</td>
+                          <td className="text-right font-bold text-primary-700">{necesita}</td>
+                          <td className="text-right text-gray-500">{formatCurrency(p.precio_compra || 0)}</td>
+                          <td className="text-right font-semibold">{formatCurrency((p.precio_compra || 0) * necesita)}</td>
+                          <td><Badge variant={variant}>{label}</Badge></td>
+                        </tr>
+                      )
+                    })
+                }
+              </tbody>
+              {productosOrden.length > 0 && (
+                <tfoot>
+                  <tr className="bg-gray-50 font-bold">
+                    <td colSpan={7} className="px-4 py-2 text-sm">
+                      Total ({productosOrden.length} productos)
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {formatCurrency(productosOrden.reduce((acc, p) => {
+                        const necesita = Math.max(0, Number(umbralStock) - Number(p.stock))
+                        return acc + (p.precio_compra || 0) * necesita
+                      }, 0))}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
         </div>
       )}
 

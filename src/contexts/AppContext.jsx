@@ -32,6 +32,16 @@ export function AppProvider({ children }) {
 
   // Al iniciar la app: cargar desde Google Sheets y actualizar el cache
   useEffect(() => {
+    // Limpiar duplicados en localStorage antes de sincronizar
+    ['ferreapp_ventas', 'ferreapp_productos', 'ferreapp_clientes'].forEach(key => {
+      try {
+        const arr = JSON.parse(localStorage.getItem(key) || '[]')
+        if (Array.isArray(arr)) {
+          const dedup = arr.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i)
+          if (dedup.length !== arr.length) localStorage.setItem(key, JSON.stringify(dedup))
+        }
+      } catch (e) { /* ignorar errores de parse */ }
+    })
     Promise.allSettled([
       db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) }),
       Promise.all([
@@ -39,7 +49,8 @@ export function AppProvider({ children }) {
         db.forceRefresh('ventaItems'),
       ]).then(([ventas, items]) => {
         if (ventas.length) {
-          setVentas(ventas.map(v => ({
+          const unicas = ventas.filter((v, i, arr) => arr.findIndex(x => x.id === v.id) === i)
+          setVentas(unicas.map(v => ({
             ...v,
             items: items.filter(i => String(i.venta_id) === String(v.id)),
           })))
@@ -101,7 +112,7 @@ export function AppProvider({ children }) {
   }, [puede, setProductos, setMovimientos])
 
   // ── VENTAS ─────────────────────────────────────────────────────────────────
-  const crearVenta = useCallback((data) => {
+  const crearVenta = useCallback(async (data) => {
     if (!puede('/ventas')) return null
     const nums = ventas.map(v => parseInt(v.numero_venta?.replace('VTA-', '') || '0')).filter(n => !isNaN(n))
     const numero = generateNumeroVenta((nums.length ? Math.max(...nums) : 0) + 1)
@@ -112,7 +123,6 @@ export function AppProvider({ children }) {
       numero_venta: numero,
       fecha: new Date().toISOString(),
       estado: 'completada',
-      // campos de despacho — solo presentes si es pedido
       ...(esPedido && {
         es_pedido: true,
         estado_despacho: 'pendiente',
@@ -121,9 +131,10 @@ export function AppProvider({ children }) {
       }),
     }
     setVentas(prev => [nueva, ...prev])
-    db.insert('ventas', nueva)
+    // Esperar confirmación del Sheet antes de retornar
+    await db.insert('ventas', nueva)
     if (esPedido) {
-      db.insert('pedidos', {
+      await db.insert('pedidos', {
         id: nueva.id,
         numero_venta: nueva.numero_venta,
         cliente_id: nueva.cliente_id,

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
-import { Printer, FileText, TrendingUp, Receipt } from 'lucide-react'
+import { Printer, FileText, Receipt } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useEmpresa } from '../contexts/EmpresaContext'
 import { formatCurrency, formatDate } from '../utils/formatters'
@@ -63,10 +63,8 @@ export default function Contabilidad() {
   // Totales
   const resumen = useMemo(() => {
     const totalFacturado  = ventasPeriodo.reduce((s, v) => s + v.total, 0)
-    const totalIVA        = ventasPeriodo.reduce((s, v) => s + (v.impuesto || 0), 0)
-    const baseImponible   = totalFacturado - totalIVA
     const totalDescuentos = ventasPeriodo.reduce((s, v) => s + (v.descuento || 0), 0)
-    return { totalFacturado, totalIVA, baseImponible, totalDescuentos, count: ventasPeriodo.length }
+    return { totalFacturado, totalDescuentos, count: ventasPeriodo.length }
   }, [ventasPeriodo])
 
   const getNombreCliente = (id) => clientes.find(c => c.id === id)?.nombre ?? 'Consumidor Final'
@@ -88,7 +86,6 @@ export default function Contabilidad() {
         <td class="mono">${getNitCliente(v.cliente_id)}</td>
         <td class="num">${formatCurrency(v.subtotal ?? v.total)}</td>
         <td class="num">${formatCurrency(v.descuento || 0)}</td>
-        <td class="num">${formatCurrency(v.impuesto || 0)}</td>
         <td class="num bold">${formatCurrency(v.total)}</td>
         <td>${METODO_LABEL[v.metodo_pago] ?? v.metodo_pago}</td>
         <td class="estado">${v.estado === 'credito' ? 'Crédito' : 'Contado'}</td>
@@ -142,7 +139,7 @@ export default function Contabilidad() {
       <tr>
         <th>#</th><th>Fecha</th><th>No. Documento</th><th>Cliente</th><th>NIT</th>
         <th class="num">Subtotal</th><th class="num">Descuento</th>
-        <th class="num">IVA 12%</th><th class="num">Total</th>
+        <th class="num">Total</th>
         <th>Método</th><th>Tipo</th>
       </tr>
     </thead>
@@ -153,8 +150,6 @@ export default function Contabilidad() {
     <table>
       <tr><td>Subtotal bruto</td><td>${formatCurrency(ventasPeriodo.reduce((s,v)=>s+(v.subtotal??v.total),0))}</td></tr>
       <tr><td>(-) Descuentos</td><td>${formatCurrency(resumen.totalDescuentos)}</td></tr>
-      <tr><td>Base imponible</td><td>${formatCurrency(resumen.baseImponible)}</td></tr>
-      <tr><td>IVA cobrado (12%)</td><td>${formatCurrency(resumen.totalIVA)}</td></tr>
       <tr class="gran-total"><td>TOTAL FACTURADO</td><td>${formatCurrency(resumen.totalFacturado)}</td></tr>
     </table>
   </div>
@@ -214,11 +209,10 @@ export default function Contabilidad() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Total facturado"  value={formatCurrency(resumen.totalFacturado)} icon={IconQ}     color="bg-primary-700" />
-        <StatCard label="Base imponible"   value={formatCurrency(resumen.baseImponible)}  icon={FileText}  color="bg-secondary-600" />
-        <StatCard label="IVA cobrado 12%"  value={formatCurrency(resumen.totalIVA)}       icon={TrendingUp} color="bg-green-600" />
-        <StatCard label="No. transacciones" value={resumen.count}  sub={resumen.totalDescuentos > 0 ? `Desc: ${formatCurrency(resumen.totalDescuentos)}` : undefined} icon={Receipt} color="bg-blue-600" />
+        <StatCard label="Descuentos"       value={formatCurrency(resumen.totalDescuentos)} icon={FileText}  color="bg-secondary-600" />
+        <StatCard label="No. transacciones" value={resumen.count} icon={Receipt} color="bg-blue-600" />
       </div>
 
       {/* Tabla libro de ventas */}
@@ -246,7 +240,6 @@ export default function Contabilidad() {
                   <th>NIT</th>
                   <th className="text-right">Subtotal</th>
                   <th className="text-right">Descuento</th>
-                  <th className="text-right">IVA 12%</th>
                   <th className="text-right">Total</th>
                   <th>Método</th>
                   <th>Tipo</th>
@@ -262,7 +255,6 @@ export default function Contabilidad() {
                     <td className="font-mono text-gray-500">{getNitCliente(v.cliente_id)}</td>
                     <td className="text-right">{formatCurrency(v.subtotal ?? v.total)}</td>
                     <td className="text-right text-red-500">{v.descuento > 0 ? `-${formatCurrency(v.descuento)}` : '—'}</td>
-                    <td className="text-right text-green-700">{formatCurrency(v.impuesto || 0)}</td>
                     <td className="text-right font-semibold">{formatCurrency(v.total)}</td>
                     <td className="capitalize">{METODO_LABEL[v.metodo_pago] ?? v.metodo_pago}</td>
                     <td>
@@ -281,7 +273,6 @@ export default function Contabilidad() {
                   <td colSpan={5} className="px-4 py-3 text-right text-gray-600">Totales del período:</td>
                   <td className="px-4 py-3 text-right">{formatCurrency(ventasPeriodo.reduce((s,v)=>s+(v.subtotal??v.total),0))}</td>
                   <td className="px-4 py-3 text-right text-red-500">{resumen.totalDescuentos > 0 ? `-${formatCurrency(resumen.totalDescuentos)}` : '—'}</td>
-                  <td className="px-4 py-3 text-right text-green-700">{formatCurrency(resumen.totalIVA)}</td>
                   <td className="px-4 py-3 text-right text-primary-700">{formatCurrency(resumen.totalFacturado)}</td>
                   <td colSpan={2} />
                 </tr>
@@ -291,36 +282,6 @@ export default function Contabilidad() {
         )}
       </div>
 
-      {/* Resumen de IVA */}
-      {ventasPeriodo.length > 0 && (
-        <div className="card max-w-sm">
-          <h3 className="font-semibold text-gray-900 mb-3">Resumen IVA — {MESES[mes]} {anio}</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal bruto</span>
-              <span>{formatCurrency(ventasPeriodo.reduce((s,v)=>s+(v.subtotal??v.total),0))}</span>
-            </div>
-            {resumen.totalDescuentos > 0 && (
-              <div className="flex justify-between text-red-500">
-                <span>(-) Descuentos</span>
-                <span>-{formatCurrency(resumen.totalDescuentos)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-gray-600">
-              <span>Base imponible</span>
-              <span>{formatCurrency(resumen.baseImponible)}</span>
-            </div>
-            <div className="flex justify-between text-green-700">
-              <span>IVA cobrado (12%)</span>
-              <span>+{formatCurrency(resumen.totalIVA)}</span>
-            </div>
-            <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-2 text-base">
-              <span>Total facturado</span>
-              <span>{formatCurrency(resumen.totalFacturado)}</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

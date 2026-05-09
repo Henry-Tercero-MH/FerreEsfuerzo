@@ -41,7 +41,7 @@ export default function Login() {
       <div className="w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex min-h-[480px]">
 
         {/* Panel izquierdo — formulario */}
-        <div className="flex-1 bg-[#3d5a80] flex flex-col justify-between p-10">
+        <div className="flex-1 bg-[#08235a] flex flex-col justify-between p-10">
           <div>
             <h1 className="text-3xl font-bold text-white mb-8 tracking-wide">LOGIN</h1>
 
