@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Eye, XCircle, ShoppingCart, Lock } from 'lucide-react'
+import { Plus, Eye, XCircle, ShoppingCart, Lock, Filter } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -25,16 +25,31 @@ export default function Ventas() {
   const { toasts, toast, remove } = useToast()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroUsuario, setFiltroUsuario] = useState('')
+  const [mostrarFiltroUsuario, setMostrarFiltroUsuario] = useState(false)
   const [ventaDetalle, setVentaDetalle] = useState(null)
   const [confirm, setConfirm] = useState(null)
 
+  const esAdmin = sesion?.rol === 'admin'
   const termino = useDebounce(busqueda)
 
+  // Usuarios únicos que han facturado (solo para el admin)
+  const usuariosConVentas = useMemo(() => {
+    const mapa = new Map()
+    ventas.forEach(v => {
+      if (v.usuario_id && v.usuario_nombre) mapa.set(v.usuario_id, v.usuario_nombre)
+    })
+    return [...mapa.entries()].map(([id, nombre]) => ({ id, nombre }))
+  }, [ventas])
+
   const ventasFiltradas = useMemo(() => ventas.filter(v => {
-    const coincide = !termino || v.numero_venta.includes(termino.toUpperCase())
-    const estado   = !filtroEstado || v.estado === filtroEstado
-    return coincide && estado
-  }), [ventas, termino, filtroEstado])
+    // Rol no-admin: solo ve sus propias ventas
+    if (!esAdmin && v.usuario_id !== sesion?.id) return false
+    const coincide    = !termino || v.numero_venta.includes(termino.toUpperCase())
+    const porEstado   = !filtroEstado || v.estado === filtroEstado
+    const porUsuario  = !filtroUsuario || v.usuario_id === filtroUsuario
+    return coincide && porEstado && porUsuario
+  }), [ventas, termino, filtroEstado, filtroUsuario, esAdmin, sesion])
 
   const getClienteNombre = (id) => clientes.find(c => c.id === id)?.nombre ?? 'Consumidor Final'
   const getMetodoPago = (val) => METODOS_PAGO.find(m => m.value === val)?.label ?? val
@@ -53,11 +68,25 @@ export default function Ventas() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Ventas</h1>
-          <p className="page-subtitle">{ventas.length} ventas registradas</p>
+          <p className="page-subtitle">
+            {ventasFiltradas.length} de {esAdmin ? ventas.length : ventas.filter(v => v.usuario_id === sesion?.id).length} ventas
+            {!esAdmin && <span className="ml-1 text-primary-600 font-medium">— solo las tuyas</span>}
+          </p>
         </div>
-        <Link to="/ventas/nueva">
-          <Button variant="primary" icon={Plus}>Nueva venta</Button>
-        </Link>
+        <div className="flex gap-2">
+          {esAdmin && (
+            <Button
+              variant={mostrarFiltroUsuario ? 'primary' : 'secondary'}
+              icon={Filter}
+              onClick={() => { setMostrarFiltroUsuario(v => !v); setFiltroUsuario('') }}
+            >
+              Filtrar por usuario
+            </Button>
+          )}
+          <Link to="/ventas/nueva">
+            <Button variant="primary" icon={Plus}>Nueva venta</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -67,6 +96,12 @@ export default function Ventas() {
           <option value="">Todos los estados</option>
           {Object.entries(ESTADOS_VENTA).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
+        {esAdmin && mostrarFiltroUsuario && (
+          <select value={filtroUsuario} onChange={e => setFiltroUsuario(e.target.value)} className="input sm:w-48">
+            <option value="">Todos los usuarios</option>
+            {usuariosConVentas.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Tabla */}

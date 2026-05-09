@@ -28,6 +28,18 @@ export const ROLES = {
   },
 }
 
+// Google Sheets devuelve booleanos como strings "TRUE"/"FALSE"
+function isActivo(u) {
+  const v = u.activo
+  if (typeof v === 'boolean') return v
+  if (typeof v === 'string') return v.toUpperCase() === 'TRUE'
+  return !!v
+}
+
+function normalizeUsuario(u) {
+  return { ...u, activo: isActivo(u) }
+}
+
 // SHA-256 de 'admin123' — precalculado para el seed inicial
 const HASH_ADMIN_DEFAULT = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'
 
@@ -45,7 +57,10 @@ const USUARIOS_DEFAULT = [
 
 export function AuthProvider({ children }) {
   const [usuarios, setUsuarios] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('ferreapp_usuarios') || 'null') || USUARIOS_DEFAULT } catch { return USUARIOS_DEFAULT }
+    try {
+      const saved = JSON.parse(localStorage.getItem('ferreapp_usuarios') || 'null')
+      return saved ? saved.map(normalizeUsuario) : USUARIOS_DEFAULT
+    } catch { return USUARIOS_DEFAULT }
   })
   const [sesion, setSesion] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('ferreapp_sesion') || 'null') } catch { return null }
@@ -58,19 +73,25 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    db.forceRefresh('usuarios').then(data => { if (data.length) setUsuarios(data) })
+    db.forceRefresh('usuarios').then(data => {
+      if (!data.length) return
+      const normalizados = data.map(normalizeUsuario)
+      // Si el sheet no tiene el admin default, lo conservamos para no perder acceso
+      const tieneAdmin = normalizados.some(u => u.id === 'usr-admin')
+      setUsuarios(tieneAdmin ? normalizados : [...USUARIOS_DEFAULT, ...normalizados])
+    })
   }, [])
 
   useEffect(() => {
     if (!sesion) return
-    const usuarioActivo = usuarios.find(u => u.id === sesion.id && u.activo)
+    const usuarioActivo = usuarios.find(u => u.id === sesion.id && isActivo(u))
     if (!usuarioActivo) persistSesion(null)
   }, [usuarios, sesion, persistSesion])
 
   const login = useCallback(async (email, password) => {
     const hash = await sha256(password)
     const usuario = usuarios.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password_hash === hash && u.activo
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password_hash === hash && isActivo(u)
     )
     if (!usuario) {
       auditar({ accion: 'login_fallido', entidad: 'usuarios', descripcion: `Intento de login fallido: ${email}` })
