@@ -9,6 +9,7 @@ import { useCompras } from '../../contexts/ComprasContext'
 import { useCuentasPorCobrar } from '../../contexts/CuentasPorCobrarContext'
 import { useProveedores } from '../../contexts/ProveedoresContext'
 import { useCaja } from '../../contexts/CajaContext'
+import { useUI } from '../../contexts/UIContext'
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -21,6 +22,7 @@ export default function Layout() {
   const { loading: loadingProveedores }   = useProveedores()
   const { loading: loadingCaja }          = useCaja()
 
+  const { facturaExpandida } = useUI()
   const cargando = loadingApp || loadingCotizaciones || loadingCompras || loadingCuentas || loadingProveedores || loadingCaja
 
   return (
@@ -32,7 +34,7 @@ export default function Layout() {
         onToggleCollapse={() => setCollapsed(v => !v)}
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${facturaExpandida ? 'pr-[480px]' : ''}`}>
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="flex-1 overflow-hidden flex flex-col">

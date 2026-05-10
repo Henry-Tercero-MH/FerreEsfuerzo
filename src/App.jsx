@@ -9,6 +9,7 @@ import { CajaProvider } from './contexts/CajaContext'
 import { CuentasPorCobrarProvider } from './contexts/CuentasPorCobrarContext'
 import { EmpresaProvider } from './contexts/EmpresaContext'
 import { TemaProvider } from './contexts/TemaContext'
+import { UIProvider } from './contexts/UIContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <UIProvider>
         <TemaProvider>
         <EmpresaProvider>
           <CatalogosProvider>
@@ -86,6 +88,7 @@ export default function App() {
           </CatalogosProvider>
         </EmpresaProvider>
         </TemaProvider>
+        </UIProvider>
       </AuthProvider>
     </BrowserRouter>
   )

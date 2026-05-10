@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode, Printer, Maximize2 } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode, Printer } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
@@ -13,8 +13,9 @@ import Button from '../components/ui/Button'
 import ClienteSelector from '../components/shared/ClienteSelector'
 import { useToast } from '../hooks/useToast'
 import { imprimirTicket } from '../components/TicketVenta'
+import { useUI } from '../contexts/UIContext'
 
-function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
+function ModalExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
   const { empresa } = useEmpresa()
   const [cuenta, setCuenta] = useState(8)
   const [pausado, setPausado] = useState(false)
@@ -44,48 +45,75 @@ function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-in">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-        <CheckCircle size={40} className="text-green-600" />
-      </div>
-      <h2 className="text-2xl font-bold text-gray-900">
-        {exito.es_pedido ? '¡Pedido registrado!' : '¡Venta registrada!'}
-      </h2>
-      <p className="text-gray-500">{exito.numero_venta} — Total: {formatCurrency(exito.total)}</p>
-      {exito.pago_recibido > 0 && (
-        <div className="flex items-center gap-3 rounded-xl bg-green-50 border border-green-200 px-6 py-3">
-          <div className="text-center">
-            <p className="text-xs text-green-600 font-medium">Recibido</p>
-            <p className="text-lg font-bold text-green-700">{formatCurrency(exito.pago_recibido)}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        {/* Banda superior verde */}
+        <div className="bg-green-500 px-6 py-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+            <CheckCircle size={24} className="text-white" />
           </div>
-          <div className="text-2xl text-green-400">→</div>
-          <div className="text-center">
-            <p className="text-xs text-green-600 font-medium">Cambio</p>
-            <p className="text-2xl font-bold text-green-700">{formatCurrency(exito.cambio || 0)}</p>
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              {exito.es_pedido ? '¡Pedido registrado!' : '¡Venta registrada!'}
+            </h2>
+            <p className="text-green-100 text-sm">{exito.numero_venta}</p>
           </div>
         </div>
-      )}
-      {exito.es_pedido && (
-        <p className="text-sm text-primary-600 flex items-center gap-1">
-          <MapPin size={14} /> {exito.direccion_entrega}
-        </p>
-      )}
-      {!exito.es_pedido && (
-        <p className="text-xs text-gray-400">
-          {pausado ? 'Listo para imprimir — presiona Nueva venta cuando quieras continuar' : `Nueva venta en ${cuenta}s...`}
-        </p>
-      )}
-      <div className="flex flex-wrap gap-3 mt-2 justify-center">
-        <button
-          onClick={handleImprimir}
-          className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
-        >
-          <Printer size={14} /> Imprimir ticket <span className="text-gray-400 text-xs ml-1">F12</span>
-        </button>
-        <Button variant="secondary" onClick={onNuevaVenta}>Nueva venta <span className="text-gray-400 text-xs ml-1">F1</span></Button>
-        <Button variant="primary" onClick={onVerHistorial}>
-          {exito.es_pedido ? 'Ver pedidos' : 'Ver ventas'}
-        </Button>
+
+        {/* Cuerpo */}
+        <div className="px-6 py-5 flex flex-col gap-4">
+          {/* Total */}
+          <div className="flex justify-between items-center rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+            <span className="text-sm text-gray-500 font-medium">Total de la venta</span>
+            <span className="text-2xl font-bold text-gray-900">{formatCurrency(exito.total)}</span>
+          </div>
+
+          {/* Recibido / Cambio */}
+          {exito.pago_recibido > 0 && (
+            <div className="flex gap-3">
+              <div className="flex-1 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-center">
+                <p className="text-xs text-blue-500 font-medium mb-0.5">Recibido</p>
+                <p className="text-xl font-bold text-blue-700">{formatCurrency(exito.pago_recibido)}</p>
+              </div>
+              <div className="flex-1 rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-center">
+                <p className="text-xs text-green-500 font-medium mb-0.5">Cambio</p>
+                <p className="text-xl font-bold text-green-700">{formatCurrency(exito.cambio || 0)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Dirección pedido */}
+          {exito.es_pedido && (
+            <p className="text-sm text-primary-600 flex items-center gap-1.5 bg-primary-50 rounded-lg px-3 py-2">
+              <MapPin size={14} className="shrink-0" /> {exito.direccion_entrega}
+            </p>
+          )}
+
+          {/* Contador */}
+          {!exito.es_pedido && (
+            <p className="text-xs text-center text-gray-400">
+              {pausado
+                ? 'Listo para imprimir — presiona Nueva venta cuando quieras continuar'
+                : `Nueva venta automáticamente en ${cuenta}s...`}
+            </p>
+          )}
+        </div>
+
+        {/* Acciones */}
+        <div className="px-6 pb-5 flex flex-wrap gap-2 justify-end border-t border-gray-100 pt-4">
+          <button
+            onClick={handleImprimir}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+          >
+            <Printer size={14} /> Imprimir <span className="text-gray-400 text-xs">F12</span>
+          </button>
+          <Button variant="secondary" onClick={onNuevaVenta}>
+            Nueva venta <span className="text-gray-400 text-xs ml-1">F1</span>
+          </Button>
+          <Button variant="primary" onClick={onVerHistorial}>
+            {exito.es_pedido ? 'Ver pedidos' : 'Ver ventas'}
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -97,6 +125,7 @@ export default function NuevaVenta() {
   const { crearCuenta } = useCuentasPorCobrar()
   const { registrarVentaEnCaja, cajaAbierta } = useCaja()
   const { sesion } = useAuth()
+  const { facturaExpandida, setFacturaExpandida } = useUI()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { toast } = useToast()
@@ -116,9 +145,21 @@ export default function NuevaVenta() {
   const [pagoRecibido, setPagoRecibido] = useState('')
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(null)
-  const [vistaPrevia, setVistaPrevia] = useState(false)
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [tipoDescuento, setTipoDescuento] = useState('ninguno')
+
+  // Activar panel expandido al entrar y resetear al salir
+  useEffect(() => { setFacturaExpandida(true); return () => setFacturaExpandida(false) }, [])
+
+  const [horaActual, setHoraActual] = useState(() =>
+    new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  )
+  useEffect(() => {
+    const t = setInterval(() =>
+      setHoraActual(new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    , 1000)
+    return () => clearInterval(t)
+  }, [])
 
   const productosFiltrados = useMemo(() => {
     const disponibles = productos.filter(p => p.stock > 0)
@@ -341,17 +382,7 @@ export default function NuevaVenta() {
     return () => window.removeEventListener('keydown', handler)
   }, [loading, items, confirmarDeshabilitado, handleConfirmar])
 
-  if (exito) {
-    const clienteExito = clientes.find(c => c.id === exito.cliente_id) || null
-    return (
-      <ExitoVenta
-        exito={exito}
-        clienteExito={clienteExito}
-        onNuevaVenta={resetVenta}
-        onVerHistorial={() => navigate(exito.es_pedido ? '/pedidos' : '/ventas')}
-      />
-    )
-  }
+  const clienteExito = exito ? (clientes.find(c => c.id === exito.cliente_id) || null) : null
 
   return (
     <div className="flex flex-col overflow-hidden h-full -m-4 sm:-m-6">
@@ -404,38 +435,51 @@ export default function NuevaVenta() {
 
         {/* Tabla de productos */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
-          {/* Encabezado fijo */}
-          <table className="w-full text-xs border-collapse shrink-0">
-            <thead className="bg-slate-100 border-b-2 border-gray-200">
-              <tr>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Código</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600">Descripción</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Categoría</th>
-                <th className="text-right px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Precio</th>
-                <th className="text-right px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Stock</th>
-                <th className="px-3 py-2 whitespace-nowrap"></th>
-              </tr>
-            </thead>
-          </table>
-          {/* Filas con scroll */}
+          {/* Contenedor con scroll, thead sticky */}
           <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-xs border-collapse">
+            <table className="w-full text-xs border-collapse table-fixed">
+              <colgroup>
+                <col style={{ width: '9%' }} />   {/* Código */}
+                <col style={{ width: '28%' }} />  {/* Descripción */}
+                <col style={{ width: '15%' }} />  {/* Categoría */}
+                <col style={{ width: '14%' }} />  {/* Ubicación */}
+                <col style={{ width: '13%' }} />  {/* Precio */}
+                <col style={{ width: '9%' }} />   {/* Stock */}
+                <col style={{ width: '12%' }} />  {/* Acción */}
+              </colgroup>
+              <thead className="bg-slate-100 border-b-2 border-gray-200 sticky top-0 z-10">
+                <tr>
+                  <th className="text-left px-3 py-2 font-semibold text-gray-600">Código</th>
+                  <th className="text-left px-3 py-2 font-semibold text-gray-600">Descripción</th>
+                  <th className="text-left px-3 py-2 font-semibold text-gray-600">Categoría</th>
+                  <th className="text-left px-3 py-2 font-semibold text-gray-600">Ubicación</th>
+                  <th className="text-right px-3 py-2 font-semibold text-gray-600">Precio</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">Stock</th>
+                  <th className="text-center px-3 py-2 font-semibold text-gray-600">Acción</th>
+                </tr>
+              </thead>
               <tbody>
                 {productosFiltradosCat.length === 0 ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-gray-400">Sin productos disponibles</td></tr>
+                  <tr><td colSpan={7} className="py-10 text-center text-gray-400">Sin productos disponibles</td></tr>
                 ) : (
                   productosFiltradosCat.map(p => (
                     <tr key={p.id} className="border-b border-gray-100 hover:bg-primary-50 transition-colors">
-                      <td className="px-3 py-1.5 font-mono text-gray-500">{p.codigo}</td>
-                      <td className="px-3 py-1.5 font-medium text-gray-900">{p.nombre}</td>
-                      <td className="px-3 py-1.5 text-gray-500 whitespace-nowrap">{p.categoria || '—'}</td>
+                      <td className="px-3 py-1.5 font-mono text-gray-500 truncate">{p.codigo}</td>
+                      <td className="px-3 py-1.5 font-medium text-gray-900 truncate">{p.nombre}</td>
+                      <td className="px-3 py-1.5 text-gray-500 truncate">{p.categoria || '—'}</td>
+                      <td className="px-3 py-1.5">
+                        {p.ubicacion
+                          ? <span className="inline-flex items-center bg-blue-50 text-blue-700 font-medium px-1.5 py-0.5 rounded truncate max-w-full">{p.ubicacion}</span>
+                          : <span className="text-gray-300">—</span>
+                        }
+                      </td>
                       <td className="px-3 py-1.5 text-right font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</td>
-                      <td className="px-3 py-1.5 text-right">
+                      <td className="px-3 py-1.5 text-center">
                         <span className={`font-semibold px-1.5 py-0.5 rounded-full ${
                           p.stock <= (p.stock_minimo || 5) ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                         }`}>{p.stock}</span>
                       </td>
-                      <td className="px-3 py-1.5 text-right">
+                      <td className="px-3 py-1.5 text-center">
                         <button
                           onClick={e => { e.stopPropagation(); agregarItem(p) }}
                           className="inline-flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-2.5 py-1 rounded-lg transition-colors"
@@ -451,125 +495,88 @@ export default function NuevaVenta() {
           </div>
         </div>
 
-        {/* Panel derecho: carrito + cobro */}
-        <div className="w-96 border-l border-gray-200 bg-white flex flex-col overflow-hidden shrink-0">
+        {/* Panel derecho: factura en tiempo real + cobro */}
+        <div className="fixed top-0 right-0 bottom-0 z-20 w-[480px] border-l border-gray-200 bg-white flex flex-col overflow-hidden shadow-2xl">
 
-          {/* Encabezado carrito */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
-            <ShoppingCart size={14} className="text-gray-500" />
-            <span className="font-semibold text-gray-700 text-xs">Detalle de Factura</span>
-            <div className="ml-auto flex items-center gap-2">
-              {items.length > 0 && <span className="text-xs text-gray-400">{items.length} ítem(s)</span>}
+          {/* Encabezado factura */}
+          <div className="px-3 py-2 border-b border-gray-100 bg-slate-50 shrink-0">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5">
+                <ShoppingCart size={13} className="text-primary-600" />
+                <span className="font-bold text-gray-800 text-xs tracking-wide uppercase">Factura en curso</span>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
+                <span>{new Date().toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                <span className="text-gray-300">|</span>
+                <span className="text-primary-600 font-semibold">{horaActual}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>Cliente:</span>
+              <span className="font-semibold text-gray-800 truncate">
+                {clienteId === 'cf'
+                  ? 'Consumidor Final'
+                  : (clientes.find(c => c.id === clienteId)?.nombre || '—')}
+              </span>
               {items.length > 0 && (
-                <button
-                  onClick={() => setVistaPrevia(true)}
-                  title="Vista previa del carrito"
-                  className="text-gray-400 hover:text-primary-600 transition-colors"
-                >
-                  <Maximize2 size={13} />
-                </button>
+                <span className="ml-auto text-gray-400">{items.length} ítem(s)</span>
               )}
             </div>
           </div>
 
-          {/* Modal vista previa carrito */}
-          {vistaPrevia && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setVistaPrevia(false)}>
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
-                {/* Header modal */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart size={18} className="text-primary-600" />
-                    <h2 className="font-bold text-gray-900 text-base">Detalle de Factura</h2>
-                    <span className="text-sm text-gray-400 ml-1">— {items.length} ítem(s)</span>
-                  </div>
-                  <button onClick={() => setVistaPrevia(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg leading-none">✕</button>
-                </div>
-                {/* Tabla de items */}
-                <div className="overflow-y-auto max-h-[60vh]">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-100 border-b border-gray-200 sticky top-0">
-                      <tr>
-                        <th className="text-left px-5 py-3 font-semibold text-gray-600">Producto</th>
-                        <th className="text-center px-4 py-3 font-semibold text-gray-600">Cantidad</th>
-                        <th className="text-right px-4 py-3 font-semibold text-gray-600">P. Unitario</th>
-                        <th className="text-right px-4 py-3 font-semibold text-gray-600">Subtotal</th>
-                        <th className="px-3 py-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map(item => (
-                        <tr key={item.producto_id} className="border-b border-gray-100 hover:bg-primary-50 transition-colors">
-                          <td className="px-5 py-3">
-                            <p className="font-medium text-gray-900">{item.nombre}</p>
-                            <p className="text-xs text-gray-400 font-mono">{item.codigo}</p>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 font-bold"><Minus size={12} /></button>
-                              <input
-                                type="number" min="1" max={item.stock_disponible}
-                                inputMode="numeric"
-                                value={item.cantidad}
-                                onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
-                                className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
-                              />
-                              <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 font-bold"><Plus size={12} /></button>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{formatCurrency(item.precio_unitario)}</td>
-                          <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</td>
-                          <td className="px-3 py-3 text-center">
-                            <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Footer totales */}
-                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-                  <div className="text-sm text-gray-500 space-y-0.5">
-                    {descuento > 0 && <p>Descuento: <span className="text-red-500 font-semibold">-{formatCurrency(descuento)}</span></p>}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Total</p>
-                    <p className="text-2xl font-bold text-primary-700 tabular-nums">{formatCurrency(total)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Tabla de ítems — encabezado fijo */}
+          <div className="shrink-0 border-b border-gray-200 bg-gray-50">
+            <table className="w-full text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left px-2 py-1.5 font-semibold text-gray-500">Producto</th>
+                  <th className="text-center px-1 py-1.5 font-semibold text-gray-500 w-20">Cant.</th>
+                  <th className="text-right px-2 py-1.5 font-semibold text-gray-500 w-16">P.Unit</th>
+                  <th className="text-right px-2 py-1.5 font-semibold text-gray-500 w-16">Total</th>
+                  <th className="w-5"></th>
+                </tr>
+              </thead>
+            </table>
+          </div>
 
-          {/* Items del carrito */}
-          <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5 scrollbar-cart">
+          {/* Tabla de ítems — filas con scroll */}
+          <div className="flex-1 overflow-y-auto scrollbar-cart">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-24 text-gray-300 gap-1">
-                <ShoppingCart size={22} className="opacity-50" />
-                <p className="text-xs">Carrito vacío</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2 py-10">
+                <ShoppingCart size={28} className="opacity-40" />
+                <p className="text-xs">Agrega productos para ver la factura</p>
               </div>
             ) : (
-              items.map(item => (
-                <div key={item.producto_id} className="flex items-center gap-1.5 rounded border border-gray-100 px-2 py-1 hover:bg-gray-50">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900 truncate leading-tight">{item.nombre}</p>
-                    <p className="text-xs text-gray-400">{formatCurrency(item.precio_unitario)} c/u</p>
-                  </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200"><Minus size={9} /></button>
-                    <input
-                      type="number" min="1" max={item.stock_disponible}
-                      inputMode="numeric"
-                      value={item.cantidad}
-                      onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
-                      className="w-8 text-center text-xs font-semibold border border-gray-200 rounded focus:outline-none focus:border-primary-400"
-                    />
-                    <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200"><Plus size={9} /></button>
-                  </div>
-                  <p className="text-xs font-semibold text-gray-900 w-20 text-right shrink-0 tabular-nums">{formatCurrency(item.subtotal)}</p>
-                  <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500"><Trash2 size={11} /></button>
-                </div>
-              ))
+              <table className="w-full text-xs border-collapse">
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={item.producto_id} className={`border-b border-gray-100 hover:bg-primary-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
+                      <td className="px-2 py-1.5">
+                        <p className="font-medium text-gray-900 leading-tight truncate max-w-[130px]">{item.nombre}</p>
+                        <p className="text-gray-400 font-mono leading-tight">{item.codigo}</p>
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 shrink-0"><Minus size={8} /></button>
+                          <input
+                            type="number" min="1" max={item.stock_disponible}
+                            inputMode="numeric"
+                            value={item.cantidad}
+                            onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
+                            className="w-8 text-center text-xs font-semibold border border-gray-200 rounded focus:outline-none focus:border-primary-400 py-0.5"
+                          />
+                          <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 shrink-0"><Plus size={8} /></button>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-gray-500 tabular-nums">{formatCurrency(item.precio_unitario)}</td>
+                      <td className="px-2 py-1.5 text-right font-semibold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</td>
+                      <td className="py-1.5 pr-1 text-center">
+                        <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={11} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
 
@@ -595,11 +602,20 @@ export default function NuevaVenta() {
           </div>
 
           {/* Totales */}
-          <div className="px-3 py-1 border-t border-gray-100 space-y-0.5 text-xs">
-            <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-            {descuento > 0 && <div className="flex justify-between text-red-500"><span>Descuento</span><span>-{formatCurrency(descuento)}</span></div>}
-            <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200 mt-1">
-              <span>Total</span><span>{formatCurrency(total)}</span>
+          <div className="px-3 py-2 border-t-2 border-gray-200 bg-slate-50 shrink-0">
+            <div className="space-y-0.5 text-xs mb-1">
+              <div className="flex justify-between text-gray-500">
+                <span>Subtotal</span><span className="tabular-nums">{formatCurrency(subtotal)}</span>
+              </div>
+              {descuento > 0 && (
+                <div className="flex justify-between text-red-500">
+                  <span>Descuento</span><span className="tabular-nums">-{formatCurrency(descuento)}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between items-center pt-1.5 border-t border-gray-300">
+              <span className="font-bold text-gray-800 text-sm">TOTAL</span>
+              <span className="font-bold text-primary-700 text-lg tabular-nums">{formatCurrency(total)}</span>
             </div>
           </div>
 
@@ -713,6 +729,16 @@ export default function NuevaVenta() {
           </div>
         </div>
       </div>
+
+      {/* Modal éxito — se muestra encima del layout sin romperlo */}
+      {exito && (
+        <ModalExitoVenta
+          exito={exito}
+          clienteExito={clienteExito}
+          onNuevaVenta={resetVenta}
+          onVerHistorial={() => navigate(exito.es_pedido ? '/pedidos' : '/ventas')}
+        />
+      )}
     </div>
   )
 }
