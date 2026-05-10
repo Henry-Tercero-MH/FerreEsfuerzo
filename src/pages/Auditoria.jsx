@@ -17,7 +17,10 @@ const ACCION_CONFIG = {
   pedido_creado:           { label: 'Pedido creado',          variant: 'blue' },
   venta_cancelada:         { label: 'Venta cancelada',        variant: 'red' },
   // Cotizaciones
-  cotizacion_creada:       { label: 'Cotización creada',      variant: 'purple' },
+  cotizacion_creada:             { label: 'Cotización creada',          variant: 'purple' },
+  cotizacion_convertida_venta:   { label: 'Cotización → Venta',         variant: 'blue' },
+  cotizacion_convertida_pedido:  { label: 'Cotización → Pedido',        variant: 'blue' },
+  cotizacion_cancelada:          { label: 'Cotización cancelada',        variant: 'red' },
   // Productos
   producto_creado:         { label: 'Producto creado',        variant: 'green' },
   producto_editado:        { label: 'Producto editado',       variant: 'yellow' },
@@ -49,6 +52,7 @@ const ACCION_CONFIG = {
   usuario_eliminado:       { label: 'Usuario desactivado',    variant: 'red' },
   // Empresa
   empresa_actualizada:     { label: 'Empresa actualizada',    variant: 'purple' },
+  rbac_actualizado:        { label: 'Permisos actualizados',  variant: 'orange' },
 }
 
 function accionBadge(accion) {

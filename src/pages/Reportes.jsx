@@ -5,7 +5,7 @@ import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useCompras } from '../contexts/ComprasContext'
 import { useProveedores } from '../contexts/ProveedoresContext'
-import { formatCurrency, formatDate } from '../utils/formatters'
+import { formatCurrency, formatDate, abrirVentanaImpresion } from '../utils/formatters'
 import { StatCard } from '../components/ui/Card'
 import {
   TrendingUp, Package, ShoppingCart, Users, FileText,
@@ -77,8 +77,7 @@ function topProductos(ventas) {
 // ── Función de impresión genérica ─────────────────────────────────────────────
 
 function imprimir(titulo, mesLabel, htmlTabla) {
-  const ventana = window.open('', '_blank', 'width=900,height=700')
-  ventana.document.write(`<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"/>
 <title>${titulo}</title>
 <style>
@@ -122,10 +121,9 @@ function imprimir(titulo, mesLabel, htmlTabla) {
 <hr/>
 ${htmlTabla}
 <div class="footer">Ferretería El Esfuerzo &mdash; Documento generado automáticamente</div>
-</body></html>`)
-  ventana.document.close()
-  ventana.focus()
-  setTimeout(() => ventana.print(), 400)
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}<\/script>
+</body></html>`
+  abrirVentanaImpresion(html, 'width=900,height=700')
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────

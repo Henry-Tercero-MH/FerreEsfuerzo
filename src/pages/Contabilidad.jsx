@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react'
 import { Printer, FileText, Receipt } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useEmpresa } from '../contexts/EmpresaContext'
-import { formatCurrency, formatDate } from '../utils/formatters'
+import { formatCurrency, formatDate, abrirVentanaImpresion } from '../utils/formatters'
 import IconQ from '../components/ui/IconQ'
 import Button from '../components/ui/Button'
 
@@ -163,14 +163,7 @@ export default function Contabilidad() {
 </body>
 </html>`
 
-    const w = window.open('', '_blank', 'width=1100,height=700')
-    w.document.write(html)
-    w.document.close()
-    w.focus()
-    w.onload = () => {
-      w.print()
-      w.onafterprint = () => w.close()
-    }
+    abrirVentanaImpresion(html, 'width=1100,height=700')
   }
 
   return (

@@ -30,6 +30,18 @@ export const generateNumeroVenta = (count) =>
 export const generateNumeroSecuencial = (prefix, count) =>
   `${prefix}-${String(count).padStart(6, '0')}`
 
+export function abrirVentanaImpresion(html, opciones = '') {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const win  = window.open(url, '_blank', opciones || 'width=800,height=600')
+  if (!win) {
+    URL.revokeObjectURL(url)
+    alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.')
+    return
+  }
+  win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true })
+}
+
 export const generateCodigoProducto = () => {
   const ts = Date.now().toString().slice(-10)
   const rand = String(Math.floor(Math.random() * 1000)).padStart(3, '0')

@@ -98,7 +98,7 @@ export default function ConfiguracionEmpresa() {
             className="sm:col-span-2"
           />
           <Input
-            label="Razón Social *"
+            label="Razón Social"
             name="razon_social"
             value={f.razon_social}
             onChange={handleChange}

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Menu, Bell, RefreshCw, Search, Package } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { usePWAUpdate } from '../../hooks/usePWAUpdate'
@@ -31,16 +32,22 @@ function BuscadorGlobal() {
   const navigate = useNavigate()
   const [abierto, setAbierto] = useState(false)
   const [q, setQ] = useState('')
+  const [qDebounced, setQDebounced] = useState('')
   const inputRef = useRef(null)
 
-  const resultados = (() => {
-    if (!q.trim()) return []
-    const t = q.toLowerCase()
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q), 180)
+    return () => clearTimeout(t)
+  }, [q])
+
+  const resultados = useMemo(() => {
+    if (!qDebounced.trim()) return []
+    const t = qDebounced.toLowerCase()
     return productos.filter(p =>
       p.nombre.toLowerCase().includes(t) ||
       String(p.codigo ?? '').toLowerCase().includes(t)
     ).slice(0, 8)
-  })()
+  }, [productos, qDebounced])
 
   useEffect(() => {
     if (abierto) setTimeout(() => inputRef.current?.focus(), 50)
@@ -49,6 +56,7 @@ function BuscadorGlobal() {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'F7') { e.preventDefault(); setAbierto(v => !v) }
+      if (e.key === 'F3') { e.preventDefault(); setQ(''); inputRef.current?.focus() }
       if (e.key === 'Escape') { setAbierto(false); setQ('') }
     }
     document.addEventListener('keydown', handler)
@@ -66,9 +74,9 @@ function BuscadorGlobal() {
         <kbd className="ml-1 text-xs bg-white border border-gray-200 rounded px-1">F7</kbd>
       </button>
 
-      {abierto && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/40" onClick={() => setAbierto(false)}>
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      {abierto && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-start justify-center pt-16 bg-black/40" onClick={() => setAbierto(false)}>
+          <div className="w-full max-w-7xl bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-4 px-7 py-5 border-b border-gray-200">
               <Search size={26} className="text-gray-400 shrink-0" />
               <input
@@ -78,28 +86,44 @@ function BuscadorGlobal() {
                 placeholder="Buscar por nombre o código..."
                 className="flex-1 text-2xl outline-none text-gray-800 placeholder-gray-400"
               />
-              <kbd className="text-base text-gray-300 border border-gray-200 rounded px-2 py-0.5">Esc</kbd>
+              <div className="flex items-center gap-2 shrink-0">
+                <kbd className="text-sm text-gray-400 border border-gray-200 rounded px-2 py-0.5 cursor-pointer hover:bg-gray-50" onClick={() => { setQ(''); inputRef.current?.focus() }} title="Limpiar búsqueda (F3)">F3 limpiar</kbd>
+                <kbd className="text-sm text-gray-400 border border-gray-200 rounded px-2 py-0.5 cursor-pointer hover:bg-gray-50" onClick={() => { setAbierto(false); setQ('') }} title="Cerrar (Esc)">Esc cerrar</kbd>
+              </div>
             </div>
             {resultados.length > 0 ? (
-              <ul className="max-h-[32rem] overflow-y-auto divide-y divide-gray-100">
+              <div className="max-h-[32rem] overflow-y-auto">
+                {/* Cabecera de columnas */}
+                <div className="flex items-center gap-5 px-7 py-2 border-b border-gray-200 bg-gray-50">
+                  <div className="w-6 shrink-0" />
+                  <div className="flex-1 grid grid-cols-4 gap-6">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Producto</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Código</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Categoría</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Ubicación</p>
+                  </div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider text-right shrink-0 w-32">Precio</p>
+                </div>
+                <ul className="divide-y divide-gray-100">
                 {resultados.map(p => (
                   <li key={p.id}
-                    className="flex items-center gap-5 px-7 py-5 hover:bg-primary-50 cursor-pointer transition-colors"
+                    className="flex items-center gap-5 px-7 py-4 hover:bg-primary-50 cursor-pointer transition-colors"
                     onClick={() => { navigate('/productos'); setAbierto(false); setQ('') }}
                   >
                     <Package size={24} className="text-gray-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Producto</p>
-                      <p className="text-xl font-semibold text-gray-900 truncate">{p.nombre}</p>
-                      <p className="text-base text-gray-500 mt-0.5">Cód: <span className="font-mono">{p.codigo}</span> · Stock: <span className="font-semibold">{p.stock}</span></p>
+                    <div className="flex-1 grid grid-cols-4 gap-6 items-center min-w-0">
+                      <p className="text-xl font-semibold text-gray-900 truncate text-center">{p.nombre}</p>
+                      <p className="text-xl font-semibold text-gray-900 truncate text-center">{p.codigo}</p>
+                      <p className="text-xl font-semibold text-gray-900 truncate text-center">{p.categoria || '—'}</p>
+                      <p className="text-xl font-semibold text-gray-900 truncate text-center">{p.ubicacion || '—'}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Precio unitario</p>
-                      <p className="text-2xl font-bold text-primary-700">{formatCurrency(p.precio_venta)}</p>
+                    <div className="shrink-0 w-32 text-right">
+                      <p className="text-xl font-semibold text-gray-900">{formatCurrency(p.precio_venta)}</p>
                     </div>
                   </li>
                 ))}
-              </ul>
+                </ul>
+              </div>
             ) : q.trim() ? (
               <div className="px-7 py-12 text-center text-lg text-gray-400">Sin resultados para "{q}"</div>
             ) : (
@@ -107,7 +131,7 @@ function BuscadorGlobal() {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   )
 }

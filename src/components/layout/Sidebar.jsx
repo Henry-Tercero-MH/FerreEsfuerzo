@@ -69,7 +69,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
         <div className="flex h-16 items-center border-b border-blue-100 px-3 flex-shrink-0">
 
           {/* Logo + nombre — oculto cuando colapsado en PC */}
-          <div className={`flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden transition-all duration-300 ${collapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'opacity-100'}`}>
+          <div className={`flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden ${collapsed ? 'lg:hidden' : ''}`}>
             <img
               src="/logoFerreApp.png"
               alt="Logo"
@@ -124,7 +124,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
                 }
               >
                 <Icon size={18} className="flex-shrink-0" />
-                <span className={`truncate transition-all duration-300 ${collapsed ? 'lg:hidden' : ''}`}>
+                <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>
                   {item.label}
                 </span>
               </NavLink>
@@ -138,7 +138,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-sm">
               {sesion?.nombre?.charAt(0).toUpperCase()}
             </div>
-            <div className={`flex-1 min-w-0 transition-all duration-300 ${collapsed ? 'lg:hidden' : ''}`}>
+            <div className={`flex-1 min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
               <p className="truncate text-sm font-medium text-gray-900">{sesion?.nombre}</p>
               <p className="truncate text-xs text-gray-400">{ROLES[sesion?.rol]?.label}</p>
             </div>

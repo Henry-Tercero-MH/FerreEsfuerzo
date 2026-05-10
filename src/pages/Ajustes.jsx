@@ -1,11 +1,16 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Download, Wifi, RefreshCw, Database } from 'lucide-react'
+import { Plus, Pencil, Trash2, Download, Wifi, FileSpreadsheet } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useAuth, ROLES } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
+import { useCotizaciones } from '../contexts/CotizacionesContext'
+import { useCompras } from '../contexts/ComprasContext'
+import { useProveedores } from '../contexts/ProveedoresContext'
+import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
+import { useCaja } from '../contexts/CajaContext'
 import { testConexion } from '../services/googleAppsScript.js'
 import { auditar } from '../services/auditoria'
 import { db } from '../services/db.js'
-import { seedDemoData } from '../utils/demoSeeder'
 import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -20,6 +25,11 @@ const FORM_VACÍO = { nombre: '', email: '', password: '', rol: 'vendedor' }
 export default function Ajustes() {
   const { usuarios, agregarUsuario, editarUsuario, eliminarUsuario, sesion } = useAuth()
   const { productos, ventas, clientes, movimientos } = useApp()
+  const { cotizaciones } = useCotizaciones()
+  const { compras } = useCompras()
+  const { proveedores } = useProveedores()
+  const { cuentas, abonos } = useCuentasPorCobrar()
+  const { aperturas, movimientos: movimientosCaja } = useCaja()
   const { toasts, toast, remove: removeToast } = useToast()
   const [modal, setModal]   = useState({ open: false, modo: 'crear', usuario: null })
   const [confirm, setConfirm] = useState(null)
@@ -28,10 +38,6 @@ export default function Ajustes() {
   const [loading, setLoading] = useState(false)
   const [alerta, setAlerta]  = useState(null)
   const [testLoading, setTestLoading]     = useState(false)
-  const [refreshLoading, setRefreshLoading] = useState(false)
-  const [massiveLoading, setMassiveLoading] = useState(false)
-  const [massiveQty, setMassiveQty] = useState(20)
-  const [massiveConfirm, setMassiveConfirm] = useState(false)
 
 
   const mostrarAlerta = (type, message) => {
@@ -94,16 +100,6 @@ export default function Ajustes() {
     setTestLoading(false)
   }
 
-  const handleRefrescarDatos = async () => {
-    setRefreshLoading(true)
-    try {
-      await db.refreshAll()
-      mostrarAlerta('success', 'Datos actualizados desde Google Sheets')
-    } catch (e) {
-      mostrarAlerta('error', `Error al actualizar: ${e.message}`)
-    }
-    setRefreshLoading(false)
-  }
 
   const handleExportarJSON = () => {
     const data = Object.keys(localStorage)
@@ -135,41 +131,113 @@ export default function Ajustes() {
     mostrarAlerta('success', 'Backup JSON descargado')
   }
 
-  const handleCargaMasiva = async () => {
-    const cantidad = Number(massiveQty)
-    setMassiveConfirm(false)
-    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 200) {
-      mostrarAlerta('error', 'La cantidad debe estar entre 1 y 200')
-      return
+  const handleExportarExcel = () => {
+    const wb = XLSX.utils.book_new()
+    const hoja = (datos, nombre) => {
+      const ws = datos.length ? XLSX.utils.json_to_sheet(datos) : XLSX.utils.aoa_to_sheet([['Sin datos']])
+      XLSX.utils.book_append_sheet(wb, ws, nombre)
     }
 
-    setMassiveLoading(true)
+    hoja(productos.map(p => ({
+      Código: p.codigo, Nombre: p.nombre, Categoría: p.categoria || '',
+      Ubicación: p.ubicacion || '', Precio_Compra: p.precio_compra || 0,
+      Precio_Venta: p.precio_venta, Stock: p.stock,
+      Stock_Mínimo: p.stock_minimo, Unidad: p.unidad || '',
+      Activo: p.activo ? 'Sí' : 'No', Creado: p.creado_en || '',
+    })), 'Productos')
 
-    try {
-      const resumen = await seedDemoData({
-        qty: cantidad,
-        usuario: {
-          id: sesion?.id ?? 'usr-admin',
-          nombre: sesion?.nombre ?? 'Administrador',
-        },
-      })
+    hoja(clientes.map(c => ({
+      ID: c.id, Nombre: c.nombre, Teléfono: c.telefono || '',
+      Email: c.email || '', NIT: c.nit || '', Tipo: c.tipo || '',
+      Activo: c.activo ? 'Sí' : 'No', Creado: c.creado_en || '',
+    })), 'Clientes')
 
-      auditar({
-        accion: 'carga_masiva',
-        entidad: 'sistema',
-        descripcion: `Carga masiva ejecutada con ${cantidad} registros por módulo`,
-        detalle: resumen,
-        sesion,
-      })
+    hoja(ventas.map(v => ({
+      Número: v.numero_venta, Fecha: v.fecha, Cliente: v.cliente_nombre || '',
+      Subtotal: v.subtotal || 0, Descuento: v.descuento || 0,
+      Total: v.total || 0, Método_Pago: v.metodo_pago || '',
+      Estado: v.estado || '', Items: (v.items || []).length,
+      Es_Pedido: v.es_pedido ? 'Sí' : 'No',
+    })), 'Ventas')
 
-      mostrarAlerta('success', `Carga masiva completada: ${cantidad} registros por módulo`)
-      window.setTimeout(() => window.location.reload(), 1200)
-    } catch (e) {
-      mostrarAlerta('error', `No se pudo completar la carga masiva: ${e.message}`)
-    } finally {
-      setMassiveLoading(false)
-    }
+    // Items de ventas (detalle)
+    const ventaItems = ventas.flatMap(v =>
+      (v.items || []).map(i => ({
+        Venta: v.numero_venta, Fecha: v.fecha,
+        Producto: i.nombre || '', Código: i.codigo || '',
+        Cantidad: i.cantidad, Precio_Unitario: i.precio_unitario,
+        Subtotal: i.subtotal,
+      }))
+    )
+    hoja(ventaItems, 'Detalle_Ventas')
+
+    hoja(movimientos.map(m => ({
+      ID: m.id, Producto_ID: m.producto_id, Tipo: m.tipo,
+      Cantidad: m.cantidad, Motivo: m.motivo || '',
+      Referencia: m.referencia || '', Fecha: m.fecha || '',
+    })), 'Movimientos_Inventario')
+
+    hoja((cotizaciones || []).map(c => ({
+      Número: c.numero_cotizacion, Fecha: c.fecha,
+      Cliente: c.cliente_nombre || '', Subtotal: c.subtotal || 0,
+      Descuento: c.descuento || 0, Total: c.total || 0,
+      Estado: c.estado || '', Vencimiento: c.fecha_vencimiento || '',
+      Notas: c.notas || '',
+    })), 'Cotizaciones')
+
+    hoja((proveedores || []).map(p => ({
+      ID: p.id, Nombre: p.nombre, Contacto: p.contacto || '',
+      Teléfono: p.telefono || '', Email: p.email || '',
+      Dirección: p.direccion || '', NIT: p.nit || '',
+      Activo: p.activo ? 'Sí' : 'No',
+    })), 'Proveedores')
+
+    hoja((compras || []).map(c => ({
+      Número: c.numero_documento, Fecha: c.fecha_documento,
+      Proveedor: c.proveedor_nombre || '', Subtotal: c.subtotal || 0,
+      Descuento: c.descuento || 0, Total: c.total || 0,
+      Estado: c.estado || '', Notas: c.notas || '',
+    })), 'Compras')
+
+    hoja((cuentas || []).map(c => ({
+      ID: c.id, Cliente_ID: c.cliente_id, Cliente: c.cliente_nombre || '',
+      Monto_Original: c.monto_original || 0, Saldo: c.saldo || 0,
+      Estado: c.estado || '', Vencimiento: c.fecha_vencimiento || '',
+      Referencia_Venta: c.referencia_venta || '',
+    })), 'Cuentas_por_Cobrar')
+
+    hoja((abonos || []).map(a => ({
+      ID: a.id, Cuenta_ID: a.cuenta_id, Monto: a.monto || 0,
+      Fecha: a.fecha || '', Método: a.metodo_pago || '', Notas: a.notas || '',
+    })), 'Abonos')
+
+    hoja((aperturas || []).map(a => ({
+      ID: a.id, Fecha_Apertura: a.fecha_apertura || '',
+      Fecha_Cierre: a.fecha_cierre || '', Fondo_Inicial: a.fondo_inicial || 0,
+      Total_Ventas: a.total_ventas || 0, Total_Ingresos: a.total_ingresos || 0,
+      Total_Egresos: a.total_egresos || 0, Saldo_Final: a.saldo_final || 0,
+      Estado: a.estado || '',
+    })), 'Caja_Aperturas')
+
+    hoja((movimientosCaja || []).map(m => ({
+      ID: m.id, Apertura_ID: m.apertura_id || '', Tipo: m.tipo || '',
+      Concepto: m.concepto || '', Monto: m.monto || 0, Fecha: m.fecha || '',
+    })), 'Caja_Movimientos')
+
+    hoja(usuarios.map(u => ({
+      ID: u.id, Nombre: u.nombre, Email: u.email,
+      Rol: u.rol, Activo: u.activo !== false ? 'Sí' : 'No',
+    })), 'Usuarios')
+
+    const fecha = new Date().toISOString().split('T')[0]
+    XLSX.writeFile(wb, `ferreapp-backup-${fecha}.xlsx`)
+    mostrarAlerta('success', 'Backup Excel descargado — ' + [
+      `${productos.length} productos`, `${ventas.length} ventas`,
+      `${clientes.length} clientes`, `${(cotizaciones||[]).length} cotizaciones`,
+      `${(compras||[]).length} compras`,
+    ].join(', '))
   }
+
 
   const rolesColor = { admin: 'orange', vendedor: 'blue', bodeguero: 'green', cotizador: 'purple' }
 
@@ -225,60 +293,19 @@ export default function Ajustes() {
           Los datos se sincronizan automáticamente con Google Sheets. Usa estas opciones para verificar o forzar una actualización.
         </p>
         <div className="flex flex-wrap gap-3">
-          <Button variant="primary" icon={RefreshCw} loading={refreshLoading} onClick={handleRefrescarDatos}>
-            Refrescar desde Google Sheets
-          </Button>
           <Button variant="secondary" icon={Wifi} loading={testLoading} onClick={handleTestConexion}>
             Probar conexión
           </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportarJSON}>
             Exportar copia JSON
           </Button>
-        </div>
-        <p className="mt-3 text-xs text-gray-400">
-          Configura <code className="bg-gray-100 px-1 rounded">VITE_APPS_SCRIPT_URL</code> en el archivo <code className="bg-gray-100 px-1 rounded">.env</code> para habilitar la sincronización.
-        </p>
-      </div>
-
-      {/* Carga masiva */}
-      <div className="card border-primary-100 bg-primary-50/40">
-        <div className="mb-4 flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white">
-            <Database size={18} />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Carga masiva de datos demo</h2>
-            <p className="text-sm text-gray-500">
-              Genera datos de prueba para productos, clientes, proveedores, compras, cotizaciones, ventas, caja y cuentas por cobrar.
-            </p>
-          </div>
+          <Button variant="secondary" icon={FileSpreadsheet} onClick={handleExportarExcel}>
+            Exportar Excel (backup)
+          </Button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-[160px_1fr] sm:items-end">
-          <Input
-            label="Registros por módulo"
-            type="number"
-            min="1"
-            max="200"
-            value={massiveQty}
-            onChange={(e) => setMassiveQty(e.target.value)}
-            helperText="Recomendado: 20 para pruebas rápidas."
-          />
-          <div className="flex flex-wrap gap-3">
-            <Button
-              variant="primary"
-              icon={Database}
-              loading={massiveLoading}
-              onClick={() => setMassiveConfirm(true)}
-            >
-              Cargar datos masivos
-            </Button>
-            <span className="self-center text-xs text-gray-500">
-              Esta acción inserta y sincroniza información real de prueba. Úsala solo para QA.
-            </span>
-          </div>
-        </div>
       </div>
+
 
       {/* Info del sistema */}
       <div className="card">
@@ -310,14 +337,6 @@ export default function Ajustes() {
         title="¿Desactivar usuario?"
         message={`Se desactivará al usuario "${confirm?.nombre}". No podrá iniciar sesión.`}
         confirmText="Desactivar"
-      />
-      <ConfirmModal
-        open={massiveConfirm}
-        onClose={() => setMassiveConfirm(false)}
-        onConfirm={handleCargaMasiva}
-        title="¿Cargar datos masivos?"
-        message={`Se crearán ${massiveQty} registros por módulo y se sincronizarán con Google Sheets. Esta acción puede tardar varios minutos.`}
-        confirmText="Cargar ahora"
       />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 

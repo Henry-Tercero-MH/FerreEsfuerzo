@@ -5,7 +5,7 @@ import { useCaja } from '../contexts/CajaContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useApp } from '../contexts/AppContext'
 import { auditar } from '../services/auditoria'
-import { formatCurrency, formatDateTime } from '../utils/formatters'
+import { formatCurrency, formatDateTime, abrirVentanaImpresion } from '../utils/formatters'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
@@ -188,12 +188,10 @@ ${movs.length ? `<div class="section">
 ${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p></div>` : ''}
 
 <p style="margin-top:32px;font-size:11px;text-align:center">Generado por FerreApp · ${new Date().toLocaleString('es-GT')}</p>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}<\/script>
 </body></html>`
 
-    const w = window.open('', '_blank', 'width=800,height=700')
-    w.document.documentElement.innerHTML = html
-    w.focus()
-    setTimeout(() => w.print(), 400)
+    abrirVentanaImpresion(html, 'width=800,height=700')
   }
 
   return (

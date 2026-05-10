@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useEmpresa } from '../contexts/EmpresaContext'
 import { auditar } from '../services/auditoria'
 import { useDebounce } from '../hooks/useDebounce'
-import { formatCurrency, formatDate } from '../utils/formatters'
+import { formatCurrency, formatDate, abrirVentanaImpresion } from '../utils/formatters'
 import { METODOS_PAGO } from '../utils/constants'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -116,9 +116,7 @@ export default function CuentasPorCobrar() {
     const fechaObj = new Date(fecha || new Date())
     const fechaStr = fechaObj.toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const horaStr  = fechaObj.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })
-    const ventana = window.open('', '_blank', 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
-    if (!ventana) { alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio.'); return }
-    ventana.document.write(`<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8"/>
@@ -205,9 +203,8 @@ export default function CuentasPorCobrar() {
     };
   </script>
 </body>
-</html>`)
-    ventana.document.close()
-    ventana.focus()
+</html>`
+    abrirVentanaImpresion(html, 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
   }
 
   const handleCrearCuenta = async () => {

@@ -7,12 +7,7 @@ export function imprimirCotizacion(cot, empresa) {
   }
   const estadoLabel = estadosLabel[cot.estado] || cot.estado || 'Vigente'
   const nombreEmpresa = empresa?.nombre_comercial || 'Ferretería El Esfuerzo'
-  const ventana = window.open('', '_blank', 'width=800,height=600')
-  if (!ventana) {
-    alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.')
-    return
-  }
-  ventana.document.write(`<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -100,7 +95,14 @@ export function imprimirCotizacion(cot, empresa) {
   </div>
   <script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}</script>
 </body>
-</html>`)
-  ventana.document.close()
-  ventana.focus()
+</html>`
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const ventana = window.open(url, '_blank', 'width=800,height=600')
+  if (!ventana) {
+    URL.revokeObjectURL(url)
+    alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.')
+    return
+  }
+  ventana.addEventListener('load', () => URL.revokeObjectURL(url), { once: true })
 }

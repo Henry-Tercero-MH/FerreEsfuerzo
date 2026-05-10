@@ -4,6 +4,8 @@ import { Plus, FileText, Eye, CheckCircle, XCircle, AlertTriangle, Printer } fro
 import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { useApp } from '../contexts/AppContext'
 import { useEmpresa } from '../contexts/EmpresaContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auditar } from '../services/auditoria'
 import { useDebounce } from '../hooks/useDebounce'
 import { formatCurrency, formatDate } from '../utils/formatters'
 import Button from '../components/ui/Button'
@@ -17,6 +19,7 @@ export default function Cotizaciones() {
   const { cotizaciones, cambiarEstado } = useCotizaciones()
   const { crearVenta, productos } = useApp()
   const { empresa } = useEmpresa()
+  const { sesion } = useAuth()
   const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -86,6 +89,7 @@ export default function Cotizaciones() {
       if (!venta) { setConfirm(null); return }
       cambiarEstado(cot.id, 'PEDIDO')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'PEDIDO' }))
+      auditar({ accion: 'cotizacion_convertida_pedido', entidad: 'cotizaciones', entidad_id: cot.id, descripcion: `Cotización ${cot.numero_cotizacion} convertida a pedido — ${formatCurrency(cot.total)}`, detalle: { cliente: cot.cliente_nombre, total: cot.total }, sesion })
     } else if (tipo === 'venta') {
       const venta = crearVenta({
         cliente_id: cot.cliente_id,
@@ -102,9 +106,11 @@ export default function Cotizaciones() {
       if (!venta) { setConfirm(null); return }
       cambiarEstado(cot.id, 'CONVERTIDA')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CONVERTIDA' }))
+      auditar({ accion: 'cotizacion_convertida_venta', entidad: 'cotizaciones', entidad_id: cot.id, descripcion: `Cotización ${cot.numero_cotizacion} convertida a venta — ${formatCurrency(cot.total)}`, detalle: { cliente: cot.cliente_nombre, total: cot.total }, sesion })
     } else if (tipo === 'cancelar') {
       cambiarEstado(cot.id, 'CANCELADA')
       if (detalle?.id === cot.id) setDetalle(prev => ({ ...prev, estado: 'CANCELADA' }))
+      auditar({ accion: 'cotizacion_cancelada', entidad: 'cotizaciones', entidad_id: cot.id, descripcion: `Cotización ${cot.numero_cotizacion} cancelada`, detalle: { cliente: cot.cliente_nombre, total: cot.total }, sesion })
     }
     setConfirm(null)
   }

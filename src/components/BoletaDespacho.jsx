@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { X, Printer } from 'lucide-react'
 import { useEmpresa } from '../contexts/EmpresaContext'
-import { formatDate, formatCurrency } from '../utils/formatters'
+import { formatDate, formatCurrency, abrirVentanaImpresion } from '../utils/formatters'
 import { ESTADOS_DESPACHO } from '../utils/constants'
 import Button from './ui/Button'
 
@@ -11,41 +11,37 @@ export default function BoletaDespacho({ pedido, cliente, onClose }) {
 
   const imprimir = () => {
     const contenido = boletaRef.current.innerHTML
-    const ventana = window.open('', '_blank', 'width=800,height=600')
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8" />
-        <title>Boleta de Despacho — ${pedido.numero_venta}</title>
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
-          .encabezado { text-align: center; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
-          .encabezado h1 { font-size: 18px; font-weight: bold; }
-          .encabezado p { font-size: 11px; color: #444; }
-          .titulo-boleta { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-          .seccion { margin-bottom: 16px; }
-          .seccion h3 { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #666; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 8px; }
-          .fila { display: flex; justify-content: space-between; margin-bottom: 4px; }
-          .fila span:first-child { color: #555; }
-          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-          th { background: #f3f4f6; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 6px 8px; text-align: left; border: 1px solid #e5e7eb; }
-          td { padding: 8px; border: 1px solid #e5e7eb; vertical-align: top; }
-          .check { width: 20px; text-align: center; }
-          .firma { display: flex; gap: 32px; margin-top: 32px; }
-          .firma-linea { flex: 1; }
-          .firma-linea .linea { border-top: 1px solid #111; margin-top: 40px; padding-top: 4px; font-size: 10px; text-align: center; color: #666; }
-          .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold; background: #fef9c3; color: #713f12; }
-          .pie { margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-        </style>
-      </head>
-      <body>${contenido}</body>
-      </html>
-    `)
-    ventana.document.close()
-    ventana.focus()
-    setTimeout(() => { ventana.print(); ventana.close() }, 300)
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Boleta de Despacho — ${pedido.numero_venta}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+    .encabezado { text-align: center; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
+    .encabezado h1 { font-size: 18px; font-weight: bold; }
+    .encabezado p { font-size: 11px; color: #444; }
+    .titulo-boleta { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .seccion { margin-bottom: 16px; }
+    .seccion h3 { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #666; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 8px; }
+    .fila { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .fila span:first-child { color: #555; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th { background: #f3f4f6; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 6px 8px; text-align: left; border: 1px solid #e5e7eb; }
+    td { padding: 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+    .check { width: 20px; text-align: center; }
+    .firma { display: flex; gap: 32px; margin-top: 32px; }
+    .firma-linea { flex: 1; }
+    .firma-linea .linea { border-top: 1px solid #111; margin-top: 40px; padding-top: 4px; font-size: 10px; text-align: center; color: #666; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold; background: #fef9c3; color: #713f12; }
+    .pie { margin-top: 24px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+  </style>
+</head>
+<body>${contenido}
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}<\/script>
+</body></html>`
+    abrirVentanaImpresion(html)
   }
 
   const estado = ESTADOS_DESPACHO[pedido.estado_despacho]

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Minus, Trash2, FileText, CheckCircle, UserPlus } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
@@ -21,6 +21,12 @@ export default function NuevaCotizacion() {
   const { toasts, toast, remove } = useToast()
 
   const [busqueda, setBusqueda] = useState('')
+  const [busquedaDebounced, setBusquedaDebounced] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaDebounced(busqueda), 200)
+    return () => clearTimeout(t)
+  }, [busqueda])
   const [items, setItems] = useState([])
   const [clienteId, setClienteId] = useState('')
   const [descuentoGlobal, setDescuentoGlobal] = useState(0)
@@ -33,12 +39,13 @@ export default function NuevaCotizacion() {
   const [errCliente, setErrCliente] = useState('')
 
   const productosFiltrados = useMemo(() => {
-    if (!busqueda) return []
+    if (!busquedaDebounced) return []
+    const q = busquedaDebounced.toLowerCase()
     return productos.filter(p =>
-      p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      String(p.codigo ?? '').toLowerCase().includes(busqueda.toLowerCase())
+      p.nombre.toLowerCase().includes(q) ||
+      String(p.codigo ?? '').toLowerCase().includes(q)
     ).slice(0, 8)
-  }, [productos, busqueda])
+  }, [productos, busquedaDebounced])
 
   const agregarItem = (producto) => {
     setBusqueda('')
@@ -169,10 +176,10 @@ export default function NuevaCotizacion() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
 
-        {/* Izquierda — buscador + items */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Izquierda — buscador + items (col-span-2 en desktop) */}
+        <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
 
           {/* Buscador */}
           <div className="card">
@@ -213,32 +220,39 @@ export default function NuevaCotizacion() {
             ) : (
               <div className="space-y-2">
                 {items.map(item => (
-                  <div key={item.producto_id} className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-100 p-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.nombre}</p>
-                      <p className="text-xs text-gray-400">{item.codigo}</p>
+                  <div key={item.producto_id} className="rounded-lg border border-gray-100 p-3">
+                    {/* Fila 1: nombre + eliminar */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{item.nombre}</p>
+                        <p className="text-xs text-gray-400">{item.codigo}</p>
+                      </div>
+                      <button onClick={() => eliminarItem(item.producto_id)} className="btn-icon btn-ghost text-gray-300 hover:text-red-500 shrink-0"><Trash2 size={14} /></button>
                     </div>
-                    {/* Precio editable — en cotizaciones se puede ajustar */}
-                    <input
-                      type="number"
-                      min="0"
-                      value={item.precio_unitario}
-                      onChange={e => cambiarPrecio(item.producto_id, e.target.value)}
-                      className="input w-24 text-right text-sm py-1"
-                    />
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="btn-icon btn-ghost w-7 h-7"><Minus size={12} /></button>
+                    {/* Fila 2: precio · cantidad · subtotal */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       <input
                         type="number"
-                        min="1"
-                        value={item.cantidad}
-                        onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
-                        className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
+                        min="0"
+                        inputMode="decimal"
+                        value={item.precio_unitario}
+                        onChange={e => cambiarPrecio(item.producto_id, e.target.value)}
+                        className="input w-24 text-right text-sm py-1"
                       />
-                      <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="btn-icon btn-ghost w-7 h-7"><Plus size={12} /></button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="btn-icon btn-ghost w-7 h-7"><Minus size={12} /></button>
+                        <input
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={item.cantidad}
+                          onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
+                          className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
+                        />
+                        <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="btn-icon btn-ghost w-7 h-7"><Plus size={12} /></button>
+                      </div>
+                      <p className="ml-auto text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</p>
                     </div>
-                    <p className="w-20 text-right text-sm font-semibold text-gray-900">{formatCurrency(item.subtotal)}</p>
-                    <button onClick={() => eliminarItem(item.producto_id)} className="btn-icon btn-ghost text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
                 ))}
               </div>
@@ -247,7 +261,7 @@ export default function NuevaCotizacion() {
         </div>
 
         {/* Derecha — datos + totales */}
-        <div className="card h-fit space-y-4 lg:sticky lg:top-24">
+        <div className="card h-fit space-y-4 lg:sticky lg:top-24 order-1 lg:order-2">
           <h3 className="font-semibold text-gray-900">Datos de la cotización</h3>
 
           <div>

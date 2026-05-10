@@ -135,7 +135,6 @@ export const validateEmpresa = (data) => {
   const errors = {}
   if (!isRequired(data.nit))               errors.nit              = 'El NIT es requerido'
   if (!isRequired(data.nombre_comercial))  errors.nombre_comercial = 'El nombre comercial es requerido'
-  if (!isRequired(data.razon_social))      errors.razon_social     = 'La razón social es requerida'
   if (!isRequired(data.direccion_fiscal))  errors.direccion_fiscal = 'La dirección fiscal es requerida'
   if (!isEmail(data.correo_electronico))   errors.correo_electronico = 'Correo inválido'
   if (!isPhone(data.telefono))             errors.telefono         = 'Teléfono inválido'

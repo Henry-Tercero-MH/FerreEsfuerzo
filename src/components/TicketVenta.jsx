@@ -119,14 +119,15 @@ function buildTicketHTML(venta, cliente, empresa, abrirCajon = true) {
 
 export function imprimirTicket(venta, cliente, empresa, abrirCajon = true) {
   const html = buildTicketHTML(venta, cliente, empresa, abrirCajon)
-  const win  = window.open('', '_blank', 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const win  = window.open(url, '_blank', 'width=320,height=600,toolbar=0,scrollbars=0,status=0')
   if (!win) {
+    URL.revokeObjectURL(url)
     alert('El navegador bloqueó la ventana emergente. Permite popups para este sitio e intenta de nuevo.')
     return
   }
-  win.document.write(html)
-  win.document.close()
-  win.focus()
+  win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true })
 }
 
 // Componente botón listo para usar

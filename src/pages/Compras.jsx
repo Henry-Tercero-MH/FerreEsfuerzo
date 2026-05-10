@@ -6,7 +6,7 @@ import { useProveedores } from '../contexts/ProveedoresContext'
 import { useEmpresa } from '../contexts/EmpresaContext'
 import { useDebounce } from '../hooks/useDebounce'
 import { useToast } from '../hooks/useToast'
-import { formatCurrency, formatDate } from '../utils/formatters'
+import { formatCurrency, formatDate, abrirVentanaImpresion } from '../utils/formatters'
 import { validateCompra } from '../utils/validators'
 import { useAuth } from '../contexts/AuthContext'
 import { auditar } from '../services/auditoria'
@@ -30,10 +30,8 @@ const FORM_VACÍO = {
 
 function imprimirCompra(compra, empresa) {
   const nombreEmpresa = empresa?.nombre_comercial || 'Ferretería El Esfuerzo'
-  const ventana = window.open('', '_blank', 'width=800,height=600')
-  if (!ventana) return
   const estadoLabel = { REGISTRADA: 'Registrada', APLICADA: 'Aplicada', ANULADA: 'Anulada' }
-  ventana.document.write(`<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"/>
 <title>Compra ${compra.numero_documento}</title>
 <style>
@@ -116,9 +114,8 @@ ${compra.notas ? `<div class="section" style="margin-top:20px"><h2>Notas</h2><di
   <p>Documento de compra — uso interno</p>
 </div>
 <script>window.onload=function(){window.print();setTimeout(function(){window.close()},800)}</script>
-</body></html>`)
-  ventana.document.close()
-  ventana.focus()
+</body></html>`
+  abrirVentanaImpresion(html)
 }
 
 export default function Compras() {
