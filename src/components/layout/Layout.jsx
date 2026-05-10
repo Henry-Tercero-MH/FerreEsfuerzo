@@ -34,7 +34,7 @@ export default function Layout() {
         onToggleCollapse={() => setCollapsed(v => !v)}
       />
 
-      <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${facturaExpandida ? 'pr-[480px]' : ''}`}>
+      <div className={`flex flex-1 flex-col overflow-hidden transition-all duration-300 ${facturaExpandida ? 'pr-[496px]' : ''}`}>
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="flex-1 overflow-hidden flex flex-col">

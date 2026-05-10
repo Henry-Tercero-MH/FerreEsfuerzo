@@ -434,7 +434,7 @@ export default function NuevaVenta() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Tabla de productos */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <div className="flex-1 flex flex-col overflow-hidden bg-white mr-4">
           {/* Contenedor con scroll, thead sticky */}
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-xs border-collapse table-fixed">
@@ -524,22 +524,7 @@ export default function NuevaVenta() {
             </div>
           </div>
 
-          {/* Tabla de ítems — encabezado fijo */}
-          <div className="shrink-0 border-b border-gray-200 bg-gray-50">
-            <table className="w-full text-xs">
-              <thead>
-                <tr>
-                  <th className="text-left px-2 py-1.5 font-semibold text-gray-500">Producto</th>
-                  <th className="text-center px-1 py-1.5 font-semibold text-gray-500 w-20">Cant.</th>
-                  <th className="text-right px-2 py-1.5 font-semibold text-gray-500 w-16">P.Unit</th>
-                  <th className="text-right px-2 py-1.5 font-semibold text-gray-500 w-16">Total</th>
-                  <th className="w-5"></th>
-                </tr>
-              </thead>
-            </table>
-          </div>
-
-          {/* Tabla de ítems — filas con scroll */}
+          {/* Tabla de ítems — una sola tabla con thead sticky */}
           <div className="flex-1 overflow-y-auto scrollbar-cart">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2 py-10">
@@ -547,12 +532,28 @@ export default function NuevaVenta() {
                 <p className="text-xs">Agrega productos para ver la factura</p>
               </div>
             ) : (
-              <table className="w-full text-xs border-collapse">
+              <table className="w-full text-xs border-collapse table-fixed">
+                <colgroup>
+                  <col style={{ width: '38%' }} /> {/* Producto */}
+                  <col style={{ width: '24%' }} /> {/* Cant. */}
+                  <col style={{ width: '18%' }} /> {/* P.Unit */}
+                  <col style={{ width: '16%' }} /> {/* Total */}
+                  <col style={{ width: '4%' }}  /> {/* Eliminar */}
+                </colgroup>
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="text-left   px-2 py-1.5 font-semibold text-gray-500">Producto</th>
+                    <th className="text-center px-1 py-1.5 font-semibold text-gray-500">Cant.</th>
+                    <th className="text-right  px-2 py-1.5 font-semibold text-gray-500">P.Unit</th>
+                    <th className="text-right  px-2 py-1.5 font-semibold text-gray-500">Total</th>
+                    <th></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {items.map((item, idx) => (
                     <tr key={item.producto_id} className={`border-b border-gray-100 hover:bg-primary-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
                       <td className="px-2 py-1.5">
-                        <p className="font-medium text-gray-900 leading-tight truncate max-w-[130px]">{item.nombre}</p>
+                        <p className="font-medium text-gray-900 leading-tight truncate">{item.nombre}</p>
                         <p className="text-gray-400 font-mono leading-tight">{item.codigo}</p>
                       </td>
                       <td className="px-1 py-1.5">
