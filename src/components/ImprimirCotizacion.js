@@ -19,31 +19,31 @@ export function imprimirCotizacion(cot, empresa) {
   <title>Cotización ${cot.numero_cotizacion}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #111; padding: 32px; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 32px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-    .empresa h1 { font-size: 22px; font-weight: 700; color: #1d4ed8; }
-    .empresa p { color: #555; font-size: 12px; }
+    .empresa h1 { font-size: 22px; font-weight: 700; color: #000; }
+    .empresa p { color: #000; font-size: 12px; }
     .cot-info { text-align: right; }
-    .cot-info .num { font-size: 18px; font-weight: 700; color: #111; }
-    .cot-info p { font-size: 12px; color: #555; margin-top: 2px; }
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #dbeafe; color: #1d4ed8; }
-    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
-    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 8px; }
+    .cot-info .num { font-size: 18px; font-weight: 700; color: #000; }
+    .cot-info p { font-size: 12px; color: #000; margin-top: 2px; }
+    .badge { display: inline-block; padding: 2px 10px; border: 1px solid #000; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .divider { border: none; border-top: 1px solid #000; margin: 16px 0; }
+    .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #000; margin-bottom: 8px; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-    .info-grid div p:first-child { font-size: 11px; color: #9ca3af; margin-bottom: 2px; }
+    .info-grid div p:first-child { font-size: 11px; color: #000; margin-bottom: 2px; }
     .info-grid div p:last-child { font-weight: 600; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    thead { background: #f3f4f6; }
-    th { padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; font-weight: 600; }
+    thead { background: #e5e5e5; }
+    th { padding: 8px 10px; text-align: left; font-size: 11px; color: #000; font-weight: 600; border: 1px solid #ccc; }
     th:not(:first-child) { text-align: right; }
-    td { padding: 8px 10px; border-top: 1px solid #f3f4f6; font-size: 13px; }
+    td { padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
     td:not(:first-child) { text-align: right; }
-    .totales { margin-left: auto; width: 260px; background: #f9fafb; border-radius: 8px; padding: 14px 16px; }
-    .totales .row { display: flex; justify-content: space-between; font-size: 13px; color: #555; padding: 3px 0; }
-    .totales .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px; }
-    .descuento { color: #ef4444; }
-    .notas-box { background: #f9fafb; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #555; }
-    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #9ca3af; }
+    .totales { margin-left: auto; width: 260px; border: 1px solid #ccc; padding: 14px 16px; }
+    .totales .row { display: flex; justify-content: space-between; font-size: 13px; color: #000; padding: 3px 0; }
+    .totales .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #000; border-top: 1px solid #000; margin-top: 8px; padding-top: 8px; }
+    .descuento { font-weight: 700; }
+    .notas-box { border: 1px solid #ccc; padding: 12px 14px; font-size: 12px; color: #000; }
+    .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #000; }
     @media print { body { padding: 16px; } }
   </style>
 </head>

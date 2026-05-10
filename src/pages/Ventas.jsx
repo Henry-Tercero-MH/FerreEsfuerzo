@@ -87,7 +87,7 @@ export default function Ventas() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Ventas</h1>
@@ -207,7 +207,7 @@ export default function Ventas() {
             {esAdmin && (
               <div className="flex justify-end pt-1">
                 <button
-                  onClick={() => imprimirTicket(ventaDetalle, clientes.find(c => c.id === ventaDetalle.cliente_id) || null, empresa, false)}
+                  onClick={() => setTimeout(() => imprimirTicket(ventaDetalle, clientes.find(c => c.id === ventaDetalle.cliente_id) || null, empresa, false), 0)}
                   className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
                 >
                   <Printer size={14} /> Reimprimir ticket

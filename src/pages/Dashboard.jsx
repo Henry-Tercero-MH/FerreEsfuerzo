@@ -14,7 +14,7 @@ function DashboardAdmin({ sesion, datos }) {
   const { totalVentasHoy, totalProductos, totalClientes, totalVentas, productosStockBajo, ultimasVentas } = datos
   const { totalPorCobrar, cuentasVencidas } = useCuentasPorCobrar()
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Bienvenido, {sesion?.nombre.split(' ')[0]}</h1>
         <p className="page-subtitle">Resumen general del negocio</p>
@@ -112,7 +112,7 @@ function DashboardVendedor({ sesion, datos }) {
   const totalHoy = misVentasHoy.reduce((acc, v) => acc + (Number(v.total) || 0), 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Hola, {sesion?.nombre.split(' ')[0]}</h1>
         <p className="page-subtitle">Tu resumen de hoy</p>
@@ -184,7 +184,7 @@ function DashboardVendedor({ sesion, datos }) {
 function DashboardBodeguero({ sesion, datos }) {
   const { productosStockBajo, totalProductos } = datos
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Bienvenido, {sesion?.nombre.split(' ')[0]}</h1>
         <p className="page-subtitle">Panel de bodega</p>
@@ -248,7 +248,7 @@ function DashboardBodeguero({ sesion, datos }) {
 function DashboardCotizador({ sesion, datos }) {
   const { totalProductos, totalClientes } = datos
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Hola, {sesion?.nombre.split(' ')[0]}</h1>
         <p className="page-subtitle">Panel de cotizaciones</p>

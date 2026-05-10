@@ -174,7 +174,7 @@ export default function Contabilidad() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       {/* Header */}
       <div className="page-header">
         <div>

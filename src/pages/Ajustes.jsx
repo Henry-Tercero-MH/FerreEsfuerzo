@@ -174,7 +174,7 @@ export default function Ajustes() {
   const rolesColor = { admin: 'orange', vendedor: 'blue', bodeguero: 'green', cotizador: 'purple' }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Ajustes</h1>
         <p className="page-subtitle">Gestión de usuarios y configuración del sistema</p>

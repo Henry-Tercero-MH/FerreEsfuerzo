@@ -98,7 +98,7 @@ export default function Proveedores() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Proveedores</h1>

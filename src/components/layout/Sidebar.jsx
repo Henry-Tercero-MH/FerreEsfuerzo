@@ -57,15 +57,16 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-gray-100
+        fixed inset-y-0 left-0 z-30 flex flex-col border-r border-blue-100
         transition-all duration-300 ease-in-out
         ${open ? 'translate-x-0 shadow-xl' : '-translate-x-full'}
         lg:static lg:translate-x-0 lg:shadow-none
         w-64 ${collapsed ? 'lg:w-[4.5rem]' : 'lg:w-64'}
-      `}>
+      `}
+      style={{ backgroundColor: '#eef3fb' }}>
 
         {/* Cabecera */}
-        <div className="flex h-16 items-center border-b border-gray-100 px-3 flex-shrink-0">
+        <div className="flex h-16 items-center border-b border-blue-100 px-3 flex-shrink-0">
 
           {/* Logo + nombre — oculto cuando colapsado en PC */}
           <div className={`flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden transition-all duration-300 ${collapsed ? 'lg:w-0 lg:opacity-0 lg:pointer-events-none' : 'opacity-100'}`}>
@@ -132,7 +133,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
         </nav>
 
         {/* Usuario */}
-        <div className="border-t border-gray-100 p-2 flex-shrink-0">
+        <div className="border-t border-blue-100 p-2 flex-shrink-0">
           <div className={`flex items-center gap-2.5 rounded-lg p-2 ${collapsed ? 'lg:justify-center' : ''}`}>
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-sm">
               {sesion?.nombre?.charAt(0).toUpperCase()}

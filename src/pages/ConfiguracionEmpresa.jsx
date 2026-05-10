@@ -59,7 +59,7 @@ export default function ConfiguracionEmpresa() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="page-title">Configuración de Empresa</h1>
         <p className="page-subtitle">Datos fiscales y configuración del sistema</p>

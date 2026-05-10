@@ -48,8 +48,8 @@ function BuscadorGlobal() {
 
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setAbierto(v => !v) }
-      if (e.key === 'Escape') setAbierto(false)
+      if (e.key === 'F7') { e.preventDefault(); setAbierto(v => !v) }
+      if (e.key === 'Escape') { setAbierto(false); setQ('') }
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
@@ -63,43 +63,47 @@ function BuscadorGlobal() {
       >
         <Search size={14} />
         <span>Buscar producto...</span>
-        <kbd className="ml-1 text-xs bg-white border border-gray-200 rounded px-1">Ctrl K</kbd>
+        <kbd className="ml-1 text-xs bg-white border border-gray-200 rounded px-1">F7</kbd>
       </button>
 
       {abierto && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/40" onClick={() => setAbierto(false)}>
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-              <Search size={16} className="text-gray-400 shrink-0" />
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/40" onClick={() => setAbierto(false)}>
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-4 px-7 py-5 border-b border-gray-200">
+              <Search size={26} className="text-gray-400 shrink-0" />
               <input
                 ref={inputRef}
                 value={q}
                 onChange={e => setQ(e.target.value)}
                 placeholder="Buscar por nombre o código..."
-                className="flex-1 text-sm outline-none text-gray-800 placeholder-gray-400"
+                className="flex-1 text-2xl outline-none text-gray-800 placeholder-gray-400"
               />
-              <kbd className="text-xs text-gray-300">Esc</kbd>
+              <kbd className="text-base text-gray-300 border border-gray-200 rounded px-2 py-0.5">Esc</kbd>
             </div>
             {resultados.length > 0 ? (
-              <ul className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+              <ul className="max-h-[32rem] overflow-y-auto divide-y divide-gray-100">
                 {resultados.map(p => (
                   <li key={p.id}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                    className="flex items-center gap-5 px-7 py-5 hover:bg-primary-50 cursor-pointer transition-colors"
                     onClick={() => { navigate('/productos'); setAbierto(false); setQ('') }}
                   >
-                    <Package size={14} className="text-gray-400 shrink-0" />
+                    <Package size={24} className="text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{p.nombre}</p>
-                      <p className="text-xs text-gray-400">Cód: {p.codigo} · Stock: {p.stock}</p>
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Producto</p>
+                      <p className="text-xl font-semibold text-gray-900 truncate">{p.nombre}</p>
+                      <p className="text-base text-gray-500 mt-0.5">Cód: <span className="font-mono">{p.codigo}</span> · Stock: <span className="font-semibold">{p.stock}</span></p>
                     </div>
-                    <p className="text-sm font-semibold text-primary-700 shrink-0">{formatCurrency(p.precio_venta)}</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Precio unitario</p>
+                      <p className="text-2xl font-bold text-primary-700">{formatCurrency(p.precio_venta)}</p>
+                    </div>
                   </li>
                 ))}
               </ul>
             ) : q.trim() ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">Sin resultados para "{q}"</div>
+              <div className="px-7 py-12 text-center text-lg text-gray-400">Sin resultados para "{q}"</div>
             ) : (
-              <div className="px-4 py-6 text-center text-xs text-gray-300">Escribe para buscar</div>
+              <div className="px-7 py-10 text-center text-base text-gray-300">Escribe para buscar</div>
             )}
           </div>
         </div>
@@ -114,7 +118,7 @@ export default function Navbar({ onMenuClick }) {
   const title = TITLES[pathname] ?? 'Ferretería El Esfuerzo'
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-gray-100 bg-white/80 backdrop-blur px-4 sm:px-6">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-blue-100 px-4 sm:px-6 shadow-sm" style={{ backgroundColor: '#f5f8fe' }}>
       <button
         onClick={onMenuClick}
         className="btn-icon btn-ghost text-gray-500 lg:hidden"

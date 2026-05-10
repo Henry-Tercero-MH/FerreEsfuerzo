@@ -232,7 +232,7 @@ export default function CuentasPorCobrar() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Cuentas por Cobrar</h1>

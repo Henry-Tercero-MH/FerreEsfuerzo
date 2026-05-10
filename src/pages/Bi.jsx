@@ -121,7 +121,7 @@ export default function Bi() {
   const clientesUnicos = new Set(ventasFiltradas.filter(v => v.cliente_id !== 'cf').map(v => v.cliente_id)).size
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Inteligencia de Negocios</h1>

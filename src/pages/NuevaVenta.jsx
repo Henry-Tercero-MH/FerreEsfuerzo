@@ -40,7 +40,7 @@ function ExitoVenta({ exito, clienteExito, onNuevaVenta, onVerHistorial }) {
 
   const handleImprimir = () => {
     setPausado(true)
-    imprimirTicket(exito, clienteExito, empresa)
+    setTimeout(() => imprimirTicket(exito, clienteExito, empresa), 0)
   }
 
   return (
@@ -353,7 +353,7 @@ export default function NuevaVenta() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden -m-4 md:-m-6">
+    <div className="flex flex-col overflow-hidden h-full -m-4 sm:-m-6">
       {/* ── Barra superior ── */}
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3 flex-1">
@@ -402,46 +402,52 @@ export default function NuevaVenta() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Tabla de productos */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-gray-50 z-10">
-              <tr className="border-b border-gray-200">
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 w-36">Código</th>
+        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+          {/* Encabezado fijo */}
+          <table className="w-full text-xs border-collapse shrink-0">
+            <thead className="bg-slate-100 border-b-2 border-gray-200">
+              <tr>
+                <th className="text-left px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Código</th>
                 <th className="text-left px-3 py-2 font-semibold text-gray-600">Descripción</th>
-                <th className="text-left px-3 py-2 font-semibold text-gray-600 w-24">Categoría</th>
-                <th className="text-right px-3 py-2 font-semibold text-gray-600 w-20">Precio</th>
-                <th className="text-right px-3 py-2 font-semibold text-gray-600 w-16">Stock</th>
-                <th className="w-24 px-3 py-2"></th>
+                <th className="text-left px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Categoría</th>
+                <th className="text-right px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Precio</th>
+                <th className="text-right px-3 py-2 font-semibold text-gray-600 whitespace-nowrap">Stock</th>
+                <th className="px-3 py-2 whitespace-nowrap"></th>
               </tr>
             </thead>
-            <tbody>
-              {productosFiltradosCat.length === 0 ? (
-                <tr><td colSpan={6} className="py-10 text-center text-gray-400">Sin productos disponibles</td></tr>
-              ) : (
-                productosFiltradosCat.map(p => (
-                  <tr key={p.id} className="border-b border-gray-100 hover:bg-primary-50 transition-colors cursor-pointer" onClick={() => agregarItem(p)}>
-                    <td className="px-3 py-1.5 font-mono text-gray-500">{p.codigo}</td>
-                    <td className="px-3 py-1.5 font-medium text-gray-900">{p.nombre}</td>
-                    <td className="px-3 py-1.5 text-gray-500">{p.categoria || '—'}</td>
-                    <td className="px-3 py-1.5 text-right font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</td>
-                    <td className="px-3 py-1.5 text-right">
-                      <span className={`font-semibold px-1.5 py-0.5 rounded-full ${
-                        p.stock <= (p.stock_minimo || 5) ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                      }`}>{p.stock}</span>
-                    </td>
-                    <td className="px-3 py-1.5 text-right">
-                      <button
-                        onClick={e => { e.stopPropagation(); agregarItem(p) }}
-                        className="inline-flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-2.5 py-1 rounded-lg transition-colors"
-                      >
-                        <Plus size={11} /> Agregar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
           </table>
+          {/* Filas con scroll */}
+          <div className="flex-1 overflow-y-auto">
+            <table className="w-full text-xs border-collapse">
+              <tbody>
+                {productosFiltradosCat.length === 0 ? (
+                  <tr><td colSpan={6} className="py-10 text-center text-gray-400">Sin productos disponibles</td></tr>
+                ) : (
+                  productosFiltradosCat.map(p => (
+                    <tr key={p.id} className="border-b border-gray-100 hover:bg-primary-50 transition-colors">
+                      <td className="px-3 py-1.5 font-mono text-gray-500">{p.codigo}</td>
+                      <td className="px-3 py-1.5 font-medium text-gray-900">{p.nombre}</td>
+                      <td className="px-3 py-1.5 text-gray-500 whitespace-nowrap">{p.categoria || '—'}</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</td>
+                      <td className="px-3 py-1.5 text-right">
+                        <span className={`font-semibold px-1.5 py-0.5 rounded-full ${
+                          p.stock <= (p.stock_minimo || 5) ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                        }`}>{p.stock}</span>
+                      </td>
+                      <td className="px-3 py-1.5 text-right">
+                        <button
+                          onClick={e => { e.stopPropagation(); agregarItem(p) }}
+                          className="inline-flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          <Plus size={11} /> Agregar
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Panel derecho: carrito + cobro */}
@@ -472,6 +478,7 @@ export default function NuevaVenta() {
                     <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200"><Minus size={9} /></button>
                     <input
                       type="number" min="1" max={item.stock_disponible}
+                      inputMode="numeric"
                       value={item.cantidad}
                       onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
                       className="w-8 text-center text-xs font-semibold border border-gray-200 rounded focus:outline-none focus:border-primary-400"
@@ -499,7 +506,7 @@ export default function NuevaVenta() {
               ))}
             </div>
             {tipoDescuento !== 'ninguno' && (
-              <input type="number" min="0" value={descuentoGlobal}
+              <input type="number" min="0" inputMode="decimal" value={descuentoGlobal}
                 onChange={e => setDescuentoGlobal(e.target.value)}
                 placeholder={tipoDescuento === 'porcentaje' ? '% descuento' : 'Q descuento'}
                 className="input text-xs mt-1 py-1" />
@@ -523,6 +530,7 @@ export default function NuevaVenta() {
                 type="number"
                 min="0"
                 step="0.01"
+                inputMode="decimal"
                 value={pagoRecibido}
                 onChange={e => setPagoRecibido(e.target.value)}
                 placeholder={`Mín. ${formatCurrency(total)}`}
@@ -542,8 +550,7 @@ export default function NuevaVenta() {
 
           {/* Cliente */}
           <div className="px-2 py-1.5 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-600 mb-1">Cliente</p>
-            <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} />
+            <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} label={null} />
           </div>
 
           {/* Método de pago */}
@@ -571,7 +578,7 @@ export default function NuevaVenta() {
             )}
             {esCredito && (
               <div className="mt-1 space-y-0.5">
-                <input type="number" min="1" value={diasCredito} onChange={e => setDiasCredito(e.target.value)}
+                <input type="number" min="1" inputMode="numeric" value={diasCredito} onChange={e => setDiasCredito(e.target.value)}
                   placeholder="Días de crédito" className="input text-xs py-1" />
                 {clienteId === 'cf' && <p className="text-xs text-red-500">⚠ Requiere cliente identificado</p>}
               </div>

@@ -130,10 +130,10 @@ export default function Cotizaciones() {
     },
   }
 
-  const imprimirCotizacionLocal = (cot) => imprimirCotizacion(cot, empresa)
+  const imprimirCotizacionLocal = (cot) => setTimeout(() => imprimirCotizacion(cot, empresa), 0)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Cotizaciones</h1>

@@ -54,7 +54,8 @@
 
   * {  }
   body {
-    @apply bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100/40 text-gray-900 font-sans antialiased;
+    @apply text-gray-900 font-sans antialiased;
+    background-color: #dde6f5;
     min-height: 100vh;
   }
   h1 { @apply text-2xl font-bold text-gray-900; }
@@ -118,7 +119,7 @@
 
   /* ── Cards ── */
   .card {
-    @apply rounded-xl bg-white/90 backdrop-blur-sm shadow-sm border border-gray-100 p-5
+    @apply rounded-xl bg-white shadow-sm border border-gray-200 p-5
            hover:shadow-md transition-all duration-200;
   }
   .card-hover {
@@ -154,20 +155,23 @@
 
   /* ── Table ── */
   .table-wrapper {
-    @apply w-full overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm;
+    @apply w-full overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm;
   }
   .table {
     @apply w-full text-sm text-left;
   }
   .table thead {
-    @apply bg-gray-50 text-xs uppercase tracking-wider text-gray-500;
+    @apply bg-slate-100 text-xs uppercase tracking-wider text-gray-600 border-b border-gray-200;
   }
   .table thead th {
-    @apply px-4 py-3.5 font-medium;
+    @apply px-4 py-3.5 font-semibold;
   }
   .table tbody tr {
-    @apply border-t border-gray-100 hover:bg-gray-50 transition-colors;
+    @apply border-t border-gray-100 hover:bg-primary-50/60 transition-colors;
     height: 48px;
+  }
+  .table tbody tr:nth-child(even) {
+    @apply bg-slate-50/70;
   }
   .table tbody td {
     @apply px-4 py-3.5;

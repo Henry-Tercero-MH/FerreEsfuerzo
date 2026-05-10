@@ -73,7 +73,7 @@ export default function Auditoria() {
   const acciones = useMemo(() => [...new Set(registros.map(r => r.accion))], [registros])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Auditoría</h1>

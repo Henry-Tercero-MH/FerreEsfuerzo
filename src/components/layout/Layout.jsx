@@ -35,13 +35,13 @@ export default function Layout() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-hidden flex flex-col">
           {cargando ? (
             <div className="flex items-center justify-center h-full">
               <LoadingSpinner text="Cargando datos..." size="lg" />
             </div>
           ) : (
-            <div className="mx-auto max-w-7xl animate-fade-in">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 animate-fade-in">
               <Outlet />
             </div>
           )}

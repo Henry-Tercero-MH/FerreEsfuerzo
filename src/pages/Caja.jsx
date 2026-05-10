@@ -197,7 +197,7 @@ ${a.notas_cierre ? `<div class="section"><h2>Notas</h2><p>${a.notas_cierre}</p><
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Caja</h1>

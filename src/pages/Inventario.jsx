@@ -50,7 +50,7 @@ export default function Inventario() {
   const productoMap = Object.fromEntries(productos.map(p => [p.id, p.nombre]))
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-7xl mx-auto">
       <div className="page-header">
         <div>
           <h1 className="page-title">Inventario</h1>
