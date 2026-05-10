@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
@@ -16,7 +16,11 @@ export default function Layout() {
   const { sidebarCollapsed, setSidebarCollapsed: setCollapsed } = useUI()
   const { pathname } = useLocation()
   const esNuevaVenta = pathname === '/ventas/nueva'
-  const collapsed = esNuevaVenta ? true : sidebarCollapsed
+  const collapsed = sidebarCollapsed
+
+  useEffect(() => {
+    if (esNuevaVenta) setCollapsed(true)
+  }, [esNuevaVenta])
 
   const { loadingApp }                    = useApp()
   const { loading: loadingCotizaciones }  = useCotizaciones()

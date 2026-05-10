@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, FileText,
   Users, Truck, Wallet, BarChart3, Building2, Settings, X, LogOut,
-  ClipboardList, BookOpen, Calculator, ChevronLeft, ChevronRight, ShieldCheck, Brain,
+  ClipboardList, BookOpen, Calculator, ChevronLeft, Menu, ShieldCheck, Brain,
 } from 'lucide-react'
 import IconQ from '../ui/IconQ'
 import { useAuth, ROLES } from '../../contexts/AuthContext'
@@ -92,7 +92,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
             title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
             className={`hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors flex-shrink-0 ${collapsed ? 'mx-auto' : 'ml-auto'}`}
           >
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
 
@@ -133,14 +133,14 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapse }) 
         </nav>
 
         {/* Usuario */}
-        <div className="border-t border-blue-100 p-2 flex-shrink-0">
+        <div className="border-t border-blue-100 p-2 flex-shrink-0 bg-primary-700">
           <div className={`flex items-center gap-2.5 rounded-lg p-2 ${collapsed ? 'lg:justify-center' : ''}`}>
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-sm">
               {sesion?.nombre?.charAt(0).toUpperCase()}
             </div>
             <div className={`flex-1 min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-              <p className="truncate text-sm font-medium text-gray-900">{sesion?.nombre}</p>
-              <p className="truncate text-xs text-gray-400">{ROLES[sesion?.rol]?.label}</p>
+              <p className="truncate text-sm font-medium text-white">{sesion?.nombre}</p>
+              <p className="truncate text-xs text-blue-200">{ROLES[sesion?.rol]?.label}</p>
             </div>
             <button
               onClick={logout}

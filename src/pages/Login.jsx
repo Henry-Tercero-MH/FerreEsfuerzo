@@ -48,7 +48,7 @@ export default function Login() {
           style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
 
           {/* Panel izquierdo — formulario */}
-          <div className="flex-1 flex flex-col justify-between p-8 sm:p-10"
+          <div className="flex-1 flex flex-col justify-center gap-6 p-8 sm:p-10"
             style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
 
             {/* Logo en móvil */}
@@ -61,13 +61,9 @@ export default function Login() {
             </div>
 
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                  <Lock size={15} className="text-white" />
-                </div>
-                <h1 className="text-2xl font-bold text-white tracking-wide">Iniciar sesión</h1>
+              <div className="flex justify-center mb-1">
+                <h1 className="text-2xl font-bold text-white tracking-wide">LOGIN</h1>
               </div>
-              <p className="text-blue-300 text-sm mb-8 ml-10">Ingresa tus credenciales para continuar</p>
 
               {error && (
                 <div className="mb-5 rounded-xl px-4 py-3 text-sm text-red-200 border border-red-400/30 flex items-start gap-2"
@@ -79,7 +75,7 @@ export default function Login() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2 text-center">
                     Correo electrónico
                   </label>
                   <input
@@ -96,7 +92,7 @@ export default function Login() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-semibold text-blue-200 uppercase tracking-wider mb-2 text-center">
                     Contraseña
                   </label>
                   <div className="relative">
@@ -138,24 +134,24 @@ export default function Login() {
               </form>
             </div>
 
-            <p className="text-xs text-white/20 mt-8">© 2025 Ferretería El Esfuerzo</p>
+            <p className="text-xs text-white/20 mt-8 text-center">© 2025 Ferretería El Esfuerzo</p>
           </div>
 
           {/* Panel derecho — logo y bienvenida (solo sm+) */}
           <div className="hidden sm:flex flex-1 flex-col items-center justify-center p-10 gap-6"
-            style={{ background: 'rgba(255,255,255,0.03)' }}>
+            style={{ background: '#ffffff', boxShadow: 'inset 8px 0 24px rgba(10,22,60,0.18), inset 0 8px 24px rgba(10,22,60,0.12), inset 0 -8px 24px rgba(10,22,60,0.12)' }}>
             <div className="relative">
               <div className="absolute inset-0 rounded-full blur-2xl opacity-30" style={{ background: 'radial-gradient(circle, #60a5fa, transparent)', transform: 'scale(1.5)' }} />
               <img
                 src="/logoFerreApp.png"
                 alt="Logo Ferretería El Esfuerzo"
-                className="relative h-44 w-44 rounded-full object-cover border-4 border-white/20"
+                className="relative h-64 w-64 rounded-full object-cover border-4 border-white/20"
                 style={{ boxShadow: '0 0 40px rgba(96,165,250,0.3)' }}
               />
             </div>
             <div className="text-center">
               <h2 className="text-4xl font-extrabold text-white leading-tight">Bienvenido.</h2>
-              <p className="text-blue-300 text-base mt-2">Ferretería El Esfuerzo</p>
+              <p className="text-black text-base mt-2 font-bold">Ferretería El Esfuerzo</p>
               <p className="text-white/30 text-xs mt-1">Sistema integral de gestión</p>
             </div>
           </div>
