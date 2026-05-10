@@ -148,15 +148,17 @@ export default function NuevaVenta() {
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [tipoDescuento, setTipoDescuento] = useState('ninguno')
 
-  // Activar panel expandido al entrar y resetear al salir
-  useEffect(() => { setFacturaExpandida(true); return () => setFacturaExpandida(false) }, [])
+  useEffect(() => {
+    setFacturaExpandida(true)
+    return () => setFacturaExpandida(false)
+  }, [])
 
   const [horaActual, setHoraActual] = useState(() =>
-    new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
   )
   useEffect(() => {
     const t = setInterval(() =>
-      setHoraActual(new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+      setHoraActual(new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }))
     , 1000)
     return () => clearInterval(t)
   }, [])
@@ -385,47 +387,45 @@ export default function NuevaVenta() {
   const clienteExito = exito ? (clientes.find(c => c.id === exito.cliente_id) || null) : null
 
   return (
-    <div className="flex flex-col overflow-hidden h-full -m-4 sm:-m-6">
-      {/* ── Barra superior ── */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              ref={inputRef}
-              value={busqueda}
-              onChange={e => { setBusqueda(e.target.value); setScanError(false) }}
-              onKeyDown={handleBusquedaKeyDown}
-              placeholder="Buscar por código o nombre del producto/servicio..."
-              className={`w-full border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary-400 transition-colors ${scanError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-              autoFocus
-            />
-            {scanError && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-medium">No encontrado</span>}
-          </div>
-          <select
-            value={categoriaFiltro}
-            onChange={e => setCategoriaFiltro(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
-          >
-            <option value="">Categoría</option>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
-            <Barcode size={13} /> Escáner listo
-          </span>
-          <span className="hidden lg:flex items-center gap-2 text-xs text-gray-400 shrink-0 border-l border-gray-200 pl-3 ml-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F1</kbd> Buscar
-            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F2</kbd> Cobrar
-            <kbd className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-300 font-mono text-gray-600">F3</kbd> Limpiar
-          </span>
+    <div className="flex flex-col overflow-hidden h-full">
+      {/* ── Barra superior — mismos estilos que Navbar ── */}
+      <div className="flex h-16 items-center gap-3 px-4 sm:px-6 border-b border-blue-100 shadow-sm shrink-0" style={{ backgroundColor: '#f5f8fe' }}>
+        <div className="relative flex-1 max-w-md">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            ref={inputRef}
+            value={busqueda}
+            onChange={e => { setBusqueda(e.target.value); setScanError(false) }}
+            onKeyDown={handleBusquedaKeyDown}
+            placeholder="Buscar por código o nombre del producto/servicio..."
+            className={`w-full border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary-400 transition-colors ${scanError ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'}`}
+            autoFocus
+          />
+          {scanError && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 font-medium">No encontrado</span>}
         </div>
+        <select
+          value={categoriaFiltro}
+          onChange={e => setCategoriaFiltro(e.target.value)}
+          className="border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-400"
+        >
+          <option value="">Categoría</option>
+          {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+          <Barcode size={13} /> Escáner listo
+        </span>
+        <span className="hidden lg:flex items-center gap-2 text-xs text-gray-400 shrink-0 border-l border-blue-100 pl-3">
+          <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 font-mono text-gray-500 shadow-sm">F1</kbd> Buscar
+          <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 font-mono text-gray-500 shadow-sm">F2</kbd> Cobrar
+          <kbd className="px-1.5 py-0.5 rounded bg-white border border-gray-200 font-mono text-gray-500 shadow-sm">F3</kbd> Limpiar
+        </span>
         {!cajaAbierta && (
-          <span className="ml-4 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+          <span className="ml-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 shrink-0">
             🔒 Caja cerrada
             {sesion?.rol === 'admin' && <a href="/caja" className="underline ml-1">Abrir caja</a>}
           </span>
         )}
-        <div className="ml-4 text-right shrink-0">
+        <div className="ml-auto text-right shrink-0">
           <p className="text-xs text-gray-400">Cajero: <span className="font-semibold text-gray-700">{sesion?.nombre}</span></p>
         </div>
       </div>
@@ -434,9 +434,9 @@ export default function NuevaVenta() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* Tabla de productos */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white mr-4">
+        <div className="flex-1 flex flex-col overflow-hidden bg-white">
           {/* Contenedor con scroll, thead sticky */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6">
             <table className="w-full text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '9%' }} />   {/* Código */}
@@ -496,83 +496,76 @@ export default function NuevaVenta() {
         </div>
 
         {/* Panel derecho: factura en tiempo real + cobro */}
-        <div className="fixed top-0 right-0 bottom-0 z-20 w-[480px] border-l border-gray-200 bg-white flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed top-0 right-0 bottom-0 z-20 w-[480px] bg-white flex flex-col overflow-hidden shadow-2xl border-l border-gray-200">
 
-          {/* Encabezado factura */}
-          <div className="px-3 py-2 border-b border-gray-100 bg-slate-50 shrink-0">
-            <div className="flex items-center justify-between mb-1">
+          {/* ── Header — misma altura que el navbar (h-16) ── */}
+          <div className="h-16 flex flex-col justify-center px-3 border-b border-blue-100 shrink-0" style={{ backgroundColor: '#f5f8fe' }}>
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart size={13} className="text-primary-600" />
-                <span className="font-bold text-gray-800 text-xs tracking-wide uppercase">Factura en curso</span>
+                <span className="font-bold text-gray-800 text-xs tracking-wide">COMPROBANTE EN CURSO</span>
               </div>
-              <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
+              <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
                 <span>{new Date().toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                 <span className="text-gray-300">|</span>
                 <span className="text-primary-600 font-semibold">{horaActual}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>Cliente:</span>
-              <span className="font-semibold text-gray-800 truncate">
-                {clienteId === 'cf'
-                  ? 'Consumidor Final'
-                  : (clientes.find(c => c.id === clienteId)?.nombre || '—')}
+            <div className="mt-0.5 text-xs text-gray-500">
+              Cliente: <span className="font-semibold text-gray-800">
+                {clienteId === 'cf' ? 'Consumidor Final' : (clientes.find(c => c.id === clienteId)?.nombre || '—')}
               </span>
-              {items.length > 0 && (
-                <span className="ml-auto text-gray-400">{items.length} ítem(s)</span>
-              )}
             </div>
           </div>
 
-          {/* Tabla de ítems — una sola tabla con thead sticky */}
-          <div className="flex-1 overflow-y-auto scrollbar-cart">
+          {/* ── Tabla de ítems ── */}
+          <div className="flex-1 overflow-y-auto scrollbar-cart bg-white">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2 py-10">
-                <ShoppingCart size={28} className="opacity-40" />
-                <p className="text-xs">Agrega productos para ver la factura</p>
+              <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-3">
+                <ShoppingCart size={36} className="opacity-30" />
+                <p className="text-sm font-medium text-gray-400">Agrega productos para ver la factura</p>
               </div>
             ) : (
               <table className="w-full text-xs border-collapse table-fixed">
                 <colgroup>
-                  <col style={{ width: '38%' }} /> {/* Producto */}
-                  <col style={{ width: '24%' }} /> {/* Cant. */}
-                  <col style={{ width: '18%' }} /> {/* P.Unit */}
-                  <col style={{ width: '16%' }} /> {/* Total */}
-                  <col style={{ width: '4%' }}  /> {/* Eliminar */}
+                  <col style={{ width: '38%' }} />
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '4%' }}  />
                 </colgroup>
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                <thead className="bg-gray-50 border-b-2 border-gray-200 sticky top-0 z-10">
                   <tr>
-                    <th className="text-left   px-2 py-1.5 font-semibold text-gray-500">Producto</th>
-                    <th className="text-center px-1 py-1.5 font-semibold text-gray-500">Cant.</th>
-                    <th className="text-right  px-2 py-1.5 font-semibold text-gray-500">P.Unit</th>
-                    <th className="text-right  px-2 py-1.5 font-semibold text-gray-500">Total</th>
+                    <th className="text-left   px-3 py-2 font-semibold text-gray-500 uppercase tracking-wide" style={{fontSize:'10px'}}>Producto</th>
+                    <th className="text-center px-1 py-2 font-semibold text-gray-500 uppercase tracking-wide" style={{fontSize:'10px'}}>Cant.</th>
+                    <th className="text-right  px-3 py-2 font-semibold text-gray-500 uppercase tracking-wide" style={{fontSize:'10px'}}>P.Unit</th>
+                    <th className="text-right  px-3 py-2 font-semibold text-gray-500 uppercase tracking-wide" style={{fontSize:'10px'}}>Total</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
-                    <tr key={item.producto_id} className={`border-b border-gray-100 hover:bg-primary-50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
-                      <td className="px-2 py-1.5">
-                        <p className="font-medium text-gray-900 leading-tight truncate">{item.nombre}</p>
-                        <p className="text-gray-400 font-mono leading-tight">{item.codigo}</p>
+                    <tr key={item.producto_id} className={`border-b border-gray-100 hover:bg-primary-50 transition-colors ${idx % 2 !== 0 ? 'bg-gray-50/50' : ''}`}>
+                      <td className="px-3 py-2">
+                        <p className="font-semibold text-gray-900 leading-tight truncate">{item.nombre}</p>
+                        <p className="text-gray-400 font-mono text-xs leading-tight">{item.codigo}</p>
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-1 py-2">
                         <div className="flex items-center justify-center gap-0.5">
-                          <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 shrink-0"><Minus size={8} /></button>
+                          <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-red-100 hover:text-red-600 shrink-0 transition-colors"><Minus size={8} /></button>
                           <input
-                            type="number" min="1" max={item.stock_disponible}
-                            inputMode="numeric"
+                            type="number" min="1" max={item.stock_disponible} inputMode="numeric"
                             value={item.cantidad}
                             onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
-                            className="w-8 text-center text-xs font-semibold border border-gray-200 rounded focus:outline-none focus:border-primary-400 py-0.5"
+                            className="w-8 text-center text-xs font-bold border border-gray-200 rounded focus:outline-none focus:border-primary-400 py-0.5"
                           />
-                          <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 shrink-0"><Plus size={8} /></button>
+                          <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-green-100 hover:text-green-600 shrink-0 transition-colors"><Plus size={8} /></button>
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-right text-gray-500 tabular-nums">{formatCurrency(item.precio_unitario)}</td>
-                      <td className="px-2 py-1.5 text-right font-semibold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</td>
-                      <td className="py-1.5 pr-1 text-center">
-                        <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={11} /></button>
+                      <td className="px-3 py-2 text-right text-gray-500 tabular-nums">{formatCurrency(item.precio_unitario)}</td>
+                      <td className="px-3 py-2 text-right font-bold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</td>
+                      <td className="pr-2 text-center">
+                        <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
                       </td>
                     </tr>
                   ))}
@@ -581,30 +574,30 @@ export default function NuevaVenta() {
             )}
           </div>
 
-          {/* Descuento */}
-          <div className="px-2 py-1 border-t border-gray-100">
-            <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs font-semibold text-gray-600">Descuento</p>
-            </div>
-            <div className="flex gap-1">
-              {['ninguno', 'porcentaje', 'fijo'].map(t => (
-                <button key={t} onClick={() => { setTipoDescuento(t); setDescuentoGlobal(0) }}
-                  className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${tipoDescuento === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                  {t === 'ninguno' ? 'Ninguno' : t === 'porcentaje' ? '%' : 'Q fijo'}
-                </button>
-              ))}
-            </div>
-            {tipoDescuento !== 'ninguno' && (
-              <input type="number" min="0" inputMode="decimal" value={descuentoGlobal}
-                onChange={e => setDescuentoGlobal(e.target.value)}
-                placeholder={tipoDescuento === 'porcentaje' ? '% descuento' : 'Q descuento'}
-                className="input text-xs mt-1 py-1" />
-            )}
-          </div>
+          {/* ── Sección inferior fija ── */}
+          <div className="shrink-0 border-t border-gray-200">
 
-          {/* Totales */}
-          <div className="px-3 py-2 border-t-2 border-gray-200 bg-slate-50 shrink-0">
-            <div className="space-y-0.5 text-xs mb-1">
+            {/* Descuento */}
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Descuento</p>
+              <div className="flex gap-1">
+                {['ninguno', 'porcentaje', 'fijo'].map(t => (
+                  <button key={t} onClick={() => { setTipoDescuento(t); setDescuentoGlobal(0) }}
+                    className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${tipoDescuento === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {t === 'ninguno' ? 'Ninguno' : t === 'porcentaje' ? '%' : 'Q fijo'}
+                  </button>
+                ))}
+              </div>
+              {tipoDescuento !== 'ninguno' && (
+                <input type="number" min="0" inputMode="decimal" value={descuentoGlobal}
+                  onChange={e => setDescuentoGlobal(e.target.value)}
+                  placeholder={tipoDescuento === 'porcentaje' ? '% descuento' : 'Q descuento'}
+                  className="input text-xs mt-1 py-1" />
+              )}
+            </div>
+
+            {/* Subtotal + TOTAL */}
+            <div className="px-3 py-1.5 border-b border-gray-100 space-y-0.5 text-xs">
               <div className="flex justify-between text-gray-500">
                 <span>Subtotal</span><span className="tabular-nums">{formatCurrency(subtotal)}</span>
               </div>
@@ -613,120 +606,104 @@ export default function NuevaVenta() {
                   <span>Descuento</span><span className="tabular-nums">-{formatCurrency(descuento)}</span>
                 </div>
               )}
+              <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200">
+                <span>TOTAL</span><span className="text-primary-700 tabular-nums">{formatCurrency(total)}</span>
+              </div>
             </div>
-            <div className="flex justify-between items-center pt-1.5 border-t border-gray-300">
-              <span className="font-bold text-gray-800 text-sm">TOTAL</span>
-              <span className="font-bold text-primary-700 text-lg tabular-nums">{formatCurrency(total)}</span>
-            </div>
-          </div>
 
-          {/* Pago en efectivo / cambio */}
-          {metodoPago === 'efectivo' && (
-            <div className="px-2 py-1 border-t border-gray-100 space-y-1">
-              <p className="text-xs font-semibold text-gray-600">Pago recibido</p>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={pagoRecibido}
-                onChange={e => setPagoRecibido(e.target.value)}
-                placeholder={`Mín. ${formatCurrency(total)}`}
-                className={`input text-xs py-1 font-semibold ${pagoNum > 0 && pagoNum < total ? 'border-red-400 focus:border-red-500' : pagoNum >= total ? 'border-green-400' : ''}`}
-              />
-              {pagoNum > 0 && pagoNum < total && (
-                <p className="text-xs text-red-500">⚠ Pago insuficiente — faltan {formatCurrency(total - pagoNum)}</p>
+            {/* Pago / Cambio */}
+            {metodoPago === 'efectivo' && (
+              <div className="px-3 py-1.5 border-b border-gray-100 space-y-1">
+                <p className="text-xs font-semibold text-gray-600">Pago recibido</p>
+                <input
+                  type="number" min="0" step="0.01" inputMode="decimal"
+                  value={pagoRecibido}
+                  onChange={e => setPagoRecibido(e.target.value)}
+                  placeholder={`Mín. ${formatCurrency(total)}`}
+                  className={`input text-xs py-1 font-semibold ${pagoNum > 0 && pagoNum < total ? 'border-red-400' : pagoNum >= total ? 'border-green-400' : ''}`}
+                />
+                {pagoNum > 0 && pagoNum < total && (
+                  <p className="text-xs text-red-500">⚠ Pago insuficiente — faltan {formatCurrency(total - pagoNum)}</p>
+                )}
+                {pagoNum >= total && (
+                  <div className="flex justify-between items-center rounded-lg bg-green-50 border border-green-200 px-2 py-1.5">
+                    <span className="text-xs font-semibold text-green-700">Cambio</span>
+                    <span className="text-sm font-bold text-green-700 tabular-nums">{formatCurrency(cambio)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Cliente */}
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} label={null} />
+            </div>
+
+            {/* Método de pago */}
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Método de pago</p>
+              <div className="flex gap-1 flex-wrap">
+                {metodos_pago.map(m => (
+                  <button key={m.value} onClick={() => { setMetodoPago(m.value); if (m.value !== 'transferencia') setComprobante('') }}
+                    className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${metodoPago === m.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {metodoPago === 'transferencia' && (
+                <div className="mt-1">
+                  <input type="text" value={comprobante} onChange={e => setComprobante(e.target.value)}
+                    placeholder="N° comprobante (obligatorio)"
+                    className={`input text-xs py-1 ${!comprobante.trim() ? 'border-orange-400' : 'border-green-400'}`} />
+                  {!comprobante.trim() && <p className="text-xs text-orange-500 mt-0.5">⚠ Requerido para transferencia</p>}
+                </div>
               )}
-              {pagoNum >= total && (
-                <div className="flex justify-between items-center rounded-lg bg-green-50 border border-green-200 px-2 py-1.5">
-                  <span className="text-xs font-semibold text-green-700">Cambio</span>
-                  <span className="text-sm font-bold text-green-700">{formatCurrency(cambio)}</span>
+              {esCredito && (
+                <div className="mt-1 space-y-0.5">
+                  <input type="number" min="1" inputMode="numeric" value={diasCredito}
+                    onChange={e => setDiasCredito(e.target.value)}
+                    placeholder="Días de crédito" className="input text-xs py-1" />
+                  {clienteId === 'cf' && <p className="text-xs text-red-500">⚠ Requiere cliente identificado</p>}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Cliente */}
-          <div className="px-2 py-1 border-t border-gray-100">
-            <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} label={null} />
-          </div>
-
-          {/* Método de pago */}
-          <div className="px-2 py-1 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-600 mb-1">Método de pago</p>
-            <div className="flex gap-1 flex-wrap">
-              {metodos_pago.map(m => (
-                <button key={m.value} onClick={() => { setMetodoPago(m.value); if (m.value !== 'transferencia') setComprobante('') }}
-                  className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${metodoPago === m.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                  {m.label}
+            {/* Tipo de cliente / pedido + notas */}
+            <div className="px-3 py-1.5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Tipo de cliente</p>
+              <div className="flex gap-1">
+                <button onClick={() => { setClienteId('cf'); setEsPedido(false) }}
+                  className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${clienteId === 'cf' && !esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  C/F
                 </button>
-              ))}
+                <button onClick={() => setEsPedido(false)}
+                  className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${clienteId !== 'cf' && !esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  Registrado
+                </button>
+                <button onClick={() => setEsPedido(true)}
+                  className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  Pedido
+                </button>
+              </div>
+              {esPedido && (
+                <div className="mt-1 space-y-0.5">
+                  {clienteId === 'cf' && <p className="text-xs text-red-500">⚠ Selecciona un cliente</p>}
+                  <textarea value={direccionEntrega} onChange={e => setDireccionEntrega(e.target.value)}
+                    rows={2} className={`input resize-none text-xs py-1 ${esPedido && !direccionEntrega.trim() ? 'border-red-300' : ''}`}
+                    placeholder="Dirección de entrega..." />
+                </div>
+              )}
+              <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={1}
+                className="input resize-none text-xs py-1 mt-1" placeholder="Notas opcionales..." />
             </div>
-            {metodoPago === 'transferencia' && (
-              <div className="mt-1">
-                <input
-                  type="text"
-                  value={comprobante}
-                  onChange={e => setComprobante(e.target.value)}
-                  placeholder="N° comprobante (obligatorio)"
-                  className={`input text-xs py-1 ${!comprobante.trim() ? 'border-orange-400 focus:border-orange-500' : 'border-green-400'}`}
-                />
-                {!comprobante.trim() && <p className="text-xs text-orange-500 mt-0.5">⚠ Requerido para transferencia</p>}
-              </div>
-            )}
-            {esCredito && (
-              <div className="mt-1 space-y-0.5">
-                <input type="number" min="1" inputMode="numeric" value={diasCredito} onChange={e => setDiasCredito(e.target.value)}
-                  placeholder="Días de crédito" className="input text-xs py-1" />
-                {clienteId === 'cf' && <p className="text-xs text-red-500">⚠ Requiere cliente identificado</p>}
-              </div>
-            )}
-          </div>
 
-          {/* Tipo de cliente / pedido */}
-          <div className="px-2 py-1 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-600 mb-1">Tipo de cliente</p>
-            <div className="flex gap-1">
-              <button onClick={() => { setClienteId('cf'); setEsPedido(false) }}
-                className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${clienteId === 'cf' && !esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                C/F
-              </button>
-              <button onClick={() => setEsPedido(false)}
-                className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${clienteId !== 'cf' && !esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                Registrado
-              </button>
-              <button onClick={() => setEsPedido(true)}
-                className={`flex-1 text-xs py-1 rounded font-semibold transition-colors ${esPedido ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                Pedido
-              </button>
+            {/* Botón confirmar */}
+            <div className="px-4 py-3">
+              <Button variant="success" className="w-full py-2.5 text-sm font-bold"
+                disabled={confirmarDeshabilitado} loading={loading} onClick={handleConfirmar}>
+                {esPedido ? 'Registrar pedido' : 'Confirmar venta'}
+              </Button>
             </div>
-            {esPedido && (
-              <div className="mt-1 space-y-0.5">
-                {clienteId === 'cf' && <p className="text-xs text-red-500">⚠ Selecciona un cliente</p>}
-                <textarea value={direccionEntrega} onChange={e => setDireccionEntrega(e.target.value)}
-                  rows={2} className={`input resize-none text-xs py-1 ${esPedido && !direccionEntrega.trim() ? 'border-red-300' : ''}`}
-                  placeholder="Dirección de entrega..." />
-              </div>
-            )}
-          </div>
-
-          {/* Notas */}
-          <div className="px-2 py-1 border-t border-gray-100">
-            <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={1}
-              className="input resize-none text-xs py-1" placeholder="Notas opcionales..." />
-          </div>
-
-          {/* Botón confirmar */}
-          <div className="px-2 pb-2 pt-1.5 border-t border-gray-200">
-            <Button
-              variant="success"
-              className="w-full"
-              disabled={confirmarDeshabilitado}
-              loading={loading}
-              onClick={handleConfirmar}
-            >
-              {esPedido ? 'Registrar pedido' : 'Confirmar venta'}
-            </Button>
           </div>
         </div>
       </div>
