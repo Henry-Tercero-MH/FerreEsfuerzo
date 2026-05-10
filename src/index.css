@@ -227,6 +227,11 @@
 ::-webkit-scrollbar-track { @apply bg-gray-100; }
 ::-webkit-scrollbar-thumb { @apply rounded-full bg-gray-300 hover:bg-gray-400; }
 
+/* Scrollbar más visible para el carrito */
+.scrollbar-cart::-webkit-scrollbar { width: 10px; }
+.scrollbar-cart::-webkit-scrollbar-track { @apply bg-gray-100 rounded-full; }
+.scrollbar-cart::-webkit-scrollbar-thumb { @apply rounded-full bg-gray-400 hover:bg-gray-500; }
+
 /* ── Animaciones ── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

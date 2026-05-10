@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
-import { Plus, Pencil, Trash2, Package } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Plus, Pencil, Trash2, Package, Barcode } from 'lucide-react'
+import JsBarcode from 'jsbarcode'
 import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useDebounce } from '../hooks/useDebounce'
@@ -57,6 +58,117 @@ export default function Productos() {
   const [form, setForm] = useState(FORM_VACÍO)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [barcodeProd, setBarcodeProd] = useState(null)
+  const [seleccionados, setSeleccionados] = useState(new Set())
+  const svgRef = useRef(null)
+
+  useEffect(() => {
+    if (!barcodeProd || !svgRef.current) return
+    const codigo = String(barcodeProd.codigo || barcodeProd.id || '0000')
+    try {
+      JsBarcode(svgRef.current, codigo, { format: 'CODE128', width: 2, height: 60, displayValue: true, fontSize: 13, margin: 8, background: '#ffffff', lineColor: '#000000' })
+    } catch {
+      JsBarcode(svgRef.current, '0000000000', { format: 'CODE128', width: 2, height: 60, displayValue: true })
+    }
+  }, [barcodeProd])
+
+  const generarSvgBarcode = (codigo, esSola = false) => {
+    const container = document.createElement('div')
+    container.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden'
+    document.body.appendChild(container)
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    container.appendChild(svg)
+    // Normalizar: em/en dash → guion ASCII, quitar caracteres no imprimibles
+    const codigoLimpio = String(codigo || '0000')
+      .replace(/[–—−]/g, '-')  // en-dash, em-dash, minus → guion
+      .replace(/[‘’]/g, "'")          // comillas tipográficas → apóstrofe
+      .replace(/[^\x20-\x7E]/g, '')             // quitar resto no-ASCII
+      .trim() || '0000'
+    try {
+      JsBarcode(svg, codigoLimpio, {
+        format: 'CODE128',
+        width: esSola ? 3 : 1.8,
+        height: esSola ? 120 : 45,
+        displayValue: false,
+        margin: esSola ? 4 : 5,
+        background: '#ffffff',
+        lineColor: '#000000',
+      })
+    } catch {
+      JsBarcode(svg, '0000000000', { format: 'CODE128', width: 1.5, height: 35, displayValue: true })
+    }
+    const result = svg.outerHTML
+    document.body.removeChild(container)
+    return result
+  }
+
+  const htmlEtiqueta = (p) => {
+    const svg = generarSvgBarcode(p.codigo, true)
+    const nombre = (String(p.nombre || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const codigo = (String(p.codigo || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const precio = Number(p.precio_venta || 0).toFixed(2)
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>${nombre}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 72mm; padding: 4px; text-align: center; color: #000; background: #fff; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .nombre { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    .barcode { display: flex; justify-content: center; }
+    .barcode svg { display: block; margin: 0 auto; }
+    .codigo { font-size: 10px; font-family: monospace; margin-top: 2px; color: #000; }
+    .precio { font-size: 15px; font-weight: bold; margin-top: 4px; }
+    @media print { @page { margin: 0; size: 80mm auto; } body { width: 80mm; } }
+  </style>
+</head>
+<body>
+  <p class="nombre">${nombre}</p>
+  <div class="barcode">${svg}</div>
+  <p class="codigo">${codigo}</p>
+  <p class="precio">Q ${precio}</p>
+  <script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; setTimeout(function() { window.close(); }, 2000); }<\/script>
+</body>
+</html>`
+  }
+
+  const imprimirLista = (lista) => {
+    const imprimir = (index) => {
+      if (index >= lista.length) return
+      const p = lista[index]
+      const html = htmlEtiqueta(p)
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const w = window.open(url, '_blank', 'width=320,height=250')
+      if (!w) { URL.revokeObjectURL(url); return }
+      const check = setInterval(() => {
+        if (w.closed) {
+          clearInterval(check)
+          URL.revokeObjectURL(url)
+          setTimeout(() => imprimir(index + 1), 300)
+        }
+      }, 200)
+    }
+    imprimir(0)
+  }
+
+  const imprimirBarcode = () => { if (barcodeProd) setTimeout(() => imprimirLista([barcodeProd]), 0) }
+  const imprimirSeleccionados = () => {
+    const lista = productosFiltrados.filter(p => seleccionados.has(p.id))
+    if (!lista.length) return
+    setTimeout(() => imprimirLista(lista), 0)
+  }
+
+  const toggleSeleccion = (id) => setSeleccionados(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  const toggleTodos = () => {
+    if (seleccionados.size === productosFiltrados.length) setSeleccionados(new Set())
+    else setSeleccionados(new Set(productosFiltrados.map(p => p.id)))
+  }
 
   const termino = useDebounce(busqueda)
 
@@ -65,7 +177,7 @@ export default function Productos() {
       if (p.activo === false) return false
       const coincideBusqueda = !termino ||
         p.nombre.toLowerCase().includes(termino.toLowerCase()) ||
-        p.codigo?.toLowerCase().includes(termino.toLowerCase())
+        String(p.codigo ?? '').toLowerCase().includes(termino.toLowerCase())
       const coincideCategoria = !categoriaFiltro || p.categoria === categoriaFiltro
       return coincideBusqueda && coincideCategoria
     })
@@ -135,9 +247,16 @@ export default function Productos() {
           <h1 className="page-title">Productos</h1>
           <p className="page-subtitle">{productos.length} productos registrados</p>
         </div>
-        {sesion?.rol === 'admin' && (
-          <Button variant="primary" icon={Plus} onClick={abrirCrear}>Nuevo producto</Button>
-        )}
+        <div className="flex gap-2">
+          {seleccionados.size > 0 && (
+            <Button variant="secondary" icon={Barcode} onClick={imprimirSeleccionados}>
+              Imprimir {seleccionados.size} seleccionado(s)
+            </Button>
+          )}
+          {sesion?.rol === 'admin' && (
+            <Button variant="primary" icon={Plus} onClick={abrirCrear}>Nuevo producto</Button>
+          )}
+        </div>
       </div>
 
       {/* Filtros */}
@@ -158,9 +277,17 @@ export default function Productos() {
         <table className="table">
           <thead>
             <tr>
+              <th className="w-8">
+                <input type="checkbox"
+                  checked={productosFiltrados.length > 0 && seleccionados.size === productosFiltrados.length}
+                  onChange={toggleTodos}
+                  className="w-4 h-4 accent-primary-600 cursor-pointer"
+                  title="Seleccionar todos"
+                />
+              </th>
               <th>Código</th><th>Nombre</th><th>Categoría</th>
               <th>Ubicación</th><th>P. Venta</th><th>Stock</th><th>Estado</th>
-              {sesion?.rol === 'admin' && <th></th>}
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -172,7 +299,14 @@ export default function Productos() {
             ) : productosFiltrados.map(p => {
               const { label, variant } = stockBadge(p)
               return (
-                <tr key={p.id}>
+                <tr key={p.id} className={seleccionados.has(p.id) ? 'bg-primary-50' : ''}>
+                  <td>
+                    <input type="checkbox"
+                      checked={seleccionados.has(p.id)}
+                      onChange={() => toggleSeleccion(p.id)}
+                      className="w-4 h-4 accent-primary-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="font-mono text-xs text-gray-500">{p.codigo}</td>
                   <td className="font-medium text-gray-900">{p.nombre}</td>
                   <td><Badge variant="gray">{p.categoria}</Badge></td>
@@ -180,14 +314,15 @@ export default function Productos() {
                   <td className="font-semibold">{formatCurrency(p.precio_venta)}</td>
                   <td>{p.stock} {p.unidad}</td>
                   <td><Badge variant={variant}>{label}</Badge></td>
-                  {sesion?.rol === 'admin' && (
-                    <td>
-                      <div className="flex gap-1 justify-end">
+                  <td>
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => setBarcodeProd(p)} title="Imprimir código de barras" className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Barcode size={15} /></button>
+                      {sesion?.rol === 'admin' && (<>
                         <button onClick={() => abrirEditar(p)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
                         <button onClick={() => setConfirm(p)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
-                      </div>
-                    </td>
-                  )}
+                      </>)}
+                    </div>
+                  </td>
                 </tr>
               )
             })}
@@ -292,6 +427,33 @@ export default function Productos() {
       />
 
       <ToastContainer toasts={toasts} onRemove={remove} />
+
+      {/* Modal código de barras */}
+      {barcodeProd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setBarcodeProd(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <Barcode size={18} className="text-primary-600" />
+                <h2 className="font-bold text-gray-900">Código de barras</h2>
+              </div>
+              <button onClick={() => setBarcodeProd(null)} className="text-gray-400 hover:text-gray-700 font-bold text-lg leading-none">✕</button>
+            </div>
+            <div className="flex flex-col items-center gap-3 px-6 py-6">
+              <p className="font-semibold text-gray-900 text-center">{barcodeProd.nombre}</p>
+              <div className="border border-gray-200 rounded-xl p-4 bg-white">
+                <svg ref={svgRef} />
+              </div>
+              <p className="text-sm text-gray-500">Cód: <span className="font-mono font-semibold">{barcodeProd.codigo}</span></p>
+              <p className="text-lg font-bold text-primary-700">Q {Number(barcodeProd.precio_venta).toFixed(2)}</p>
+            </div>
+            <div className="flex gap-2 px-5 pb-5">
+              <Button variant="secondary" className="flex-1" onClick={() => setBarcodeProd(null)}>Cerrar</Button>
+              <Button variant="primary" icon={Barcode} className="flex-1" onClick={() => setTimeout(imprimirBarcode, 0)}>Imprimir</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

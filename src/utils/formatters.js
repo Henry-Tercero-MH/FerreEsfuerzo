@@ -30,5 +30,8 @@ export const generateNumeroVenta = (count) =>
 export const generateNumeroSecuencial = (prefix, count) =>
   `${prefix}-${String(count).padStart(6, '0')}`
 
-export const generateCodigoProducto = () =>
-  `PROD-${Date.now().toString(36).toUpperCase()}`
+export const generateCodigoProducto = () => {
+  const ts = Date.now().toString().slice(-10)
+  const rand = String(Math.floor(Math.random() * 1000)).padStart(3, '0')
+  return (ts + rand).slice(0, 13)
+}

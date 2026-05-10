@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode, Printer } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, ShoppingCart, CheckCircle, MapPin, Barcode, Printer, Maximize2 } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCatalogos } from '../contexts/CatalogosContext'
 import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
@@ -116,6 +116,7 @@ export default function NuevaVenta() {
   const [pagoRecibido, setPagoRecibido] = useState('')
   const [loading, setLoading] = useState(false)
   const [exito, setExito] = useState(null)
+  const [vistaPrevia, setVistaPrevia] = useState(false)
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [tipoDescuento, setTipoDescuento] = useState('ninguno')
 
@@ -451,17 +452,97 @@ export default function NuevaVenta() {
         </div>
 
         {/* Panel derecho: carrito + cobro */}
-        <div className="w-72 border-l border-gray-200 bg-white flex flex-col overflow-hidden shrink-0">
+        <div className="w-96 border-l border-gray-200 bg-white flex flex-col overflow-hidden shrink-0">
 
           {/* Encabezado carrito */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 bg-gray-50">
             <ShoppingCart size={14} className="text-gray-500" />
             <span className="font-semibold text-gray-700 text-xs">Detalle de Factura</span>
-            {items.length > 0 && <span className="ml-auto text-xs text-gray-400">{items.length} ítem(s)</span>}
+            <div className="ml-auto flex items-center gap-2">
+              {items.length > 0 && <span className="text-xs text-gray-400">{items.length} ítem(s)</span>}
+              {items.length > 0 && (
+                <button
+                  onClick={() => setVistaPrevia(true)}
+                  title="Vista previa del carrito"
+                  className="text-gray-400 hover:text-primary-600 transition-colors"
+                >
+                  <Maximize2 size={13} />
+                </button>
+              )}
+            </div>
           </div>
 
+          {/* Modal vista previa carrito */}
+          {vistaPrevia && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setVistaPrevia(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+                {/* Header modal */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart size={18} className="text-primary-600" />
+                    <h2 className="font-bold text-gray-900 text-base">Detalle de Factura</h2>
+                    <span className="text-sm text-gray-400 ml-1">— {items.length} ítem(s)</span>
+                  </div>
+                  <button onClick={() => setVistaPrevia(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg leading-none">✕</button>
+                </div>
+                {/* Tabla de items */}
+                <div className="overflow-y-auto max-h-[60vh]">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100 border-b border-gray-200 sticky top-0">
+                      <tr>
+                        <th className="text-left px-5 py-3 font-semibold text-gray-600">Producto</th>
+                        <th className="text-center px-4 py-3 font-semibold text-gray-600">Cantidad</th>
+                        <th className="text-right px-4 py-3 font-semibold text-gray-600">P. Unitario</th>
+                        <th className="text-right px-4 py-3 font-semibold text-gray-600">Subtotal</th>
+                        <th className="px-3 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map(item => (
+                        <tr key={item.producto_id} className="border-b border-gray-100 hover:bg-primary-50 transition-colors">
+                          <td className="px-5 py-3">
+                            <p className="font-medium text-gray-900">{item.nombre}</p>
+                            <p className="text-xs text-gray-400 font-mono">{item.codigo}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => cambiarCantidad(item.producto_id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 font-bold"><Minus size={12} /></button>
+                              <input
+                                type="number" min="1" max={item.stock_disponible}
+                                inputMode="numeric"
+                                value={item.cantidad}
+                                onChange={e => setCantidadDirecta(item.producto_id, e.target.value)}
+                                className="w-12 text-center text-sm font-semibold border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-primary-400"
+                              />
+                              <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 font-bold"><Plus size={12} /></button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{formatCurrency(item.precio_unitario)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">{formatCurrency(item.subtotal)}</td>
+                          <td className="px-3 py-3 text-center">
+                            <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={15} /></button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Footer totales */}
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <div className="text-sm text-gray-500 space-y-0.5">
+                    {descuento > 0 && <p>Descuento: <span className="text-red-500 font-semibold">-{formatCurrency(descuento)}</span></p>}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">Total</p>
+                    <p className="text-2xl font-bold text-primary-700 tabular-nums">{formatCurrency(total)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Items del carrito */}
-          <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+          <div className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5 scrollbar-cart">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-24 text-gray-300 gap-1">
                 <ShoppingCart size={22} className="opacity-50" />
@@ -485,7 +566,7 @@ export default function NuevaVenta() {
                     />
                     <button onClick={() => cambiarCantidad(item.producto_id, +1)} className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200"><Plus size={9} /></button>
                   </div>
-                  <p className="text-xs font-semibold text-gray-900 w-12 text-right shrink-0">{formatCurrency(item.subtotal)}</p>
+                  <p className="text-xs font-semibold text-gray-900 w-20 text-right shrink-0 tabular-nums">{formatCurrency(item.subtotal)}</p>
                   <button onClick={() => eliminarItem(item.producto_id)} className="text-gray-300 hover:text-red-500"><Trash2 size={11} /></button>
                 </div>
               ))
@@ -493,7 +574,7 @@ export default function NuevaVenta() {
           </div>
 
           {/* Descuento */}
-          <div className="px-2 py-1.5 border-t border-gray-100">
+          <div className="px-2 py-1 border-t border-gray-100">
             <div className="flex items-center gap-1 mb-1">
               <p className="text-xs font-semibold text-gray-600">Descuento</p>
             </div>
@@ -514,7 +595,7 @@ export default function NuevaVenta() {
           </div>
 
           {/* Totales */}
-          <div className="px-3 py-1.5 border-t border-gray-100 space-y-0.5 text-xs">
+          <div className="px-3 py-1 border-t border-gray-100 space-y-0.5 text-xs">
             <div className="flex justify-between text-gray-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
             {descuento > 0 && <div className="flex justify-between text-red-500"><span>Descuento</span><span>-{formatCurrency(descuento)}</span></div>}
             <div className="flex justify-between font-bold text-gray-900 text-sm pt-1 border-t border-gray-200 mt-1">
@@ -524,7 +605,7 @@ export default function NuevaVenta() {
 
           {/* Pago en efectivo / cambio */}
           {metodoPago === 'efectivo' && (
-            <div className="px-2 py-1.5 border-t border-gray-100 space-y-1">
+            <div className="px-2 py-1 border-t border-gray-100 space-y-1">
               <p className="text-xs font-semibold text-gray-600">Pago recibido</p>
               <input
                 type="number"
@@ -549,12 +630,12 @@ export default function NuevaVenta() {
           )}
 
           {/* Cliente */}
-          <div className="px-2 py-1.5 border-t border-gray-100">
+          <div className="px-2 py-1 border-t border-gray-100">
             <ClienteSelector clientes={clientes} value={clienteId} onChange={setClienteId} label={null} />
           </div>
 
           {/* Método de pago */}
-          <div className="px-2 py-1.5 border-t border-gray-100">
+          <div className="px-2 py-1 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-600 mb-1">Método de pago</p>
             <div className="flex gap-1 flex-wrap">
               {metodos_pago.map(m => (
@@ -586,7 +667,7 @@ export default function NuevaVenta() {
           </div>
 
           {/* Tipo de cliente / pedido */}
-          <div className="px-2 py-1.5 border-t border-gray-100">
+          <div className="px-2 py-1 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-600 mb-1">Tipo de cliente</p>
             <div className="flex gap-1">
               <button onClick={() => { setClienteId('cf'); setEsPedido(false) }}

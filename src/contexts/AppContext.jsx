@@ -67,14 +67,19 @@ export function AppProvider({ children }) {
     const nuevo = {
       ...data,
       id: `p-${shortId()}`,
-      codigo: data.codigo || generateCodigoProducto(),
+      codigo: data.codigo || (() => {
+        let cod
+        do { cod = generateCodigoProducto() }
+        while (productos.some(p => String(p.codigo) === cod))
+        return cod
+      })(),
       activo: true,
       creado_en: new Date().toISOString(),
     }
     setProductos(prev => [...prev, nuevo])
     db.insert('productos', nuevo)
     return nuevo
-  }, [puede, setProductos])
+  }, [puede, setProductos, productos])
 
   const editarProducto = useCallback((id, data) => {
     if (!puede('/productos')) return null
