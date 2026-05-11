@@ -1,12 +1,14 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { getAuditoriaLocal } from '../services/auditoria'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { gasGetAll } from '../services/googleAppsScript'
 import {
   ShoppingCart, Package, Plus, Pencil, Trash2, User, Truck,
   Wallet, Lock, FileText, LogIn, LogOut, Activity,
 } from 'lucide-react'
 
-const LS_LEIDAS = 'ferreapp_notif_leidas'
-const MAX_NOTIF = 50
+const LS_LEIDAS  = 'ferreapp_notif_leidas'
+const LS_CACHE   = 'ferreapp_notif_cache'
+const MAX_NOTIF  = 50
+const POLLING_MS = 60_000 // 1 minuto
 
 export const ACCION_ICONO = {
   venta_creada:       { icon: ShoppingCart, color: 'text-green-600',  bg: 'bg-green-50'  },
@@ -32,23 +34,49 @@ function getLeidas() {
 function saveLeidas(set) {
   localStorage.setItem(LS_LEIDAS, JSON.stringify([...set]))
 }
+function getCacheLocal() {
+  try { return JSON.parse(localStorage.getItem(LS_CACHE) || '[]') } catch { return [] }
+}
 
 const NotificacionesContext = createContext(null)
 
 export function NotificacionesProvider({ children }) {
-  const [notificaciones, setNotificaciones] = useState([])
+  const [notificaciones, setNotificaciones] = useState(() => getCacheLocal())
   const [leidas, setLeidas] = useState(getLeidas)
+  const timerRef = useRef(null)
 
-  const cargar = useCallback(() => {
-    setNotificaciones(getAuditoriaLocal().slice(0, MAX_NOTIF))
+  const cargarDesdeSheet = useCallback(async () => {
+    if (document.visibilityState === 'hidden') return
+    try {
+      const res = await gasGetAll('auditoria')
+      if (res?.ok && Array.isArray(res.data) && res.data.length) {
+        const ordenadas = [...res.data]
+          .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          .slice(0, MAX_NOTIF)
+        setNotificaciones(ordenadas)
+        localStorage.setItem(LS_CACHE, JSON.stringify(ordenadas))
+      }
+    } catch {
+      // sin conexión — mantiene cache local
+    }
   }, [])
 
   useEffect(() => {
-    cargar()
-    const handler = () => cargar()
-    window.addEventListener('ferreapp:auditoria', handler)
-    return () => window.removeEventListener('ferreapp:auditoria', handler)
-  }, [cargar])
+    cargarDesdeSheet()
+    // Polling cada 60s
+    timerRef.current = setInterval(cargarDesdeSheet, POLLING_MS)
+    // Al volver a la pestaña, refresca inmediatamente
+    const onVisible = () => { if (document.visibilityState === 'visible') cargarDesdeSheet() }
+    document.addEventListener('visibilitychange', onVisible)
+    // Al registrar una acción local, refresca también
+    const onAuditoria = () => cargarDesdeSheet()
+    window.addEventListener('ferreapp:auditoria', onAuditoria)
+    return () => {
+      clearInterval(timerRef.current)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('ferreapp:auditoria', onAuditoria)
+    }
+  }, [cargarDesdeSheet])
 
   const noLeidas = notificaciones.filter(n => !leidas.has(n.id)).length
 
