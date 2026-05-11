@@ -10,6 +10,7 @@ import { CuentasPorCobrarProvider } from './contexts/CuentasPorCobrarContext'
 import { EmpresaProvider } from './contexts/EmpresaContext'
 import { TemaProvider } from './contexts/TemaContext'
 import { UIProvider } from './contexts/UIContext'
+import { NotificacionesProvider } from './contexts/NotificacionesContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <NotificacionesProvider>
         <UIProvider>
         <TemaProvider>
         <EmpresaProvider>
@@ -89,6 +91,7 @@ export default function App() {
         </EmpresaProvider>
         </TemaProvider>
         </UIProvider>
+        </NotificacionesProvider>
       </AuthProvider>
     </BrowserRouter>
   )

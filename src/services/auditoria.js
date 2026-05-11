@@ -56,6 +56,9 @@ export function auditar({ accion, entidad, entidad_id = '', descripcion, detalle
   // 2. Enviar al Sheet en background (sin bloquear UI)
   gasInsert('auditoria', registro).catch(() => {})
 
+  // 3. Notificar en tiempo real a quien escuche
+  window.dispatchEvent(new CustomEvent('ferreapp:auditoria', { detail: registro }))
+
   return registro
 }
 

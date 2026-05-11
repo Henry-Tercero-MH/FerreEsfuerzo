@@ -119,7 +119,11 @@ export function AppProvider({ children }) {
   // ── VENTAS ─────────────────────────────────────────────────────────────────
   const crearVenta = useCallback(async (data) => {
     if (!puede('/ventas')) return null
-    const nums = ventas.map(v => parseInt(v.numero_venta?.replace('VTA-', '') || '0')).filter(n => !isNaN(n))
+    // Refresca ventas desde el Sheet antes de calcular el correlativo
+    // para evitar duplicados cuando dos dispositivos venden simultáneamente
+    const ventasActualizadas = await db.forceRefresh('ventas').catch(() => ventas)
+    const listaBase = Array.isArray(ventasActualizadas) ? ventasActualizadas : ventas
+    const nums = listaBase.map(v => parseInt(v.numero_venta?.replace('VTA-', '') || '0')).filter(n => !isNaN(n))
     const numero = generateNumeroVenta((nums.length ? Math.max(...nums) : 0) + 1)
     const esPedido = !!data.es_pedido
     const nueva = {
