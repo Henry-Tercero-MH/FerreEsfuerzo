@@ -146,8 +146,10 @@ function tiempoRelativo(fechaISO) {
 }
 
 function PanelNotificaciones() {
-  const { notificaciones, noLeidas, leidas, marcarLeida, marcarTodasLeidas } = useNotificaciones()
+  const { notificaciones, noLeidas, esLeida, marcarLeida, marcarTodasLeidas } = useNotificaciones()
   const [abierto, setAbierto] = useState(false)
+  const [animando, setAnimando] = useState(false)
+  const prevNoLeidas = useRef(noLeidas)
   const ref = useRef(null)
 
   useEffect(() => {
@@ -156,6 +158,14 @@ function PanelNotificaciones() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  useEffect(() => {
+    if (noLeidas > prevNoLeidas.current) {
+      setAnimando(true)
+      setTimeout(() => setAnimando(false), 1000)
+    }
+    prevNoLeidas.current = noLeidas
+  }, [noLeidas])
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -163,9 +173,9 @@ function PanelNotificaciones() {
         className="btn-icon btn-ghost text-gray-500 relative"
         title="Notificaciones"
       >
-        <Bell size={18} />
+        <Bell size={18} className={animando ? 'animate-bounce' : ''} />
         {noLeidas > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+          <span className={`absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none ${animando ? 'animate-ping-once' : ''}`}>
             {noLeidas > 9 ? '9+' : noLeidas}
           </span>
         )}
@@ -208,26 +218,25 @@ function PanelNotificaciones() {
 
             {/* Lista */}
             <div className="overflow-y-auto flex-1">
-              {notificaciones.length === 0 ? (
+              {notificaciones.filter(n => !esLeida(n)).length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-300 gap-2">
                   <Bell size={32} className="opacity-30" />
                   <p className="text-sm text-gray-400">Sin notificaciones</p>
                 </div>
-              ) : notificaciones.map(n => {
+              ) : notificaciones.filter(n => !esLeida(n)).map(n => {
                 const cfg = ACCION_ICONO[n.accion] || ACCION_DEFAULT
                 const Icon = cfg.icon
-                const leida = leidas.has(n.id)
                 return (
                   <div
                     key={n.id}
                     onClick={() => marcarLeida(n.id)}
-                    className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 cursor-pointer transition-colors hover:bg-gray-50 ${leida ? 'opacity-60' : 'bg-white'}`}
+                    className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 cursor-pointer transition-colors hover:bg-gray-50 bg-white"
                   >
                     <div className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-full ${cfg.bg}`}>
                       <Icon size={15} className={cfg.color} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm leading-snug truncate ${leida ? 'text-gray-500' : 'text-gray-800 font-medium'}`}>
+                      <p className="text-sm leading-snug truncate text-gray-800 font-medium">
                         {n.descripcion}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -236,7 +245,7 @@ function PanelNotificaciones() {
                         <span className="text-xs text-gray-400">{tiempoRelativo(n.fecha)}</span>
                       </div>
                     </div>
-                    {!leida && <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-primary-500" />}
+                    <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-primary-500" />
                   </div>
                 )
               })}

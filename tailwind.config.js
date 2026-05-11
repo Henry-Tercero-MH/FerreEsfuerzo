@@ -60,6 +60,16 @@ export default {
         'glow-purple': '0 0 20px rgba(168, 85, 247, 0.3)',
         'glow-green': '0 0 20px rgba(34, 197, 94, 0.3)',
       },
+      keyframes: {
+        'ping-once': {
+          '0%':   { transform: 'scale(1)',    opacity: '1' },
+          '50%':  { transform: 'scale(1.6)', opacity: '0.6' },
+          '100%': { transform: 'scale(1)',    opacity: '1' },
+        },
+      },
+      animation: {
+        'ping-once': 'ping-once 0.6s ease-out',
+      },
     },
   },
   plugins: [],

@@ -5,10 +5,11 @@ import {
   Wallet, Lock, FileText, LogIn, LogOut, Activity,
 } from 'lucide-react'
 
-const LS_LEIDAS  = 'ferreapp_notif_leidas'
-const LS_CACHE   = 'ferreapp_notif_cache'
-const MAX_NOTIF  = 50
-const POLLING_MS = 60_000 // 1 minuto
+const LS_LEIDAS      = 'ferreapp_notif_leidas'
+const LS_LEIDAS_HASTA = 'ferreapp_notif_leidas_hasta'
+const LS_CACHE       = 'ferreapp_notif_cache'
+const MAX_NOTIF      = 50
+const POLLING_MS     = 60_000 // 1 minuto
 
 export const ACCION_ICONO = {
   venta_creada:       { icon: ShoppingCart, color: 'text-green-600',  bg: 'bg-green-50'  },
@@ -34,6 +35,12 @@ function getLeidas() {
 function saveLeidas(set) {
   localStorage.setItem(LS_LEIDAS, JSON.stringify([...set]))
 }
+function getLeidasHasta() {
+  return localStorage.getItem(LS_LEIDAS_HASTA) || null
+}
+function saveLeidasHasta(fecha) {
+  localStorage.setItem(LS_LEIDAS_HASTA, fecha)
+}
 function getCacheLocal() {
   try { return JSON.parse(localStorage.getItem(LS_CACHE) || '[]') } catch { return [] }
 }
@@ -43,6 +50,7 @@ const NotificacionesContext = createContext(null)
 export function NotificacionesProvider({ children }) {
   const [notificaciones, setNotificaciones] = useState(() => getCacheLocal())
   const [leidas, setLeidas] = useState(getLeidas)
+  const [leidasHasta, setLeidasHasta] = useState(getLeidasHasta)
   const timerRef = useRef(null)
 
   const cargarDesdeSheet = useCallback(async () => {
@@ -78,7 +86,12 @@ export function NotificacionesProvider({ children }) {
     }
   }, [cargarDesdeSheet])
 
-  const noLeidas = notificaciones.filter(n => !leidas.has(n.id)).length
+  const esLeida = useCallback((n) => {
+    if (leidasHasta && n.fecha <= leidasHasta) return true
+    return leidas.has(n.id)
+  }, [leidas, leidasHasta])
+
+  const noLeidas = notificaciones.filter(n => !esLeida(n)).length
 
   const marcarLeida = useCallback((id) => {
     setLeidas(prev => {
@@ -87,17 +100,14 @@ export function NotificacionesProvider({ children }) {
   }, [])
 
   const marcarTodasLeidas = useCallback(() => {
-    setLeidas(prev => {
-      const s = new Set(prev)
-      notificaciones.forEach(n => s.add(n.id))
-      saveLeidas(s)
-      return s
-    })
-  }, [notificaciones])
+    const ahora = new Date().toISOString()
+    saveLeidasHasta(ahora)
+    setLeidasHasta(ahora)
+  }, [])
 
   return (
     <NotificacionesContext.Provider value={{
-      notificaciones, noLeidas, leidas, marcarLeida, marcarTodasLeidas,
+      notificaciones, noLeidas, esLeida, marcarLeida, marcarTodasLeidas,
     }}>
       {children}
     </NotificacionesContext.Provider>
