@@ -1,6 +1,21 @@
 import { formatCurrency, formatDate } from '../utils/formatters'
 
-export function imprimirCotizacion(cot, empresa) {
+async function logoBase64() {
+  try {
+    const res = await fetch('/logoFerreApp.png')
+    const blob = await res.blob()
+    return await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
+export async function imprimirCotizacion(cot, empresa) {
+  const logo = await logoBase64()
   const estadosLabel = {
     VIGENTE: 'Vigente', PEDIDO: 'Pedido', CONVERTIDA: 'Convertida',
     VENCIDA: 'Vencida', CANCELADA: 'Cancelada',
@@ -16,6 +31,8 @@ export function imprimirCotizacion(cot, empresa) {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 32px; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+    .empresa { display: flex; align-items: center; gap: 14px; }
+    .empresa img { height: 64px; width: 64px; border-radius: 50%; object-fit: cover; }
     .empresa h1 { font-size: 22px; font-weight: 700; color: #000; }
     .empresa p { color: #000; font-size: 12px; }
     .cot-info { text-align: right; }
@@ -45,10 +62,13 @@ export function imprimirCotizacion(cot, empresa) {
 <body>
   <div class="header">
     <div class="empresa">
+      ${logo ? `<img src="${logo}" alt="Logo" />` : ''}
+      <div>
       <h1>${nombreEmpresa}</h1>
       ${empresa?.razon_social ? `<p>${empresa.razon_social}</p>` : ''}
       ${empresa?.nit ? `<p>NIT: ${empresa.nit}</p>` : ''}
       ${empresa?.telefono ? `<p>Tel: ${empresa.telefono}</p>` : ''}
+      </div>
     </div>
     <div class="cot-info">
       <p class="num">${cot.numero_cotizacion}</p>

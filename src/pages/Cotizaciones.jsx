@@ -136,7 +136,7 @@ export default function Cotizaciones() {
     },
   }
 
-  const imprimirCotizacionLocal = (cot) => setTimeout(() => imprimirCotizacion(cot, empresa), 0)
+  const imprimirCotizacionLocal = (cot) => imprimirCotizacion(cot, empresa)
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
