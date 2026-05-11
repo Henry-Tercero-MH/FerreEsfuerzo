@@ -50,7 +50,9 @@ export function ComprasProvider({ children }) {
       throw new Error(`Subtotal inválido: ${data.subtotal}`)
     }
     
-    const nums = compras.map(c => parseInt(String(c.numero_documento || '').replace('COM-', '') || '0')).filter(n => !isNaN(n))
+    const comprasActualizadas = await db.forceRefresh('compras').catch(() => compras)
+    const listaBase = Array.isArray(comprasActualizadas) ? comprasActualizadas : compras
+    const nums = listaBase.map(c => parseInt(String(c.numero_documento || '').replace('COM-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
       id: shortId(),

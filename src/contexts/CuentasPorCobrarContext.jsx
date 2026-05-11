@@ -51,7 +51,9 @@ export function CuentasPorCobrarProvider({ children }) {
       throw new Error(`Monto inválido: ${data.monto_original}`)
     }
     
-    const nums = cuentas.map(c => parseInt(c.numero_documento?.replace('CXC-', '') || '0')).filter(n => !isNaN(n))
+    const cuentasActualizadas = await db.forceRefresh('cuentasCobrar').catch(() => cuentas)
+    const listaBase = Array.isArray(cuentasActualizadas) ? cuentasActualizadas : cuentas
+    const nums = listaBase.map(c => parseInt(c.numero_documento?.replace('CXC-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
       id: shortId(),

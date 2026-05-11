@@ -44,7 +44,9 @@ export function CotizacionesProvider({ children }) {
       throw new Error(`Subtotal inválido: ${data.subtotal}`)
     }
     
-    const nums = cotizaciones.map(c => parseInt(c.numero_cotizacion?.replace('COT-', '') || '0')).filter(n => !isNaN(n))
+    const cotizActualizadas = await db.forceRefresh('cotizaciones').catch(() => cotizaciones)
+    const listaBase = Array.isArray(cotizActualizadas) ? cotizActualizadas : cotizaciones
+    const nums = listaBase.map(c => parseInt(c.numero_cotizacion?.replace('COT-', '') || '0')).filter(n => !isNaN(n))
     const nueva = {
       ...data,
       id: shortId(),
