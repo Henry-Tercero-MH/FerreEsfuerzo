@@ -43,7 +43,7 @@ export default function Layout() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className={`flex-1 overflow-hidden flex flex-col transition-all duration-300 ${esNuevaVenta ? 'pr-[480px]' : ''}`}>
+        <main className={`flex-1 overflow-hidden flex flex-col transition-all duration-300 ${esNuevaVenta ? 'lg:pr-[480px]' : ''}`}>
           {cargando ? (
             <div className="flex items-center justify-center h-full">
               <LoadingSpinner text="Cargando datos..." size="lg" />

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Minus, Trash2, FileText, CheckCircle, UserPlus } from 'lucide-react'
+import { Search, Plus, Minus, Trash2, FileText, CheckCircle, UserPlus, ShoppingCart } from 'lucide-react'
 import { useApp } from '../contexts/AppContext'
 import { useCotizaciones } from '../contexts/CotizacionesContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -37,6 +37,7 @@ export default function NuevaCotizacion() {
   const [modalCliente, setModalCliente] = useState(false)
   const [nuevoCliente, setNuevoCliente] = useState({ nombre: '', telefono: '', nit: '' })
   const [errCliente, setErrCliente] = useState('')
+  const [tabMovil, setTabMovil] = useState('productos')
 
   const productosFiltrados = useMemo(() => {
     if (!busquedaDebounced) return []
@@ -49,6 +50,7 @@ export default function NuevaCotizacion() {
 
   const agregarItem = (producto) => {
     setBusqueda('')
+    if (window.innerWidth < 1024) setTabMovil('cotizacion')
     setItems(prev => {
       const existente = prev.find(i => i.producto_id === producto.id)
       if (existente) {
@@ -169,17 +171,36 @@ export default function NuevaCotizacion() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Nueva Cotización</h1>
-          <p className="page-subtitle">Agrega productos y genera la cotización</p>
+          <p className="page-subtitle hidden sm:block">Agrega productos y genera la cotización</p>
         </div>
         <Button variant="secondary" onClick={() => navigate('/cotizaciones')}>
           Cancelar
         </Button>
       </div>
 
+      {/* Tabs móvil/tablet */}
+      <div className="lg:hidden flex border-b border-gray-200 bg-white rounded-t-xl overflow-hidden shadow-sm">
+        <button
+          onClick={() => setTabMovil('productos')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tabMovil === 'productos' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-gray-400'}`}
+        >
+          Productos
+        </button>
+        <button
+          onClick={() => setTabMovil('cotizacion')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${tabMovil === 'cotizacion' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-gray-400'}`}
+        >
+          Cotización
+          {items.length > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold">{items.length}</span>
+          )}
+        </button>
+      </div>
+
       <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
 
-        {/* Izquierda — buscador + items (col-span-2 en desktop) */}
-        <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
+        {/* Izquierda — buscador + items */}
+        <div className={`lg:col-span-2 space-y-4 order-2 lg:order-1 ${tabMovil === 'cotizacion' ? 'hidden lg:block' : 'block'}`}>
 
           {/* Buscador */}
           <div className="card">
@@ -195,18 +216,39 @@ export default function NuevaCotizacion() {
               />
             </div>
             {productosFiltrados.length > 0 && (
-              <div className="mt-2 rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                {productosFiltrados.map(p => (
-                  <button key={p.id} onClick={() => agregarItem(p)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-primary-50 border-b border-gray-50 last:border-0 transition-colors">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{p.nombre}</p>
-                      <p className="text-xs text-gray-400">{p.codigo} · Stock: {p.stock}</p>
+              <>
+                {/* Vista lista en desktop */}
+                <div className="hidden lg:block mt-2 rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                  {productosFiltrados.map(p => (
+                    <button key={p.id} onClick={() => agregarItem(p)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-primary-50 border-b border-gray-50 last:border-0 transition-colors">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{p.nombre}</p>
+                        <p className="text-xs text-gray-400">{p.codigo} · Stock: {p.stock}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</p>
+                    </button>
+                  ))}
+                </div>
+                {/* Vista tarjetas en móvil */}
+                <div className="lg:hidden mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {productosFiltrados.map(p => (
+                    <div key={p.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{p.nombre}</p>
+                        <p className="text-xs text-gray-400 font-mono">{p.codigo} · Stock: {p.stock}</p>
+                        <p className="text-xs text-primary-700 font-bold mt-0.5">{formatCurrency(p.precio_venta)}</p>
+                      </div>
+                      <button
+                        onClick={() => agregarItem(p)}
+                        className="shrink-0 flex items-center justify-center w-9 h-9 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors"
+                      >
+                        <Plus size={18} />
+                      </button>
                     </div>
-                    <p className="text-sm font-semibold text-primary-700">{formatCurrency(p.precio_venta)}</p>
-                  </button>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -261,7 +303,7 @@ export default function NuevaCotizacion() {
         </div>
 
         {/* Derecha — datos + totales */}
-        <div className="card h-fit space-y-4 lg:sticky lg:top-24 order-1 lg:order-2">
+        <div className={`card h-fit space-y-4 lg:sticky lg:top-24 order-1 lg:order-2 ${tabMovil === 'productos' ? 'hidden lg:block' : 'block'}`}>
           <h3 className="font-semibold text-gray-900">Datos de la cotización</h3>
 
           <div>
@@ -297,6 +339,7 @@ export default function NuevaCotizacion() {
             <input
               type="number"
               min="0"
+              inputMode="decimal"
               value={descuentoGlobal}
               onChange={e => setDescuentoGlobal(e.target.value)}
               className="input"

@@ -147,6 +147,7 @@ export default function NuevaVenta() {
   const [exito, setExito] = useState(null)
   const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const [tipoDescuento, setTipoDescuento] = useState('ninguno')
+  const [tabMovil, setTabMovil] = useState('productos') // 'productos' | 'carrito'
 
   useEffect(() => {
     setFacturaExpandida(true)
@@ -175,6 +176,7 @@ export default function NuevaVenta() {
   const agregarItem = useCallback((producto) => {
     setBusqueda('')
     setTimeout(() => inputRef.current?.focus(), 0)
+    if (window.innerWidth < 1024) setTabMovil('carrito')
     setItems(prev => {
       const existente = prev.find(i => i.producto_id === producto.id)
       if (existente) {
@@ -411,7 +413,7 @@ export default function NuevaVenta() {
           <option value="">Categoría</option>
           {categorias.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+        <span className="hidden sm:flex items-center gap-1 text-xs text-gray-400 shrink-0">
           <Barcode size={13} /> Escáner listo
         </span>
         <span className="hidden lg:flex items-center gap-2 text-xs text-gray-400 shrink-0 border-l border-blue-100 pl-3">
@@ -425,27 +427,71 @@ export default function NuevaVenta() {
             {sesion?.rol === 'admin' && <a href="/caja" className="underline ml-1">Abrir caja</a>}
           </span>
         )}
-        <div className="ml-auto text-right shrink-0">
+        <div className="hidden lg:block ml-auto text-right shrink-0">
           <p className="text-xs text-gray-400">Cajero: <span className="font-semibold text-gray-700">{sesion?.nombre}</span></p>
         </div>
+      </div>
+
+      {/* ── Tabs móvil/tablet (solo < lg) ── */}
+      <div className="lg:hidden flex border-b border-gray-200 bg-white shrink-0">
+        <button
+          onClick={() => setTabMovil('productos')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tabMovil === 'productos' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-gray-400'}`}
+        >
+          Productos
+        </button>
+        <button
+          onClick={() => setTabMovil('carrito')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5 ${tabMovil === 'carrito' ? 'text-primary-600 border-b-2 border-primary-600' : 'text-gray-400'}`}
+        >
+          Carrito
+          {items.length > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold">{items.length}</span>
+          )}
+        </button>
       </div>
 
       {/* ── Cuerpo principal ── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Tabla de productos */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        {/* Tabla de productos — siempre visible en lg, tab en móvil */}
+        <div className={`flex-1 flex flex-col overflow-hidden bg-white ${tabMovil === 'carrito' ? 'hidden lg:flex' : 'flex'}`}>
           {/* Contenedor con scroll, thead sticky */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6">
-            <table className="w-full text-xs border-collapse table-fixed">
+          <div className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6">
+            {/* Vista tarjetas en móvil */}
+            <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-2 py-3">
+              {productosFiltradosCat.length === 0 ? (
+                <p className="col-span-2 py-10 text-center text-gray-400">Sin productos disponibles</p>
+              ) : productosFiltradosCat.map(p => (
+                <div key={p.id} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{p.nombre}</p>
+                    <p className="text-xs text-gray-400 font-mono">{p.codigo}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-primary-700 font-bold">{formatCurrency(p.precio_venta)}</span>
+                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${p.stock <= (p.stock_minimo || 5) ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{p.stock}</span>
+                      {p.ubicacion && <span className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{p.ubicacion}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); agregarItem(p) }}
+                    className="shrink-0 flex items-center justify-center w-9 h-9 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-colors"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {/* Vista tabla en desktop */}
+            <table className="hidden lg:table w-full text-xs border-collapse table-fixed">
               <colgroup>
-                <col style={{ width: '9%' }} />   {/* Código */}
-                <col style={{ width: '28%' }} />  {/* Descripción */}
-                <col style={{ width: '15%' }} />  {/* Categoría */}
-                <col style={{ width: '14%' }} />  {/* Ubicación */}
-                <col style={{ width: '13%' }} />  {/* Precio */}
-                <col style={{ width: '9%' }} />   {/* Stock */}
-                <col style={{ width: '12%' }} />  {/* Acción */}
+                <col style={{ width: '9%' }} />
+                <col style={{ width: '28%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '9%' }} />
+                <col style={{ width: '12%' }} />
               </colgroup>
               <thead className="bg-slate-100 border-b-2 border-gray-200 sticky top-0 z-10">
                 <tr>
@@ -495,11 +541,11 @@ export default function NuevaVenta() {
           </div>
         </div>
 
-        {/* Panel derecho: factura en tiempo real + cobro */}
-        <div className="fixed top-0 right-0 bottom-0 z-20 w-[480px] bg-white flex flex-col overflow-hidden shadow-2xl border-l border-gray-200">
+        {/* Panel derecho: factura en tiempo real + cobro — fixed solo en lg+ */}
+        <div className={`lg:fixed lg:top-0 lg:right-0 lg:bottom-0 lg:z-20 lg:w-[480px] lg:shadow-2xl lg:border-l lg:border-gray-200 bg-white flex flex-col overflow-hidden ${tabMovil === 'productos' ? 'hidden lg:flex' : 'flex flex-1'}`}>
 
-          {/* ── Header — misma altura que el navbar (h-16) ── */}
-          <div className="h-16 flex flex-col justify-center px-3 border-b border-blue-100 shrink-0" style={{ backgroundColor: '#f5f8fe' }}>
+          {/* ── Header — solo visible en desktop ── */}
+          <div className="hidden lg:flex h-16 flex-col justify-center px-3 border-b border-blue-100 shrink-0" style={{ backgroundColor: '#f5f8fe' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart size={13} className="text-primary-600" />

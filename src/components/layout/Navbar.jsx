@@ -143,7 +143,7 @@ export default function Navbar({ onMenuClick }) {
   const esNuevaVenta = pathname === '/ventas/nueva'
 
   return (
-    <header className={`sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-blue-100 px-4 sm:px-6 shadow-sm transition-all duration-300 ${esNuevaVenta ? 'w-[calc(100%-480px)]' : ''}`} style={{ backgroundColor: '#f5f8fe' }}>
+    <header className={`sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-blue-100 px-4 sm:px-6 shadow-sm transition-all duration-300 ${esNuevaVenta ? 'lg:w-[calc(100%-480px)]' : ''}`} style={{ backgroundColor: '#f5f8fe' }}>
       <button
         onClick={onMenuClick}
         className="btn-icon btn-ghost text-gray-500 lg:hidden"
