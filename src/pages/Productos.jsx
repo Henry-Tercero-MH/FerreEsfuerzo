@@ -170,6 +170,8 @@ export default function Productos() {
     else setSeleccionados(new Set(productosFiltrados.map(p => p.id)))
   }
 
+  const puedeEditar = sesion?.rol === 'admin' || sesion?.email === 'falegria@gmail.com'
+
   const termino = useDebounce(busqueda)
 
   const productosFiltrados = useMemo(() => {
@@ -253,7 +255,7 @@ export default function Productos() {
               Imprimir {seleccionados.size} seleccionado(s)
             </Button>
           )}
-          {sesion?.rol === 'admin' && (
+          {puedeEditar && (
             <Button variant="primary" icon={Plus} onClick={abrirCrear}>Nuevo producto</Button>
           )}
         </div>
@@ -317,7 +319,7 @@ export default function Productos() {
                   <td>
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => setBarcodeProd(p)} title="Imprimir código de barras" className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Barcode size={15} /></button>
-                      {sesion?.rol === 'admin' && (<>
+                      {puedeEditar && (<>
                         <button onClick={() => abrirEditar(p)} className="btn-icon btn-ghost text-gray-400 hover:text-primary-600"><Pencil size={15} /></button>
                         <button onClick={() => setConfirm(p)} className="btn-icon btn-ghost text-gray-400 hover:text-red-500"><Trash2 size={15} /></button>
                       </>)}
@@ -350,7 +352,7 @@ export default function Productos() {
             <option value="">Seleccionar...</option>
             {categorias.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
-          {sesion?.rol === 'admin' && (
+          {puedeEditar && (
             <Input label="Precio compra (Q)" name="precio_compra" type="number" min="0" value={form.precio_compra} onChange={handleChange} error={errors.precio_compra} placeholder="0.00" />
           )}
           <Input label="Precio venta (Q) *" name="precio_venta" type="number" min="0" value={form.precio_venta} onChange={handleChange} error={errors.precio_venta} placeholder="0.00" />
