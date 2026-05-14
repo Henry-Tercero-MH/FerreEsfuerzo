@@ -82,8 +82,6 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
   const compras = []
   const cotizaciones = []
   const ventas = []
-  const cuentasCobrar = []
-  const abonos = []
   const pedidos = []
   const cajaAperturas = []
   const cajaMovimientos = []
@@ -211,41 +209,6 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
       })
     }
 
-    const montoOriginal = ventaTotal
-    const montoPagado = i % 2 === 0 ? ventaTotal : num(ventaTotal * 0.5)
-    const saldo = num(montoOriginal - montoPagado)
-    const estadoCuenta = saldo <= 0 ? 'PAGADA' : montoPagado > 0 ? 'PARCIAL' : 'PENDIENTE'
-    const cuentaId = `cxc-${run}-${pad(i + 1)}`
-
-    cuentasCobrar.push({
-      id: cuentaId,
-      numero_documento: mkRef('CXC', run, i + 1),
-      cliente_id: cliente.id,
-      cliente_nombre: cliente.nombre,
-      referencia_venta: ventaId,
-      fecha_emision: dateOnly(-(i + 1)),
-      fecha_vencimiento: dateOnly(10 + i),
-      monto_original: montoOriginal,
-      monto_pagado: montoPagado,
-      saldo,
-      estado: estadoCuenta,
-      notas: `Cuenta demo ${pad(i + 1)}`,
-      creado_en: isoDays(-(qty - i)),
-    })
-
-    if (montoPagado > 0) {
-      abonos.push({
-        id: `abo-${run}-${pad(i + 1)}`,
-        cuenta_por_cobrar_id: cuentaId,
-        usuario_id: usuario.id,
-        monto: montoPagado,
-        metodo_pago: metodoPago,
-        referencia: numeroVenta,
-        fecha: isoDays(-(i + 1)),
-        notas: `Abono demo ${pad(i + 1)}`,
-      })
-    }
-
     cajaAperturas.push({
       id: `caja-${run}-${pad(i + 1)}`,
       usuario_id: usuario.id,
@@ -287,8 +250,6 @@ export function buildDemoPayload(qty = 20, usuario = { id: 'usr-admin', nombre: 
     cotizaciones,
     ventas,
     pedidos,
-    cuentasCobrar,
-    abonos,
     cajaAperturas,
     cajaMovimientos,
   }
@@ -310,8 +271,6 @@ export async function seedDemoData({ qty = 20, usuario = { id: 'usr-admin', nomb
   await insertMany('cotizaciones', payload.cotizaciones)
   await insertMany('ventas', payload.ventas)
   await insertMany('pedidos', payload.pedidos)
-  await insertMany('cuentasCobrar', payload.cuentasCobrar)
-  await insertMany('abonos', payload.abonos)
   await insertMany('movimientos', payload.movimientos)
   await insertMany('cajaAperturas', payload.cajaAperturas)
   await insertMany('cajaMovimientos', payload.cajaMovimientos)
@@ -325,8 +284,6 @@ export async function seedDemoData({ qty = 20, usuario = { id: 'usr-admin', nomb
     cotizaciones: payload.cotizaciones.length,
     ventas: payload.ventas.length,
     pedidos: payload.pedidos.length,
-    cuentasCobrar: payload.cuentasCobrar.length,
-    abonos: payload.abonos.length,
     movimientos: payload.movimientos.length,
     cajaAperturas: payload.cajaAperturas.length,
     cajaMovimientos: payload.cajaMovimientos.length,
