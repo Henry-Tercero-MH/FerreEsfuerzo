@@ -43,12 +43,12 @@ export function AppProvider({ children }) {
       } catch (e) { /* ignorar errores de parse */ }
     })
     Promise.allSettled([
-      db.forceRefresh('productos').then(data => { if (data.length) setProductos(data) }),
+      db.forceRefresh('productos').then(data => { if (Array.isArray(data)) setProductos(data) }),
       Promise.all([
         db.forceRefresh('ventas'),
         db.forceRefresh('ventaItems'),
       ]).then(([ventas, items]) => {
-        if (ventas.length) {
+        if (Array.isArray(ventas)) {
           const unicas = ventas.filter((v, i, arr) => arr.findIndex(x => x.id === v.id) === i)
           setVentas(unicas.map(v => ({
             ...v,
@@ -56,8 +56,13 @@ export function AppProvider({ children }) {
           })))
         }
       }),
-      db.forceRefresh('clientes').then(data => { if (data.length) setClientes(data) }),
-      db.forceRefresh('movimientos').then(data => { if (data.length) setMovimientos(data) }),
+      db.forceRefresh('clientes').then(data => {
+        if (Array.isArray(data)) {
+          const sinCF = data.filter(c => c.id !== 'cf')
+          setClientes([CLIENTES_SEED[0], ...sinCF])
+        }
+      }),
+      db.forceRefresh('movimientos').then(data => { if (Array.isArray(data)) setMovimientos(data) }),
     ]).finally(() => setLoadingApp(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

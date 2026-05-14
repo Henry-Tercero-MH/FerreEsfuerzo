@@ -30,8 +30,8 @@ export function CuentasPorCobrarProvider({ children }) {
 
   useEffect(() => {
     Promise.all([
-      db.forceRefresh('cuentasCobrar').then(data => { if (data.length) setCuentas(data) }),
-      db.forceRefresh('abonos').then(data => { if (data.length) setAbonos(data) }),
+      db.forceRefresh('cuentasCobrar').then(data => { if (Array.isArray(data)) setCuentas(data) }),
+      db.forceRefresh('abonos').then(data => { if (Array.isArray(data)) setAbonos(data) }),
     ]).finally(() => setLoading(false))
   }, [])
 

@@ -42,8 +42,8 @@ export function CajaProvider({ children }) {
   // Carga inicial desde Google Sheets — normaliza campos numéricos que vienen como string de Sheets
   useEffect(() => {
     Promise.all([
-      db.forceRefresh('cajaAperturas').then(data => { if (data.length) setAperturas(data.map(normalizarApertura)) }),
-      db.forceRefresh('cajaMovimientos').then(data => { if (data.length) setMovimientos(data) }),
+      db.forceRefresh('cajaAperturas').then(data => { if (Array.isArray(data)) setAperturas(data.map(normalizarApertura)) }),
+      db.forceRefresh('cajaMovimientos').then(data => { if (Array.isArray(data)) setMovimientos(data) }),
     ]).finally(() => setLoading(false))
   }, [puede])
 

@@ -10,7 +10,6 @@ import { useCuentasPorCobrar } from '../contexts/CuentasPorCobrarContext'
 import { useCaja } from '../contexts/CajaContext'
 import { testConexion } from '../services/googleAppsScript.js'
 import { auditar } from '../services/auditoria'
-import { db } from '../services/db.js'
 import { useToast } from '../hooks/useToast'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -90,6 +89,19 @@ export default function Ajustes() {
       toast(`Usuario "${usuario.nombre}" desactivado`, 'warning')
       auditar({ accion: 'usuario_eliminado', entidad: 'usuarios', entidad_id: usuario.id, descripcion: `Usuario desactivado: ${usuario.nombre} (${usuario.rol})`, detalle: { nombre: usuario.nombre, email: usuario.email, rol: usuario.rol }, sesion })
     }
+  }
+
+
+  const handleLimpiarCuentas = () => {
+    const totalCuentas = cuentas.length
+    const totalAbonos = abonos.length
+    localStorage.removeItem('ferreapp_cuentas_cobrar')
+    localStorage.removeItem('ferreapp_cuentasCobrar')
+    localStorage.removeItem('ferreapp_abonos')
+    localStorage.removeItem('ferreapp_cuentasCobrar_ts')
+    localStorage.removeItem('ferreapp_abonos_ts')
+    auditar({ accion: 'datos_limpiados', entidad: 'cuentasCobrar', descripcion: `Cache limpiado: ${totalCuentas} cuentas y ${totalAbonos} abonos`, sesion })
+    mostrarAlerta('success', `Cache limpiado. Recarga la página para confirmar.`)
   }
 
   const handleTestConexion = async () => {
@@ -302,6 +314,11 @@ export default function Ajustes() {
           <Button variant="secondary" icon={FileSpreadsheet} onClick={handleExportarExcel}>
             Exportar Excel (backup)
           </Button>
+          {(cuentas.length > 0 || abonos.length > 0) && (
+            <Button variant="danger" onClick={handleLimpiarCuentas}>
+              Limpiar cuentas por cobrar ({cuentas.length})
+            </Button>
+          )}
         </div>
 
       </div>
